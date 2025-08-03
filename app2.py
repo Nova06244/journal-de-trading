@@ -51,6 +51,11 @@ if st.button("Ajouter la mise"):
     st.session_state["capital"] += new_cap
     st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
 
+
+# 🔁 Réinitialiser la mise de départ
+if st.button("🔁 Réinitialiser la mise de départ"):
+    st.session_state["capital"] = 0.0
+    st.success("✅ Mise de départ réinitialisée à 0.00 €")
 # 📊 Liste des trades
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
