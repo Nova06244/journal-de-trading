@@ -1,21 +1,28 @@
 import streamlit as st
 import pandas as pd
+import os
 
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 
 st.title("📘 Journal de Trading")
 
+# Emplacement du fichier de sauvegarde local
+SAVE_FILE = "journal_trading.csv"
+
 # Initialisation
 if "data" not in st.session_state:
-    st.session_state["data"] = pd.DataFrame(columns=[
-        "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
-    ])
+    if os.path.exists(SAVE_FILE):
+        st.session_state["data"] = pd.read_csv(SAVE_FILE)
+    else:
+        st.session_state["data"] = pd.DataFrame(columns=[
+            "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
+        ])
 
 if "capital" not in st.session_state:
     st.session_state["capital"] = 0.00
 
-# Onglets
-tab1, tab2 = st.tabs(["📈 Journal", "💰 Mise de départ"])
+# Tabs
+tab1, tab2, tab3 = st.tabs(["📈 Journal", "💰 Mise de départ", "💾 Sauvegarde & Sync"])
 
 # Onglet Capital
 with tab2:
@@ -44,7 +51,7 @@ with tab1:
         submitted = st.form_submit_button("Ajouter le trade")
         if submitted:
             new_row = {
-                "Date": date.strftime("%d/%m/%Y"),  # <-- format personnalisé
+                "Date": date.strftime("%d/%m/%Y"),
                 "Session": session,
                 "Actif": actif,
                 "Résultat": resultat,
@@ -56,9 +63,11 @@ with tab1:
                 [st.session_state["data"], pd.DataFrame([new_row])],
                 ignore_index=True
             )
-            st.success("✅ Trade ajouté")
+            # Sauvegarde automatique
+            st.session_state["data"].to_csv(SAVE_FILE, index=False)
+            st.success("✅ Trade ajouté et sauvegardé")
 
-    # Tableau avec bouton à droite
+    # Tableau avec 🗑️ à droite
     st.subheader("📊 Liste des trades")
     df = st.session_state["data"]
 
@@ -74,6 +83,7 @@ with tab1:
         with cols[-1]:
             if st.button("🗑️", key=f"delete_{i}"):
                 st.session_state["data"] = df.drop(i).reset_index(drop=True)
+                st.session_state["data"].to_csv(SAVE_FILE, index=False)
                 st.experimental_rerun()
 
     # Statistiques
@@ -98,3 +108,34 @@ with tab1:
 
     st.markdown(f"### 💼 Capital actuel : {st.session_state['capital']:.2f} €")
     st.markdown(f"### 🧮 Capital total : **{capital_total:.2f} €**")
+
+# Onglet Sauvegarde
+with tab3:
+    st.subheader("💾 Export / Import de vos données")
+
+    # Export
+    csv = st.session_state["data"].to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="📤 Exporter mes trades (CSV)",
+        data=csv,
+        file_name="journal_trading.csv",
+        mime="text/csv"
+    )
+
+    st.markdown("---")
+
+    # Import
+    uploaded_file = st.file_uploader("📥 Importer un fichier CSV de sauvegarde", type=["csv"])
+    if uploaded_file:
+        try:
+            imported_df = pd.read_csv(uploaded_file)
+            required_cols = ["Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"]
+            if all(col in imported_df.columns for col in required_cols):
+                st.session_state["data"] = imported_df
+                st.session_state["data"].to_csv(SAVE_FILE, index=False)
+                st.success("✅ Données importées avec succès.")
+                st.experimental_rerun()
+            else:
+                st.error("❌ Le fichier CSV ne contient pas les bonnes colonnes.")
+        except Exception as e:
+            st.error(f"❌ Erreur d'importation : {e}")
