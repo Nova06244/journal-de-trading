@@ -21,7 +21,8 @@ st.subheader("📋 Entrée d'un trade")
 with st.form("add_trade_form"):
     col1, col2, col3 = st.columns(3)
     with col1:
-        date = st.date_input("Date").strftime("%d/%m/%Y")
+        date_obj = st.date_input("Date", format="DD/MM/YYYY")
+    date = pd.to_datetime(date_obj).strftime("%d/%m/%Y")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
         actif = st.text_input("Actif", value="EUR/USD")
