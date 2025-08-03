@@ -11,7 +11,9 @@ if "data" not in st.session_state:
     st.session_state["data"] = pd.DataFrame(columns=[
         "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
     ])
+if "capital" not in st.session_state:
     st.session_state["capital"] = 0.0
+if "pending_import" not in st.session_state:
     st.session_state["pending_import"] = None
 
 # 📋 Formulaire d'ajout de trade
