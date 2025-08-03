@@ -5,20 +5,19 @@ st.set_page_config(page_title="Journal de Trading", layout="wide")
 
 st.title("📘 Journal de Trading")
 
-# Initialisation du journal
+# Initialisation
 if "data" not in st.session_state:
     st.session_state["data"] = pd.DataFrame(columns=[
         "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
     ])
 
-# Initialisation du capital
 if "capital" not in st.session_state:
     st.session_state["capital"] = 0.00
 
-# Onglets
+# Tabs
 tab1, tab2 = st.tabs(["📈 Journal", "💰 Mise de départ"])
 
-# Onglet 2 : Capital de départ
+# Onglet Capital
 with tab2:
     st.subheader("💰 Mise de départ ou ajout de capital")
     new_cap = st.number_input("Montant (€)", min_value=0.0, step=100.0, format="%.2f")
@@ -26,7 +25,7 @@ with tab2:
         st.session_state["capital"] += new_cap
         st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
 
-# Onglet 1 : Journal de trading
+# Onglet Journal
 with tab1:
     st.subheader("📋 Entrée d'un trade")
     with st.form("add_trade_form"):
@@ -59,7 +58,7 @@ with tab1:
             )
             st.success("✅ Trade ajouté")
 
-    # Bouton de suppression par ligne
+    # Tableau avec 🗑️ à gauche et coloration conditionnelle
     st.subheader("📊 Liste des trades")
     df = st.session_state["data"]
 
@@ -69,8 +68,14 @@ with tab1:
             if st.button("🗑️", key=f"delete_{i}"):
                 st.session_state["data"] = df.drop(i).reset_index(drop=True)
                 st.experimental_rerun()
-        for j, value in enumerate(df.loc[i]):
-            cols[j + 1].write(value)
+        for j, col_name in enumerate(df.columns):
+            value = df.loc[i, col_name]
+
+            # Coloration conditionnelle : SL → rouge
+            if df.loc[i, "Résultat"] == "SL" and col_name in ["Risk (%)", "Reward (%)", "Gain (€)"]:
+                cols[j + 1].markdown(f"<span style='color:red'>{value}</span>", unsafe_allow_html=True)
+            else:
+                cols[j + 1].write(value)
 
     # Statistiques
     st.subheader("📈 Statistiques")
@@ -80,6 +85,7 @@ with tab1:
     total_risk = df["Risk (%)"].sum()
     total_reward = df["Reward (%)"].sum()
     winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
+    capital_total = st.session_state["capital"] + total_gain
 
     col1, col2, col3 = st.columns(3)
     col1.metric("✅ Total TP", total_tp)
@@ -92,3 +98,4 @@ with tab1:
     col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
     st.markdown(f"### 💼 Capital actuel : {st.session_state['capital']:.2f} €")
+    st.markdown(f"### 🧮 Capital total : **{capital_total:.2f} €**")
