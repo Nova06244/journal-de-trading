@@ -14,7 +14,7 @@ if "data" not in st.session_state:
 if "capital" not in st.session_state:
     st.session_state["capital"] = 0.00
 
-# Tabs
+# Onglets
 tab1, tab2 = st.tabs(["📈 Journal", "💰 Mise de départ"])
 
 # Onglet Capital
@@ -31,7 +31,7 @@ with tab1:
     with st.form("add_trade_form"):
         col1, col2, col3 = st.columns(3)
         with col1:
-            date = st.date_input("Date")
+            date = st.date_input("Date", format="DD/MM/YYYY")
             session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
         with col2:
             actif = st.text_input("Actif", value="EUR/USD")
@@ -44,7 +44,7 @@ with tab1:
         submitted = st.form_submit_button("Ajouter le trade")
         if submitted:
             new_row = {
-                "Date": date,
+                "Date": date.strftime("%d/%m/%Y"),  # <-- format personnalisé
                 "Session": session,
                 "Actif": actif,
                 "Résultat": resultat,
@@ -58,24 +58,23 @@ with tab1:
             )
             st.success("✅ Trade ajouté")
 
-    # Tableau avec 🗑️ à gauche et coloration conditionnelle
+    # Tableau avec bouton à droite
     st.subheader("📊 Liste des trades")
     df = st.session_state["data"]
 
     for i in df.index:
-        cols = st.columns([0.07, 1, 1, 1, 1, 1, 1, 1])
-        with cols[0]:
+        cols = st.columns([1, 1, 1, 1, 1, 1, 1, 0.07])
+        for j, col_name in enumerate(df.columns):
+            value = df.loc[i, col_name]
+            if df.loc[i, "Résultat"] == "SL" and col_name in ["Risk (%)", "Reward (%)", "Gain (€)"]:
+                cols[j].markdown(f"<span style='color:red'>{value}</span>", unsafe_allow_html=True)
+            else:
+                cols[j].write(value)
+
+        with cols[-1]:
             if st.button("🗑️", key=f"delete_{i}"):
                 st.session_state["data"] = df.drop(i).reset_index(drop=True)
                 st.experimental_rerun()
-        for j, col_name in enumerate(df.columns):
-            value = df.loc[i, col_name]
-
-            # Coloration conditionnelle : SL → rouge
-            if df.loc[i, "Résultat"] == "SL" and col_name in ["Risk (%)", "Reward (%)", "Gain (€)"]:
-                cols[j + 1].markdown(f"<span style='color:red'>{value}</span>", unsafe_allow_html=True)
-            else:
-                cols[j + 1].write(value)
 
     # Statistiques
     st.subheader("📈 Statistiques")
