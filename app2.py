@@ -21,7 +21,7 @@ with st.form("add_trade_form"):
         date = st.date_input("Date", format="DD/MM/YYYY")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
-        actif = st.text_input("Actif", value="EUR/USD")
+        actif = st.text_input("Actif", value="XAU/USD")
         resultat = st.selectbox("Résultat", ["TP", "SL"])
     with col3:
         risk = st.number_input("Risk (%)", min_value=0, step=1)
