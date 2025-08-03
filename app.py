@@ -3,13 +3,20 @@ import pandas as pd
 import os
 
 st.set_page_config(page_title="Journal de Trading", layout="wide")
-
 st.title("📘 Journal de Trading")
 
-# Emplacement du fichier de sauvegarde local
+# Fichiers de sauvegarde
 SAVE_FILE = "journal_trading.csv"
+CAPITAL_FILE = "capital.csv"
 
-# Initialisation
+# Chargement du capital
+if "capital" not in st.session_state:
+    if os.path.exists(CAPITAL_FILE):
+        st.session_state["capital"] = float(pd.read_csv(CAPITAL_FILE)["capital"][0])
+    else:
+        st.session_state["capital"] = 0.00
+
+# Chargement des données de trading
 if "data" not in st.session_state:
     if os.path.exists(SAVE_FILE):
         st.session_state["data"] = pd.read_csv(SAVE_FILE)
@@ -18,21 +25,10 @@ if "data" not in st.session_state:
             "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
         ])
 
-if "capital" not in st.session_state:
-    st.session_state["capital"] = 0.00
-
-# Tabs
+# Réorganisation des onglets : Journal | Mise | Sauvegarde
 tab1, tab2, tab3 = st.tabs(["📈 Journal", "💰 Mise de départ", "💾 Sauvegarde & Sync"])
 
-# Onglet Capital
-with tab2:
-    st.subheader("💰 Mise de départ ou ajout de capital")
-    new_cap = st.number_input("Montant (€)", min_value=0.0, step=100.0, format="%.2f")
-    if st.button("Ajouter au capital"):
-        st.session_state["capital"] += new_cap
-        st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
-
-# Onglet Journal
+# Onglet 1 : Journal
 with tab1:
     st.subheader("📋 Entrée d'un trade")
     with st.form("add_trade_form"):
@@ -67,7 +63,7 @@ with tab1:
             st.session_state["data"].to_csv(SAVE_FILE, index=False)
             st.success("✅ Trade ajouté et sauvegardé")
 
-    # Tableau avec 🗑️ à droite
+    # Tableau des trades avec bouton 🗑️ à droite
     st.subheader("📊 Liste des trades")
     df = st.session_state["data"]
 
@@ -109,11 +105,20 @@ with tab1:
     st.markdown(f"### 💼 Capital actuel : {st.session_state['capital']:.2f} €")
     st.markdown(f"### 🧮 Capital total : **{capital_total:.2f} €**")
 
-# Onglet Sauvegarde
+# Onglet 2 : Mise de départ
+with tab2:
+    st.subheader("💰 Mise de départ ou ajout de capital")
+    new_cap = st.number_input("Montant (€)", min_value=0.0, step=100.0, format="%.2f")
+    if st.button("Ajouter au capital"):
+        st.session_state["capital"] += new_cap
+        pd.DataFrame({"capital": [st.session_state["capital"]]}).to_csv(CAPITAL_FILE, index=False)
+        st.success(f"✅ Nouveau capital sauvegardé : {st.session_state['capital']:.2f} €")
+
+# Onglet 3 : Sauvegarde & Sync
 with tab3:
     st.subheader("💾 Export / Import de vos données")
 
-    # Export
+    # Export CSV
     csv = st.session_state["data"].to_csv(index=False).encode("utf-8")
     st.download_button(
         label="📤 Exporter mes trades (CSV)",
@@ -124,7 +129,7 @@ with tab3:
 
     st.markdown("---")
 
-    # Import
+    # Import CSV
     uploaded_file = st.file_uploader("📥 Importer un fichier CSV de sauvegarde", type=["csv"])
     if uploaded_file:
         try:
