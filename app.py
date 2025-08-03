@@ -4,28 +4,16 @@ import pandas as pd
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# === ETAPE 1 : Chargement manuel si rien n'est encore importé ===
-if "file_loaded" not in st.session_state or not st.session_state["file_loaded"]:
-    st.subheader("📂 Charger votre fichier journal_trading.csv")
-    uploaded_file = st.file_uploader("Choisissez un fichier CSV pour commencer", type=["csv"])
-    
-    if uploaded_file:
-        try:
-            full_df = pd.read_csv(uploaded_file)
-            cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
-            trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
-            st.session_state["data"] = trade_rows
-            st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
-            st.session_state["file_loaded"] = True
-            st.success("✅ Fichier chargé avec succès !")
-            st.experimental_rerun()  # recharge l'app pour afficher l'interface complète
-        except Exception as e:
-            st.error(f"❌ Erreur lors du chargement du fichier : {e}")
-    st.stop()
+SAVE_FILE = "journal_trading.csv"
 
-# === ETAPE 2 : Interface principale ===
+# Initialisation de la session
+if "data" not in st.session_state:
+    st.session_state["data"] = pd.DataFrame(columns=[
+        "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
+    ])
+    st.session_state["capital"] = 0.0
 
-# 📋 Formulaire d'ajout de trade
+# Onglet: Entrée d'un trade
 st.subheader("📋 Entrée d'un trade")
 with st.form("add_trade_form"):
     col1, col2, col3 = st.columns(3)
@@ -56,17 +44,16 @@ with st.form("add_trade_form"):
         )
         st.success("✅ Trade ajouté")
 
-# 💰 Bloc mise de départ
+# Onglet: Mise de départ
 st.subheader("💰 Mise de départ ou ajout de capital")
 new_cap = st.number_input("Ajouter au capital (€)", min_value=0.0, step=100.0, format="%.2f")
 if st.button("Ajouter la mise"):
     st.session_state["capital"] += new_cap
     st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
 
-# 📊 Liste des trades
+# Liste des trades
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
-
 for i in df.index:
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 0.07])
     for j, col_name in enumerate(df.columns):
@@ -80,7 +67,7 @@ for i in df.index:
             st.session_state["data"] = df.drop(i).reset_index(drop=True)
             st.rerun()
 
-# 📈 Statistiques
+# Statistiques
 st.subheader("📈 Statistiques")
 total_tp = (df["Résultat"] == "TP").sum()
 total_sl = (df["Résultat"] == "SL").sum()
@@ -100,7 +87,7 @@ col4.metric("📉 Total Risk (%)", f"{total_risk}")
 col5.metric("📈 Total Reward (%)", f"{total_reward}")
 col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
-# 💼 Capital + bloc de sauvegarde & sync
+# Capital et Sauvegarde & Sync
 col7, col8 = st.columns([1, 1])
 with col7:
     st.markdown(f"### 💼 Capital actuel : {st.session_state['capital']:.2f} €")
@@ -108,7 +95,6 @@ with col7:
 
 with col8:
     st.markdown("### 💾 Sauvegarde & Sync")
-    # Export
     capital_row = pd.DataFrame([{
         "Date": "", "Session": "", "Actif": "__CAPITAL__",
         "Résultat": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
@@ -122,17 +108,16 @@ with col8:
         mime="text/csv"
     )
 
-    # Import (en cours de session)
     st.markdown("---")
-    replace_file = st.file_uploader("📥 Importer un autre fichier CSV", type=["csv"], key="reimport")
-    if replace_file:
+    uploaded_file = st.file_uploader("📥 Importer un fichier CSV", type=["csv"])
+    if uploaded_file and st.button("✅ Appliquer l'import"):
         try:
-            new_df = pd.read_csv(replace_file)
-            cap_rows = new_df[new_df["Actif"] == "__CAPITAL__"]
-            trade_rows = new_df[new_df["Actif"] != "__CAPITAL__"]
+            full_df = pd.read_csv(uploaded_file)
+            cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
+            trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
             st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
             st.session_state["data"] = trade_rows
-            st.success("✅ Nouveau fichier importé avec succès.")
+            st.success("✅ Données importées avec succès.")
             st.rerun()
         except Exception as e:
             st.error(f"❌ Erreur d'importation : {e}")
