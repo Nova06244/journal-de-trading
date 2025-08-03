@@ -1,31 +1,31 @@
 import streamlit as st
 import pandas as pd
-import os
 
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-SAVE_FILE = "journal_trading.csv"
+# === ETAPE 1 : Chargement manuel si rien n'est encore importé ===
+if "file_loaded" not in st.session_state or not st.session_state["file_loaded"]:
+    st.subheader("📂 Charger votre fichier journal_trading.csv")
+    uploaded_file = st.file_uploader("Choisissez un fichier CSV pour commencer", type=["csv"])
+    
+    if uploaded_file:
+        try:
+            full_df = pd.read_csv(uploaded_file)
+            cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
+            trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
+            st.session_state["data"] = trade_rows
+            st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
+            st.session_state["file_loaded"] = True
+            st.success("✅ Fichier chargé avec succès !")
+            st.experimental_rerun()  # recharge l'app pour afficher l'interface complète
+        except Exception as e:
+            st.error(f"❌ Erreur lors du chargement du fichier : {e}")
+    st.stop()
 
-# 🔁 Supprimer les drapeaux temporaires
-if st.session_state.get("trigger_reload"):
-    del st.session_state["trigger_reload"]
+# === ETAPE 2 : Interface principale ===
 
-# 📂 Chargement des données et du capital
-if "data" not in st.session_state:
-    if os.path.exists(SAVE_FILE):
-        full_df = pd.read_csv(SAVE_FILE)
-        capital_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
-        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
-        st.session_state["data"] = trade_rows
-        st.session_state["capital"] = float(capital_rows["Gain (€)"].iloc[0]) if not capital_rows.empty else 0.0
-    else:
-        st.session_state["data"] = pd.DataFrame(columns=[
-            "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
-        ])
-        st.session_state["capital"] = 0.0
-
-# 📋 Formulaire d'ajout
+# 📋 Formulaire d'ajout de trade
 st.subheader("📋 Entrée d'un trade")
 with st.form("add_trade_form"):
     col1, col2, col3 = st.columns(3)
@@ -63,9 +63,10 @@ if st.button("Ajouter la mise"):
     st.session_state["capital"] += new_cap
     st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
 
-# 📊 Tableau des trades
+# 📊 Liste des trades
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
+
 for i in df.index:
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 0.07])
     for j, col_name in enumerate(df.columns):
@@ -121,23 +122,17 @@ with col8:
         mime="text/csv"
     )
 
-    # Import CSV + Contrôle
+    # Import (en cours de session)
     st.markdown("---")
-    uploaded_file = st.file_uploader("📥 Importer fichier CSV", type=["csv"])
-    if uploaded_file:
-        st.session_state["import_buffer"] = uploaded_file
-        st.info("📥 Fichier chargé. Cliquez sur 'Appliquer l'import' pour confirmer.")
-
-    if "import_buffer" in st.session_state and st.button("✅ Appliquer l'import"):
+    replace_file = st.file_uploader("📥 Importer un autre fichier CSV", type=["csv"], key="reimport")
+    if replace_file:
         try:
-            full_import = pd.read_csv(st.session_state["import_buffer"])
-            cap_rows = full_import[full_import["Actif"] == "__CAPITAL__"]
-            trade_rows = full_import[full_import["Actif"] != "__CAPITAL__"]
+            new_df = pd.read_csv(replace_file)
+            cap_rows = new_df[new_df["Actif"] == "__CAPITAL__"]
+            trade_rows = new_df[new_df["Actif"] != "__CAPITAL__"]
             st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
             st.session_state["data"] = trade_rows
-            del st.session_state["import_buffer"]
-            st.success("✅ Données importées avec succès.")
-            st.session_state["trigger_reload"] = True
+            st.success("✅ Nouveau fichier importé avec succès.")
             st.rerun()
         except Exception as e:
-            st.error(f"❌ Erreur pendant l'import : {e}")
+            st.error(f"❌ Erreur d'importation : {e}")
