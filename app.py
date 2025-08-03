@@ -5,28 +5,28 @@ import os
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# Fichiers de sauvegarde
 SAVE_FILE = "journal_trading.csv"
-CAPITAL_FILE = "capital.csv"
 
-# Chargement du capital
-if "capital" not in st.session_state:
-    if os.path.exists(CAPITAL_FILE):
-        st.session_state["capital"] = float(pd.read_csv(CAPITAL_FILE)["capital"][0])
-    else:
-        st.session_state["capital"] = 0.00
-
-# Chargement des données de trading
+# Chargement des données
 if "data" not in st.session_state:
     if os.path.exists(SAVE_FILE):
-        st.session_state["data"] = pd.read_csv(SAVE_FILE)
+        full_df = pd.read_csv(SAVE_FILE)
+        # Séparer la ligne de capital si présente
+        capital_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
+        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
+        st.session_state["data"] = trade_rows
+        if not capital_rows.empty:
+            st.session_state["capital"] = float(capital_rows["Gain (€)"].iloc[0])
+        else:
+            st.session_state["capital"] = 0.0
     else:
         st.session_state["data"] = pd.DataFrame(columns=[
             "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
         ])
+        st.session_state["capital"] = 0.0
 
-# Réorganisation des onglets : Journal | Mise | Sauvegarde
-tab1, tab2, tab3 = st.tabs(["📈 Journal", "💰 Mise de départ", "💾 Sauvegarde & Sync"])
+# Onglets simplifiés
+tab1, tab2 = st.tabs(["📈 Journal", "💰 Mise de départ"])
 
 # Onglet 1 : Journal
 with tab1:
@@ -59,11 +59,9 @@ with tab1:
                 [st.session_state["data"], pd.DataFrame([new_row])],
                 ignore_index=True
             )
-            # Sauvegarde automatique
-            st.session_state["data"].to_csv(SAVE_FILE, index=False)
-            st.success("✅ Trade ajouté et sauvegardé")
-
-    # Tableau des trades avec bouton 🗑️ à droite
+            st.success("✅ Trade ajouté")
+    
+    # Tableau avec suppression
     st.subheader("📊 Liste des trades")
     df = st.session_state["data"]
 
@@ -75,11 +73,9 @@ with tab1:
                 cols[j].markdown(f"<span style='color:red'>{value}</span>", unsafe_allow_html=True)
             else:
                 cols[j].write(value)
-
         with cols[-1]:
             if st.button("🗑️", key=f"delete_{i}"):
                 st.session_state["data"] = df.drop(i).reset_index(drop=True)
-                st.session_state["data"].to_csv(SAVE_FILE, index=False)
                 st.experimental_rerun()
 
     # Statistiques
@@ -102,8 +98,40 @@ with tab1:
     col5.metric("📈 Total Reward (%)", f"{total_reward}")
     col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
-    st.markdown(f"### 💼 Capital actuel : {st.session_state['capital']:.2f} €")
-    st.markdown(f"### 🧮 Capital total : **{capital_total:.2f} €**")
+    # Capital + bloc de sauvegarde à droite
+    col7, col8 = st.columns([1, 1])
+    with col7:
+        st.markdown(f"### 💼 Capital actuel : {st.session_state['capital']:.2f} €")
+        st.markdown(f"### 🧮 Capital total : **{capital_total:.2f} €**")
+    with col8:
+        st.markdown("### 💾 Sauvegarde & Sync")
+        full_df = st.session_state["data"].copy()
+        capital_row = pd.DataFrame([{
+            "Date": "", "Session": "", "Actif": "__CAPITAL__",
+            "Résultat": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
+        }])
+        export_df = pd.concat([full_df, capital_row], ignore_index=True)
+        csv = export_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📤 Exporter tout (CSV)",
+            data=csv,
+            file_name="journal_trading.csv",
+            mime="text/csv"
+        )
+        st.markdown("---")
+        uploaded_file = st.file_uploader("📥 Importer CSV", type=["csv"])
+        if uploaded_file:
+            try:
+                full_import = pd.read_csv(uploaded_file)
+                cap_rows = full_import[full_import["Actif"] == "__CAPITAL__"]
+                trade_rows = full_import[full_import["Actif"] != "__CAPITAL__"]
+                if not cap_rows.empty:
+                    st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0])
+                st.session_state["data"] = trade_rows
+                st.success("✅ Données et capital importés.")
+                st.experimental_rerun()
+            except Exception as e:
+                st.error(f"❌ Erreur : {e}")
 
 # Onglet 2 : Mise de départ
 with tab2:
@@ -111,36 +139,4 @@ with tab2:
     new_cap = st.number_input("Montant (€)", min_value=0.0, step=100.0, format="%.2f")
     if st.button("Ajouter au capital"):
         st.session_state["capital"] += new_cap
-        pd.DataFrame({"capital": [st.session_state["capital"]]}).to_csv(CAPITAL_FILE, index=False)
-        st.success(f"✅ Nouveau capital sauvegardé : {st.session_state['capital']:.2f} €")
-
-# Onglet 3 : Sauvegarde & Sync
-with tab3:
-    st.subheader("💾 Export / Import de vos données")
-
-    # Export CSV
-    csv = st.session_state["data"].to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="📤 Exporter mes trades (CSV)",
-        data=csv,
-        file_name="journal_trading.csv",
-        mime="text/csv"
-    )
-
-    st.markdown("---")
-
-    # Import CSV
-    uploaded_file = st.file_uploader("📥 Importer un fichier CSV de sauvegarde", type=["csv"])
-    if uploaded_file:
-        try:
-            imported_df = pd.read_csv(uploaded_file)
-            required_cols = ["Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"]
-            if all(col in imported_df.columns for col in required_cols):
-                st.session_state["data"] = imported_df
-                st.session_state["data"].to_csv(SAVE_FILE, index=False)
-                st.success("✅ Données importées avec succès.")
-                st.experimental_rerun()
-            else:
-                st.error("❌ Le fichier CSV ne contient pas les bonnes colonnes.")
-        except Exception as e:
-            st.error(f"❌ Erreur d'importation : {e}")
+        st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
