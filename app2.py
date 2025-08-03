@@ -33,7 +33,7 @@ with st.form("add_trade_form"):
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
         new_row = {
-            "Date": date.strftime("%d/%m/%Y"),
+            "Date": pd.to_datetime(date).strftime("%d/%m/%Y"),
             "Session": session,
             "Actif": actif,
             "Résultat": resultat,
