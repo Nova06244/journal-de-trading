@@ -5,13 +5,13 @@ import os
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# Reset du drapeau importé pour éviter les boucles
-if "import_done" in st.session_state:
-    del st.session_state["import_done"]
+# ✅ Supprimer le flag temporaire au redémarrage pour éviter la boucle
+if st.session_state.get("trigger_rerun"):
+    del st.session_state["trigger_rerun"]
 
 SAVE_FILE = "journal_trading.csv"
 
-# Chargement des données et du capital
+# ✅ Chargement des données et du capital
 if "data" not in st.session_state:
     if os.path.exists(SAVE_FILE):
         full_df = pd.read_csv(SAVE_FILE)
@@ -28,7 +28,7 @@ if "data" not in st.session_state:
         ])
         st.session_state["capital"] = 0.0
 
-# 📋 Formulaire d'ajout de trade
+# ✅ Formulaire d'ajout de trade
 st.subheader("📋 Entrée d'un trade")
 with st.form("add_trade_form"):
     col1, col2, col3 = st.columns(3)
@@ -60,14 +60,14 @@ with st.form("add_trade_form"):
         )
         st.success("✅ Trade ajouté")
 
-# 💰 Bloc de mise de départ
+# ✅ Mise de départ intégrée dans la même page
 st.subheader("💰 Mise de départ ou ajout de capital")
 new_cap = st.number_input("Ajouter au capital (€)", min_value=0.0, step=100.0, format="%.2f")
 if st.button("Ajouter la mise"):
     st.session_state["capital"] += new_cap
     st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
 
-# 📊 Liste des trades
+# ✅ Liste des trades avec suppression
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
 
@@ -84,7 +84,7 @@ for i in df.index:
             st.session_state["data"] = df.drop(i).reset_index(drop=True)
             st.rerun()
 
-# 📈 Statistiques
+# ✅ Statistiques
 st.subheader("📈 Statistiques")
 total_tp = (df["Résultat"] == "TP").sum()
 total_sl = (df["Résultat"] == "SL").sum()
@@ -104,7 +104,7 @@ col4.metric("📉 Total Risk (%)", f"{total_risk}")
 col5.metric("📈 Total Reward (%)", f"{total_reward}")
 col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
-# 💼 Capital + Sauvegarde
+# ✅ Capital + Sauvegarde/Sync
 col7, col8 = st.columns([1, 1])
 with col7:
     st.markdown(f"### 💼 Capital actuel : {st.session_state['capital']:.2f} €")
@@ -136,8 +136,8 @@ with col8:
                 st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0])
             st.session_state["data"] = trade_rows
             st.success("✅ Données et capital importés.")
-            if "import_done" not in st.session_state:
-                st.session_state["import_done"] = True
-                st.rerun()
+            # ✅ Activer relance unique
+            st.session_state["trigger_rerun"] = True
+            st.rerun()
         except Exception as e:
             st.error(f"❌ Erreur : {e}")
