@@ -46,21 +46,19 @@ with st.form("add_trade_form"):
     with col2:
         actif = st.text_input("Actif", value="EUR/USD")
         resultat = st.selectbox("Résultat", ["TP", "SL"])
-        mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
     with col3:
         risk = st.number_input("Risk (%)", min_value=0.0, step=0.01, format="%.2f")
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
-
-    # Calcul automatique du gain
-    if resultat == "TP":
-        gain = round(mise * reward, 2)
-    elif resultat == "SL":
-        gain = round(-mise * risk, 2)
-    else:
-        gain = 0.0
+        mise = st.number_input("Mise (€)", min_value=0.0, step=1.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
+        gain = 0.0
+        if resultat == "SL":
+            gain = -mise * risk
+        elif resultat == "TP":
+            gain = mise * reward
+
         new_row = {
             "Date": date,
             "Session": session,
@@ -98,17 +96,23 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 # 📊 Liste des trades
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
+expected_cols = ["Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Mise (€)", "Gain (€)"]
+for col in expected_cols:
+    if col not in df.columns:
+        df[col] = ""
+
 for i in df.index:
-    cols = st.columns([1])
-    result = df.loc[i, "Résultat"]
+    trade = df.loc[i]
+    result = trade["Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "black"
-    value = df.loc[i, "Gain (€)"]
-    try:
-        value_str = f"{float(value):.2f}"
-    except:
-        value_str = value
-    style = f"<span style='color:{color}'>{value_str}</span>"
-    cols[0].markdown(style, unsafe_allow_html=True)
+
+    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
+    fields = ["Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Mise (€)", "Gain (€)"]
+    for j, field in enumerate(fields):
+        value = trade[field]
+        value = "" if pd.isna(value) else value
+        cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
+
     with cols[-1]:
         if st.button("🗑️", key=f"delete_{i}"):
             st.session_state["data"] = df.drop(i).reset_index(drop=True)
