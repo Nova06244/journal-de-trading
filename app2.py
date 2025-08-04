@@ -19,19 +19,19 @@ if "data" not in st.session_state:
             st.session_state["data"] = trade_rows
         except:
             st.session_state["data"] = pd.DataFrame(columns=[
-                "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Mise (€)", "Gain (€)"
+                "Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
             ])
             st.session_state["capital"] = 0.0
     else:
         st.session_state["data"] = pd.DataFrame(columns=[
-            "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Mise (€)", "Gain (€)"
+            "Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
         ])
         st.session_state["capital"] = 0.0
 
 def save_data():
     capital_row = pd.DataFrame([{
         "Date": "", "Session": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Risk (%)": "", "Reward (%)": "", "Mise (€)": "", "Gain (€)": st.session_state["capital"]
+        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
     export_df = pd.concat([st.session_state["data"], capital_row], ignore_index=True)
     export_df.to_csv(SAVE_FILE, index=False)
@@ -44,12 +44,12 @@ with st.form("add_trade_form"):
         date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
-        actif = st.text_input("Actif", value="XAU/USD")
+        actif = st.text_input("Actif", value="EUR/USD")
         resultat = st.selectbox("Résultat", ["TP", "SL"])
+        mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
     with col3:
         risk = st.number_input("Risk (%)", min_value=0.0, step=0.01, format="%.2f")
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
-        mise = st.number_input("Mise (€)", min_value=0.0, step=1.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
@@ -64,9 +64,9 @@ with st.form("add_trade_form"):
             "Session": session,
             "Actif": actif,
             "Résultat": resultat,
+            "Mise (€)": mise,
             "Risk (%)": risk,
             "Reward (%)": reward,
-            "Mise (€)": mise,
             "Gain (€)": gain
         }
         st.session_state["data"] = pd.concat(
@@ -96,23 +96,14 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 # 📊 Liste des trades
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
-expected_cols = ["Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Mise (€)", "Gain (€)"]
-for col in expected_cols:
-    if col not in df.columns:
-        df[col] = ""
-
 for i in df.index:
-    trade = df.loc[i]
-    result = trade["Résultat"]
-    color = "green" if result == "TP" else "red" if result == "SL" else "black"
-
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
-    fields = ["Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Mise (€)", "Gain (€)"]
-    for j, field in enumerate(fields):
-        value = trade[field]
+    result = df.loc[i, "Résultat"]
+    color = "green" if result == "TP" else "red" if result == "SL" else "black"
+    for j, col_name in enumerate(df.columns):
+        value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
-
     with cols[-1]:
         if st.button("🗑️", key=f"delete_{i}"):
             st.session_state["data"] = df.drop(i).reset_index(drop=True)
@@ -121,6 +112,9 @@ for i in df.index:
 
 # 📈 Statistiques
 st.subheader("📈 Statistiques")
+df["Risk (%)"] = pd.to_numeric(df["Risk (%)"], errors="coerce").fillna(0)
+df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
+
 total_tp = (df["Résultat"] == "TP").sum()
 total_sl = (df["Résultat"] == "SL").sum()
 total_gain = df["Gain (€)"].sum()
@@ -135,12 +129,42 @@ col2.metric("❌ Total SL", total_sl)
 col3.metric("🏆 Winrate", f"{winrate:.2f}%")
 
 col4, col5, col6 = st.columns(3)
-col4.metric("📉 Total Risk (%)", f"{total_risk}")
-col5.metric("📈 Total Reward (%)", f"{total_reward}")
+col4.metric("📉 Total Risk (%)", f"{total_risk:.2f}")
+col5.metric("📈 Total Reward (%)", f"{total_reward:.2f}")
 col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
 st.markdown("### 🧮 Capital total (Capital + Gains)")
 st.success(f"💼 {capital_total:.2f} €")
+
+# 📈 Graphe de performance
+st.subheader("📈 Graphe de performance : Capital cumulé")
+
+if not df.empty:
+    df_graph = df.copy()
+    df_graph["Date"] = pd.to_datetime(df_graph["Date"], format="%d/%m/%Y", errors="coerce")
+    df_graph = df_graph.sort_values("Date")
+    df_graph["Gain (€)"] = pd.to_numeric(df_graph["Gain (€)"], errors="coerce").fillna(0)
+    df_graph["Cumul des gains"] = df_graph["Gain (€)"].cumsum()
+    df_graph["Capital cumulé"] = st.session_state["capital"] + df_graph["Cumul des gains"]
+
+    st.line_chart(df_graph.set_index("Date")[["Capital cumulé"]])
+else:
+    st.info("Aucun trade enregistré pour générer le graphe du capital.")
+
+# 📊 Graphe R/R
+st.subheader("📊 Reward / Risk Ratio par Trade")
+
+if not df.empty:
+    df_rr = df.copy()
+    df_rr["Reward (%)"] = pd.to_numeric(df_rr["Reward (%)"], errors="coerce").fillna(0)
+    df_rr["Risk (%)"] = pd.to_numeric(df_rr["Risk (%)"], errors="coerce").replace(0, pd.NA)
+    df_rr["R/R"] = df_rr["Reward (%)"] / df_rr["Risk (%)"]
+    df_rr["Trade"] = df_rr.index + 1
+    rr_chart_data = df_rr[["Trade", "R/R"]].dropna().set_index("Trade")
+
+    st.bar_chart(rr_chart_data)
+else:
+    st.info("Aucun trade enregistré pour générer le graphe Reward/Risk.")
 
 # 💾 Sauvegarde & Import manuel
 st.markdown("---")
@@ -149,7 +173,7 @@ csv = pd.concat([
     st.session_state["data"],
     pd.DataFrame([{
         "Date": "", "Session": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Risk (%)": "", "Reward (%)": "", "Mise (€)": "", "Gain (€)": st.session_state["capital"]
+        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
 ], ignore_index=True).to_csv(index=False).encode("utf-8")
 st.download_button(
