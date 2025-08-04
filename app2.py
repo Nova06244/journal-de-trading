@@ -44,7 +44,7 @@ with st.form("add_trade_form"):
         date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
-        actif = st.text_input("Actif", value="EUR/USD")
+        actif = st.text_input("Actif", value="XAU/USD")
         resultat = st.selectbox("Résultat", ["TP", "SL"])
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
     with col3:
