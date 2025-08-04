@@ -1,164 +1,138 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import os
-
-SAVE_FILE = "journal_trading.csv"
+import json
 
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# Chargement automatique du fichier si présent
+SAVE_FILE = "journal_trading.csv"
+LOCAL_FILE = "local_state.json"
+
+# Chargement local si existant
+if os.path.exists(LOCAL_FILE):
+    with open(LOCAL_FILE, "r") as f:
+        saved = json.load(f)
+        st.session_state["capital"] = saved.get("capital", 0.0)
+        st.session_state["data"] = pd.DataFrame.from_dict(saved.get("data", {}))
+
+# Initialisation
 if "data" not in st.session_state:
-    if os.path.exists(SAVE_FILE):
-        try:
-            full_df = pd.read_csv(SAVE_FILE)
-            cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
-            trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
-            st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
-            st.session_state["data"] = trade_rows
-        except:
-            st.session_state["data"] = pd.DataFrame(columns=[
-                "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
-            ])
-            st.session_state["capital"] = 0.0
-    else:
-        st.session_state["data"] = pd.DataFrame(columns=[
-            "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Gain (€)"
-        ])
-        st.session_state["capital"] = 0.0
+    st.session_state["data"] = pd.DataFrame(columns=[
+        "Date", "Session", "Actif", "Résultat", "Risk (%)", "Reward (%)", "Mise (€)", "Gain (€)"
+    ])
+if "capital" not in st.session_state:
+    st.session_state["capital"] = 0.0
 
-def save_data():
-    capital_row = pd.DataFrame([{
-        "Date": "", "Session": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
-    }])
-    export_df = pd.concat([st.session_state["data"], capital_row], ignore_index=True)
-    export_df.to_csv(SAVE_FILE, index=False)
-
-# 📋 Formulaire d'ajout de trade
-st.subheader("📋 Entrée d'un trade")
-with st.form("add_trade_form"):
+# --- Formulaire d’ajout de trade ---
+st.subheader("📋 Entrée d’un trade")
+with st.form("form_trade"):
     col1, col2, col3 = st.columns(3)
     with col1:
-        date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
+        date = st.date_input("Date", format="DD/MM/YYYY")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
-        actif = st.text_input("Actif", value="EUR/USD")
+        actif = st.text_input("Actif", "EUR/USD")
         resultat = st.selectbox("Résultat", ["TP", "SL"])
     with col3:
         risk = st.number_input("Risk (%)", min_value=0.0, step=0.01, format="%.2f")
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
-        mise_trade = st.number_input("Mise sur ce trade (€)", min_value=0.0, step=10.0, format="%.2f")
+        mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
-        if resultat == "SL":
-            gain = -mise_trade * (risk / 100)
-        else:
-            gain = mise_trade * (reward / 100)
-
     if submitted:
+        gain = mise * reward / 100 if resultat == "TP" else - mise * risk / 100
         new_row = {
-            "Date": date,
+            "Date": date.strftime("%d/%m/%Y"),
             "Session": session,
             "Actif": actif,
             "Résultat": resultat,
-            "Risk (%)": risk,
-            "Reward (%)": reward,
-            "Gain (€)": gain
+            "Risk (%)": round(risk, 2),
+            "Reward (%)": round(reward, 2),
+            "Mise (€)": mise,
+            "Gain (€)": round(gain, 2)
         }
         st.session_state["data"] = pd.concat(
             [st.session_state["data"], pd.DataFrame([new_row])],
             ignore_index=True
         )
-        save_data()
-        st.success("✅ Trade ajouté")
+        st.success("✅ Trade ajouté.")
 
-# 💰 Mise de départ
+# --- Mise de départ ---
 st.subheader("💰 Mise de départ ou ajout de capital")
-col_cap1, col_cap2 = st.columns([2, 1])
-with col_cap1:
-    new_cap = st.number_input("Ajouter au capital (€)", min_value=0.0, step=100.0, format="%.2f")
-with col_cap2:
-    if st.button("Ajouter la mise"):
-        st.session_state["capital"] += new_cap
-        save_data()
-        st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
-    if st.button("♻️ Réinitialiser la mise de départ"):
-        st.session_state["capital"] = 0.0
-        save_data()
-        st.success("🔁 Mise de départ réinitialisée à 0 €")
+cap1, cap2 = st.columns([3, 1])
+with cap1:
+    capital_input = st.number_input("Ajouter au capital (€)", min_value=0.0, step=100.0, format="%.2f")
+with cap2:
+    if st.button("Ajouter"):
+        st.session_state["capital"] += capital_input
+        st.success("✅ Capital ajouté.")
 
+if st.button("🔁 Réinitialiser la mise de départ"):
+    st.session_state["capital"] = 0.0
+    st.success("✅ Mise réinitialisée.")
 
-st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €")
+st.markdown(f"💼 **Capital actuel : {st.session_state['capital']:.2f} €**")
 
-# 📊 Liste des trades
+# --- Liste des trades ---
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
+
 for i in df.index:
-    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 0.1])
-    result = df.loc[i, "Résultat"]
-    color = "green" if result == "TP" else "red" if result == "SL" else "black"
-    for j, col_name in enumerate(df.columns):
-        value = df.loc[i, col_name]
-        style = f"<span style='color:{color}'>{value}</span>"
-        cols[j].markdown(style, unsafe_allow_html=True)
+    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
+    couleur = "green" if df.loc[i, "Résultat"] == "TP" else "red" if df.loc[i, "Résultat"] == "SL" else "black"
+    for j, col in enumerate(df.columns):
+        val = df.loc[i, col]
+        cols[j].markdown(f"<span style='color:{couleur}'>{val}</span>", unsafe_allow_html=True)
     with cols[-1]:
-        if st.button("🗑️", key=f"delete_{i}"):
+        if st.button("🗑️", key=f"del_{i}"):
             st.session_state["data"] = df.drop(i).reset_index(drop=True)
-            save_data()
             st.rerun()
 
-# 📈 Statistiques
+# --- Statistiques ---
 st.subheader("📈 Statistiques")
-total_tp = (df["Résultat"] == "TP").sum()
-total_sl = (df["Résultat"] == "SL").sum()
-total_gain = df["Gain (€)"].sum()
-total_risk = df["Risk (%)"].sum()
-total_reward = df["Reward (%)"].sum()
-winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
-capital_total = st.session_state["capital"] + total_gain
+tp = (df["Résultat"] == "TP").sum()
+sl = (df["Résultat"] == "SL").sum()
+gain_total = df["Gain (€)"].sum()
+winrate = (tp / (tp + sl)) * 100 if tp + sl > 0 else 0
+capital_total = st.session_state["capital"] + gain_total
 
 col1, col2, col3 = st.columns(3)
-col1.metric("✅ Total TP", total_tp)
-col2.metric("❌ Total SL", total_sl)
+col1.metric("✅ TP", tp)
+col2.metric("❌ SL", sl)
 col3.metric("🏆 Winrate", f"{winrate:.2f}%")
 
-col4, col5, col6 = st.columns(3)
-col4.metric("📉 Total Risk (%)", f"{total_risk}")
-col5.metric("📈 Total Reward (%)", f"{total_reward}")
-col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
+st.markdown(f"### 🧮 Capital total : **{capital_total:.2f} €**")
 
-st.markdown("### 🧮 Capital total (Capital + Gains)")
-st.success(f"💼 {capital_total:.2f} €")
+# --- Sauvegarde CSV ---
+st.subheader("💾 Sauvegarde & Importation")
+# Ajout capital dans le CSV
+capital_row = pd.DataFrame([{
+    "Date": "", "Session": "", "Actif": "__CAPITAL__",
+    "Résultat": "", "Risk (%)": "", "Reward (%)": "", "Mise (€)": "", "Gain (€)": st.session_state["capital"]
+}])
+export_df = pd.concat([df, capital_row], ignore_index=True)
+csv = export_df.to_csv(index=False).encode("utf-8")
 
-# 💾 Sauvegarde & Import manuel
-st.markdown("---")
-st.subheader("💾 Exporter / Importer manuellement")
-csv = pd.concat([
-    st.session_state["data"],
-    pd.DataFrame([{
-        "Date": "", "Session": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
-    }])
-], ignore_index=True).to_csv(index=False).encode("utf-8")
-st.download_button(
-    label="📤 Exporter tout (CSV)",
-    data=csv,
-    file_name="journal_trading.csv",
-    mime="text/csv"
-)
+st.download_button("📤 Exporter (CSV)", data=csv, file_name=SAVE_FILE, mime="text/csv")
 
-uploaded_file = st.file_uploader("📥 Importer un fichier CSV", type=["csv"])
-if uploaded_file and st.button("✅ Accepter l'import"):
+# Import CSV
+uploaded = st.file_uploader("📥 Importer un fichier CSV", type=["csv"])
+if uploaded and st.button("✅ Appliquer l'import"):
     try:
-        full_df = pd.read_csv(uploaded_file)
-        cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
-        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
-        st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
-        st.session_state["data"] = trade_rows
-        save_data()
-        st.success("✅ Données et capital importés.")
+        full = pd.read_csv(uploaded)
+        cap = full[full["Actif"] == "__CAPITAL__"]
+        trades = full[full["Actif"] != "__CAPITAL__"]
+        st.session_state["data"] = trades
+        st.session_state["capital"] = float(cap["Gain (€)"].iloc[0]) if not cap.empty else 0.0
+        st.success("✅ Données importées.")
         st.rerun()
     except Exception as e:
-        st.error(f"❌ Erreur d'importation : {e}")
+        st.error(f"❌ Erreur : {e}")
+
+# --- Sauvegarde automatique locale ---
+with open(LOCAL_FILE, "w") as f:
+    json.dump({
+        "capital": st.session_state["capital"],
+        "data": st.session_state["data"].to_dict()
+    }, f)
