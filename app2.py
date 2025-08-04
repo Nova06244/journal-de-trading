@@ -47,8 +47,8 @@ with st.form("add_trade_form"):
         actif = st.text_input("Actif", value="EUR/USD")
         resultat = st.selectbox("Résultat", ["TP", "SL"])
     with col3:
-        risk = st.number_input("Risk (%)", min_value=0, step=1)
-        reward = st.number_input("Reward (%)", min_value=0, step=1)
+        risk = st.number_input("Risk (%)", min_value=0.0, step=0.01, format="%.2f")
+        reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
         gain = st.number_input("Gain (€)", step=0.01, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
