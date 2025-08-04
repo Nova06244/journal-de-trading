@@ -49,9 +49,14 @@ with st.form("add_trade_form"):
     with col3:
         risk = st.number_input("Risk (%)", min_value=0.0, step=0.01, format="%.2f")
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
-        gain = st.number_input("Gain (€)", step=0.01, format="%.2f")
+        mise_trade = st.number_input("Mise sur ce trade (€)", min_value=0.0, step=10.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
+        if resultat == "SL":
+            gain = -mise_trade * (risk / 100)
+        else:
+            gain = mise_trade * (reward / 100)
+
     if submitted:
         new_row = {
             "Date": date,
