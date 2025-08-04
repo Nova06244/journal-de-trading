@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import matplotlib.pyplot as plt
 import os
 
 SAVE_FILE = "journal_trading.csv"
-
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
@@ -53,12 +53,7 @@ with st.form("add_trade_form"):
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
-        gain = 0.0
-        if resultat == "SL":
-            gain = -mise * risk
-        elif resultat == "TP":
-            gain = mise * reward
-
+        gain = -mise * risk if resultat == "SL" else mise * reward
         new_row = {
             "Date": date,
             "Session": session,
@@ -97,9 +92,9 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
 for i in df.index:
-    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
+    cols = st.columns([1]*len(df.columns) + [0.1])
     result = df.loc[i, "Résultat"]
-    color = "green" if result == "TP" else "red" if result == "SL" else "black"
+    color = "green" if result == "TP" else "red"
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
@@ -114,6 +109,7 @@ for i in df.index:
 st.subheader("📈 Statistiques")
 df["Risk (%)"] = pd.to_numeric(df["Risk (%)"], errors="coerce").fillna(0)
 df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
+df["Gain (€)"] = pd.to_numeric(df["Gain (€)"], errors="coerce").fillna(0)
 
 total_tp = (df["Résultat"] == "TP").sum()
 total_sl = (df["Résultat"] == "SL").sum()
@@ -133,42 +129,49 @@ col4.metric("📉 Total Risk (%)", f"{total_risk:.2f}")
 col5.metric("📈 Total Reward (%)", f"{total_reward:.2f}")
 col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
-st.markdown("### 🧮 Capital total (Capital + Gains)")
-st.success(f"💼 {capital_total:.2f} €")
+st.success(f"💼 Capital total : {capital_total:.2f} €")
 
-# 📈 Graphe de performance
-st.subheader("📈 Graphe de performance : Capital cumulé")
+# 📈 Graphe capital cumulé
+st.subheader("📈 Graphe Capital cumulé avec session")
 
 if not df.empty:
     df_graph = df.copy()
-    df_graph["Date"] = pd.to_datetime(df_graph["Date"], format="%d/%m/%Y", errors="coerce")
-    df_graph = df_graph.sort_values("Date")
-    df_graph["Gain (€)"] = pd.to_numeric(df_graph["Gain (€)"], errors="coerce").fillna(0)
-    df_graph["Cumul des gains"] = df_graph["Gain (€)"].cumsum()
-    df_graph["Capital cumulé"] = st.session_state["capital"] + df_graph["Cumul des gains"]
+    df_graph["DateTime"] = pd.to_datetime(df_graph["Date"] + " " + df_graph["Session"].str.extract(r'(\d{1,2}h\d{0,2})')[0].fillna("00h00").str.replace("h", ":"), errors='coerce')
+    df_graph = df_graph.sort_values("DateTime")
+    df_graph["Cumul"] = df_graph["Gain (€)"].cumsum() + st.session_state["capital"]
 
-    st.line_chart(df_graph.set_index("Date")[["Capital cumulé"]])
-else:
-    st.info("Aucun trade enregistré pour générer le graphe du capital.")
+    fig, ax = plt.subplots()
+    ax.plot(df_graph["DateTime"], df_graph["Cumul"], label="Capital cumulé", marker='o')
+    ax.axhline(y=st.session_state["capital"], color='blue', linewidth=2, linestyle='--', label='Mise de départ')
+    ax.set_xlabel("Date et Heure")
+    ax.set_ylabel("Capital (€)")
+    ax.set_title("Évolution du capital")
+    ax.legend()
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
 
-# 📊 Graphe R/R
-st.subheader("📊 Reward / Risk Ratio par Trade")
+# 📊 Graphe Risk vs Reward
+st.subheader("📊 Risk vs Reward")
 
 if not df.empty:
     df_rr = df.copy()
-    df_rr["Reward (%)"] = pd.to_numeric(df_rr["Reward (%)"], errors="coerce").fillna(0)
-    df_rr["Risk (%)"] = pd.to_numeric(df_rr["Risk (%)"], errors="coerce").replace(0, pd.NA)
-    df_rr["R/R"] = df_rr["Reward (%)"] / df_rr["Risk (%)"]
-    df_rr["Trade"] = df_rr.index + 1
-    rr_chart_data = df_rr[["Trade", "R/R"]].dropna().set_index("Trade")
+    df_rr["Reward"] = df_rr.apply(lambda x: x["Reward (%)"] if x["Résultat"] == "TP" else 0, axis=1)
+    df_rr["Risk"] = df_rr.apply(lambda x: -x["Risk (%)"] if x["Résultat"] == "SL" else 0, axis=1)
+    df_rr["Index"] = range(1, len(df_rr)+1)
 
-    st.bar_chart(rr_chart_data)
-else:
-    st.info("Aucun trade enregistré pour générer le graphe Reward/Risk.")
+    fig2, ax2 = plt.subplots()
+    ax2.bar(df_rr["Index"], df_rr["Reward"], color='green', label='Reward')
+    ax2.bar(df_rr["Index"], df_rr["Risk"], color='red', label='Risk')
+    ax2.axhline(0, color='black', linewidth=0.8)
+    ax2.set_title("Risk vs Reward par trade")
+    ax2.set_xlabel("Trade")
+    ax2.set_ylabel("R/R")
+    ax2.legend()
+    st.pyplot(fig2)
 
-# 💾 Sauvegarde & Import manuel
+# 💾 Export / Import
 st.markdown("---")
-st.subheader("💾 Exporter / Importer manuellement")
+st.subheader("💾 Export / Import CSV")
 csv = pd.concat([
     st.session_state["data"],
     pd.DataFrame([{
@@ -176,12 +179,7 @@ csv = pd.concat([
         "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
 ], ignore_index=True).to_csv(index=False).encode("utf-8")
-st.download_button(
-    label="📤 Exporter tout (CSV)",
-    data=csv,
-    file_name="journal_trading.csv",
-    mime="text/csv"
-)
+st.download_button("📤 Exporter le journal", data=csv, file_name="journal_trading.csv", mime="text/csv")
 
 uploaded_file = st.file_uploader("📥 Importer un fichier CSV", type=["csv"])
 if uploaded_file and st.button("✅ Accepter l'import"):
@@ -195,13 +193,4 @@ if uploaded_file and st.button("✅ Accepter l'import"):
         st.success("✅ Données et capital importés.")
         st.rerun()
     except Exception as e:
-        st.error(f"❌ Erreur d'importation : {e}")
-
-
-# 📊 Graphiques de performance
-
-st.subheader("📉 Performance du capital cumulé (avec heure)")
-st.image("graph_final_capital_cumule.png", use_column_width=True)
-
-st.subheader("📊 Comparaison Reward vs Risk")
-st.image("graph_final_reward_vs_risk.png", use_column_width=True)
+        st.error(f"❌ Erreur : {e}")
