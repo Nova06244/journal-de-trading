@@ -84,6 +84,9 @@ with col_cap2:
         save_data()
         st.success("🔁 Mise de départ réinitialisée à 0 €")
 
+
+st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €")
+
 # 📊 Liste des trades
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
