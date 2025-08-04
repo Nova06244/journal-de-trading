@@ -44,22 +44,23 @@ with st.form("add_trade_form"):
         date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
-        actif = st.text_input("Actif", value="XAU/USD")
+        actif = st.text_input("Actif", value="EUR/USD")
         resultat = st.selectbox("Résultat", ["TP", "SL"])
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
     with col3:
         risk = st.number_input("Risk (%)", min_value=0.0, step=0.01, format="%.2f")
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
 
+    # Calcul automatique du gain
+    if resultat == "TP":
+        gain = round(mise * reward, 2)
+    elif resultat == "SL":
+        gain = round(-mise * risk, 2)
+    else:
+        gain = 0.0
+
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
-        if resultat == "TP":
-            gain = mise * reward
-        elif resultat == "SL":
-            gain = -mise * risk
-        else:
-            gain = 0.0
-
         new_row = {
             "Date": date,
             "Session": session,
@@ -68,9 +69,8 @@ with st.form("add_trade_form"):
             "Risk (%)": risk,
             "Reward (%)": reward,
             "Mise (€)": mise,
-            "Gain (€)": round(gain, 2)
+            "Gain (€)": gain
         }
-
         st.session_state["data"] = pd.concat(
             [st.session_state["data"], pd.DataFrame([new_row])],
             ignore_index=True
@@ -99,13 +99,16 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
 for i in df.index:
-    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
+    cols = st.columns([1])
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "black"
-    for j, col_name in enumerate(df.columns):
-        value = df.loc[i, col_name]
-        style = f"<span style='color:{color}'>{value}</span>"
-        cols[j].markdown(style, unsafe_allow_html=True)
+    value = df.loc[i, "Gain (€)"]
+    try:
+        value_str = f"{float(value):.2f}"
+    except:
+        value_str = value
+    style = f"<span style='color:{color}'>{value_str}</span>"
+    cols[0].markdown(style, unsafe_allow_html=True)
     with cols[-1]:
         if st.button("🗑️", key=f"delete_{i}"):
             st.session_state["data"] = df.drop(i).reset_index(drop=True)
@@ -117,8 +120,8 @@ st.subheader("📈 Statistiques")
 total_tp = (df["Résultat"] == "TP").sum()
 total_sl = (df["Résultat"] == "SL").sum()
 total_gain = df["Gain (€)"].sum()
-total_risk = df["Risk (%)"].sum()
-total_reward = df["Reward (%)"].sum()
+total_risk = df[df["Résultat"] == "SL"]["Risk (%)"].sum()
+total_reward = df[df["Résultat"] == "TP"]["Reward (%)"].sum()
 winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
 capital_total = st.session_state["capital"] + total_gain
 
@@ -128,8 +131,8 @@ col2.metric("❌ Total SL", total_sl)
 col3.metric("🏆 Winrate", f"{winrate:.2f}%")
 
 col4, col5, col6 = st.columns(3)
-col4.metric("📉 Total Risk", f"{total_risk}")
-col5.metric("📈 Total Reward", f"{total_reward}")
+col4.metric("📉 Total Risk (%)", f"{total_risk}")
+col5.metric("📈 Total Reward (%)", f"{total_reward}")
 col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
 st.markdown("### 🧮 Capital total (Capital + Gains)")
