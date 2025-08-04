@@ -196,3 +196,12 @@ if uploaded_file and st.button("✅ Accepter l'import"):
         st.rerun()
     except Exception as e:
         st.error(f"❌ Erreur d'importation : {e}")
+
+
+# 📊 Graphiques de performance
+
+st.subheader("📉 Performance du capital cumulé (avec heure)")
+st.image("graph_final_capital_cumule.png", use_column_width=True)
+
+st.subheader("📊 Comparaison Reward vs Risk")
+st.image("graph_final_reward_vs_risk.png", use_column_width=True)
