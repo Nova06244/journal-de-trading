@@ -84,7 +84,6 @@ with col_cap2:
         save_data()
         st.success("🔁 Mise de départ réinitialisée à 0 €")
 
-
 st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €")
 
 # 📊 Liste des trades
@@ -96,7 +95,11 @@ for i in df.index:
     color = "green" if result == "TP" else "red" if result == "SL" else "black"
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
-        style = f"<span style='color:{color}'>{value}</span>"
+        try:
+            value_str = f"{float(value):.2f}" if isinstance(value, (int, float)) or str(value).replace('.', '', 1).isdigit() else value
+        except:
+            value_str = value
+        style = f"<span style='color:{color}'>{value_str}</span>"
         cols[j].markdown(style, unsafe_allow_html=True)
     with cols[-1]:
         if st.button("🗑️", key=f"delete_{i}"):
