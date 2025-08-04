@@ -44,7 +44,7 @@ with st.form("add_trade_form"):
         date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
-        actif = st.text_input("Actif", value="XAU/USD")
+        actif = st.text_input("Actif", value="EUR/USD")
         resultat = st.selectbox("Résultat", ["TP", "SL"])
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
     with col3:
@@ -54,9 +54,9 @@ with st.form("add_trade_form"):
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
         if resultat == "TP":
-            gain = mise * (reward / 100)
+            gain = mise * reward
         elif resultat == "SL":
-            gain = -mise * (risk / 100)
+            gain = -mise * risk
         else:
             gain = 0.0
 
@@ -128,8 +128,8 @@ col2.metric("❌ Total SL", total_sl)
 col3.metric("🏆 Winrate", f"{winrate:.2f}%")
 
 col4, col5, col6 = st.columns(3)
-col4.metric("📉 Total Risk (%)", f"{total_risk}")
-col5.metric("📈 Total Reward (%)", f"{total_reward}")
+col4.metric("📉 Total Risk", f"{total_risk}")
+col5.metric("📈 Total Reward", f"{total_reward}")
 col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
 st.markdown("### 🧮 Capital total (Capital + Gains)")
