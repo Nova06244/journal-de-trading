@@ -8,7 +8,7 @@ SAVE_FILE = "journal_trading.csv"
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# Chargement automatique du fichier si présent
+# Chargement automatique
 if "data" not in st.session_state:
     if os.path.exists(SAVE_FILE):
         try:
@@ -44,23 +44,26 @@ with st.form("add_trade_form"):
         date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
-        actif = st.text_input("Actif", value="XAU/USD")
+        actif = st.text_input("Actif", value="XAU-USD")
         resultat = st.selectbox("Résultat", ["TP", "SL", "Breakeven", "Pas de trade"])
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
     with col3:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
-        gain = 0.0
-        if resultat == "TP":
-            gain = mise * reward
-        elif resultat == "SL":
-            gain = -mise * 1  # Risque fixe à 1
-        elif resultat == "Breakeven":
-            gain = st.number_input("Montant du Breakeven (€)", value=0.0, step=0.01, format="%.2f")
-        elif resultat == "Pas de trade":
-            gain = 0.0
+        breakeven_gain = 0.0
+        if resultat == "Breakeven":
+            breakeven_gain = st.number_input("Gain Breakeven (€)", value=0.0, step=1.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
+        if resultat == "SL":
+            gain = -mise * 1  # Risque fixe à 1
+        elif resultat == "TP":
+            gain = mise * reward
+        elif resultat == "Breakeven":
+            gain = breakeven_gain
+        else:
+            gain = 0.0
+
         new_row = {
             "Date": date,
             "Session": session,
@@ -100,8 +103,8 @@ df = st.session_state["data"]
 for i in df.index:
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 0.1])
     result = df.loc[i, "Résultat"]
-    color = "green" if result == "TP" else "red" if result == "SL" else "black"
-    for j, col_name in enumerate(["Date", "Session", "Actif", "Résultat", "Mise (€)", "Reward (%)", "Gain (€)"]):
+    color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "black"
+    for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
@@ -117,6 +120,8 @@ df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
 
 total_tp = (df["Résultat"] == "TP").sum()
 total_sl = (df["Résultat"] == "SL").sum()
+total_be = (df["Résultat"] == "Breakeven").sum()
+total_nt = (df["Résultat"] == "Pas de trade").sum()
 total_gain = df["Gain (€)"].sum()
 total_reward = df[df["Résultat"] == "TP"]["Reward (%)"].sum()
 winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
@@ -125,11 +130,12 @@ capital_total = st.session_state["capital"] + total_gain
 col1, col2, col3 = st.columns(3)
 col1.metric("✅ Total TP", total_tp)
 col2.metric("❌ Total SL", total_sl)
-col3.metric("🏆 Winrate", f"{winrate:.2f}%")
+col3.metric("💙 Breakeven", total_be)
 
-col4, col5 = st.columns(2)
-col4.metric("📈 Total Reward (%)", f"{total_reward:.2f}")
-col5.metric("💰 Gain total (€)", f"{total_gain:.2f}")
+col4, col5, col6 = st.columns(3)
+col4.metric("🕒 Pas de trade", total_nt)
+col5.metric("📈 Total Reward", f"{total_reward:.2f}")
+col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
 st.markdown("### 🧮 Capital total (Capital + Gains)")
 st.success(f"💼 {capital_total:.2f} €")
@@ -164,3 +170,63 @@ if uploaded_file and st.button("✅ Accepter l'import"):
         st.rerun()
     except Exception as e:
         st.error(f"❌ Erreur d'importation : {e}")
+
+ajout de capital")
+col_cap1, col_cap2 = st.columns([2, 1])
+with col_cap1:
+    new_cap = st.number_input("Ajouter au capital (€)", min_value=0.0, step=100.0, format="%.2f")
+with col_cap2:
+    if st.button("Ajouter la mise"):
+        st.session_state["capital"] += new_cap
+        save_data()
+        st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
+    if st.button("♻️ Réinitialiser la mise de départ"):
+        st.session_state["capital"] = 0.0
+        save_data()
+        st.success("🔁 Mise de départ réinitialisée à 0 €")
+
+st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €")
+
+# 📊 Liste des trades
+st.subheader("📊 Liste des trades")
+df = st.session_state["data"]
+for i in df.index:
+    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 0.1])
+    result = df.loc[i, "Résultat"]
+    color = (
+        "green" if result == "TP"
+        else "red" if result == "SL"
+        else "blue" if result == "Breakeven"
+        else "black"
+    )
+    for j, col_name in enumerate(df.columns):
+        value = df.loc[i, col_name]
+        value = "" if pd.isna(value) else value
+        cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
+    with cols[-1]:
+        if st.button("🗑️", key=f"delete_{i}"):
+            st.session_state["data"] = df.drop(i).reset_index(drop=True)
+            save_data()
+            st.rerun()
+
+# 📈 Statistiques
+st.subheader("📈 Statistiques")
+df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
+total_tp = (df["Résultat"] == "TP").sum()
+total_sl = (df["Résultat"] == "SL").sum()
+total_gain = df["Gain (€)"].sum()
+total_reward = df[df["Résultat"] == "TP"]["Reward (%)"].sum()
+winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
+capital_total = st.session_state["capital"] + total_gain
+
+col1, col2, col3 = st.columns(3)
+col1.metric("✅ Total TP", total_tp)
+col2.metric("❌ Total SL", total_sl)
+col3.metric("🏆 Winrate", f"{winrate:.2f}%")
+
+col4, col5 = st.columns(2)
+col4.metric("📈 Total Reward (%)", f"{total_reward:.2f}")
+col5.metric("💰 Gain total (€)", f"{total_gain:.2f}")
+
+st.markdown("### 🧮 Capital total (Capital + Gains)")
+st.success(f"💼 {capital_total:.2f} €")
