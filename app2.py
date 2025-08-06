@@ -39,7 +39,7 @@ def save_data():
 # 📋 Formulaire d'ajout de trade
 st.subheader("📋 Entrée d'un trade")
 with st.form("add_trade_form"):
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
@@ -129,6 +129,8 @@ df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
 df["Gain (€)"] = pd.to_numeric(df["Gain (€)"], errors="coerce").fillna(0)
 
 total_tp = (df["Résultat"] == "TP").sum()
+total_be = (df["Résultat"] == "Breakeven").sum()
+total_nt = (df["Résultat"] == "Pas de trade").sum()
 total_sl = (df["Résultat"] == "SL").sum()
 total_be = (df["Résultat"] == "Breakeven").sum()
 total_no_trade = (df["Résultat"] == "Pas de trade").sum()
@@ -139,9 +141,11 @@ total_reward = df[df["Résultat"] == "TP"]["Reward (%)"].sum()
 winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
 capital_total = st.session_state["capital"] + total_gain
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 col1.metric("✅ Total TP", total_tp)
-col2.metric("❌ Total SL", total_sl)
+col2.metric("🟦 Breakeven", total_be)
+col3.metric("➖ Pas de trade", total_nt)
+# col2.metric("❌ Total SL", total_sl)
 col3.metric("🔵 Breakeven", total_be)
 
 col4, col5, col6 = st.columns(3)
