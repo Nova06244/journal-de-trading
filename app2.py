@@ -41,23 +41,23 @@ with st.form("add_trade_form"):
     col1, col2 = st.columns(2)
     with col1:
         date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
-        reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
         actif = st.text_input("Actif", value="XAU/USD")
-    with col2:
-        resultat = st.selectbox("Résultat", ["TP", "SL", "Breakeven", "Pas de trade"])
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
+    with col2:
+        reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
+        resultat = st.selectbox("Résultat", ["TP", "SL", "Breakeven", "Pas de trade"])
         mise = st.number_input("Mise (€)", min_value=0.0, step=1.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
-        risk = 1.0  # fixé à 1
+        risk = 1.0
         if resultat == "TP":
             gain = mise * reward
         elif resultat == "SL":
             gain = -mise * risk
         elif resultat == "Breakeven":
             gain = mise
-        else:  # Pas de trade
+        else:
             gain = 0.0
 
         new_row = {
@@ -103,7 +103,7 @@ for i in df.index:
         "green" if result == "TP"
         else "red" if result == "SL"
         else "blue" if result == "Breakeven"
-        else "white"  # Pas de trade
+        else "white"
     )
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
