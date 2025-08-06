@@ -36,41 +36,47 @@ def save_data():
     export_df = pd.concat([st.session_state["data"], capital_row], ignore_index=True)
     export_df.to_csv(SAVE_FILE, index=False)
 
+
 # 📋 Formulaire d'ajout de trade
 st.subheader("📋 Entrée d'un trade")
 with st.form("add_trade_form"):
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
+    col1a, col1b = st.columns(2)
+    with col1a:
         date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
-        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
-    with col2:
-        actif = st.text_input("Actif", value="XAU-USD")
-        resultat = st.selectbox("Résultat", ["TP", "SL", "Breakeven", "Pas de trade"])
-        mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
-    with col3:
-        risk = 1.0  # Fixé à 1
+    with col1b:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
 
-    gain = 0.0
-    if resultat == "SL":
-        gain = -mise * risk
-    elif resultat == "TP":
-        gain = mise * reward
-    elif resultat == "Breakeven":
-        gain = mise  # mise récupérée en gain
-    elif resultat == "Pas de trade":
-        mise = 0.0
-        gain = 0.0
+    col2a, col2b = st.columns(2)
+    with col2a:
+        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
+    with col2b:
+        actif = st.text_input("Actif", value="XAU-USD")
+
+    col3a, col3b = st.columns(2)
+    with col3a:
+        resultat = st.selectbox("Résultat", ["TP", "SL", "Breakeven", "Pas de trade"])
+    with col3b:
+        mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
+        gain = 0.0
+        if resultat == "SL":
+            gain = -mise * 1
+        elif resultat == "TP":
+            gain = mise * reward
+        elif resultat == "Breakeven":
+            gain = mise
+        elif resultat == "Pas de trade":
+            gain = 0.0
+
         new_row = {
             "Date": date,
             "Session": session,
             "Actif": actif,
             "Résultat": resultat,
             "Mise (€)": mise,
-            "Risk (%)": risk,
+            "Risk (%)": 1.0,
             "Reward (%)": reward,
             "Gain (€)": gain
         }
@@ -80,6 +86,7 @@ with st.form("add_trade_form"):
         )
         save_data()
         st.success("✅ Trade ajouté")
+
 
 # 💰 Mise de départ
 st.subheader("💰 Mise de départ ou ajout de capital")
