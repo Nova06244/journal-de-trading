@@ -163,3 +163,90 @@ col8.metric("📈 Total Reward (%)", f"{total_reward:.2f}")
 st.markdown("### 🧮 Capital total (Capital + Gains)")
 st.success(f"💼 {capital_total:.2f} €")
 
+
+:
+        risk = 1.0
+        gain = 0.0
+        if resultat == "TP":
+            gain = mise * reward
+        elif resultat == "SL":
+            gain = -mise * risk
+        elif resultat == "Breakeven":
+            gain = mise
+        elif resultat == "Pas de trade":
+            gain = 0.0
+
+        new_row = {
+            "Date": date,
+            "Session": session,
+            "Actif": actif,
+            "Résultat": resultat,
+            "Mise (€)": mise,
+            "Risk (%)": risk,
+            "Reward (%)": reward,
+            "Gain (€)": gain
+        }
+        st.session_state["data"] = pd.concat(
+            [st.session_state["data"], pd.DataFrame([new_row])],
+            ignore_index=True
+        )
+        save_data()
+        st.success("✅ Trade ajouté")
+
+# 📈 Statistiques
+st.subheader("📈 Statistiques")
+df = st.session_state["data"]
+df["Risk (%)"] = pd.to_numeric(df["Risk (%)"], errors="coerce").fillna(0)
+df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
+
+total_tp = (df["Résultat"] == "TP").sum()
+total_sl = (df["Résultat"] == "SL").sum()
+total_be = (df["Résultat"] == "Breakeven").sum()
+total_none = (df["Résultat"] == "Pas de trade").sum()
+total_reward = df[df["Résultat"] == "TP"]["Reward (%)"].sum()
+total_risk = df[df["Résultat"] == "SL"]["Risk (%)"].sum()
+winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
+total_gain = df["Gain (€)"].sum()
+
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("✅ Total TP", total_tp)
+col2.metric("❌ Total SL", total_sl)
+col3.metric("🟦 Breakeven", total_be)
+col4.metric("⏸️ Pas de trade", total_none)
+
+col5, col6, col7, col8 = st.columns(4)
+col5.metric("📈 Total Reward", f"{total_reward:.2f}")
+col6.metric("📉 Total Risk", f"{total_risk:.2f}")
+col7.metric("🏆 Winrate", f"{winrate:.2f}%")
+col8.metric("💰 Gain total (€)", f"{total_gain:.2f}")
+
+# 💾 Sauvegarde & Import manuel
+st.markdown("---")
+st.subheader("💾 Exporter / Importer manuellement")
+csv = pd.concat([
+    st.session_state["data"],
+    pd.DataFrame([{
+        "Date": "", "Session": "", "Actif": "__CAPITAL__",
+        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
+    }])
+], ignore_index=True).to_csv(index=False).encode("utf-8")
+st.download_button(
+    label="📤 Exporter tout (CSV)",
+    data=csv,
+    file_name="journal_trading.csv",
+    mime="text/csv"
+)
+
+uploaded_file = st.file_uploader("📥 Importer un fichier CSV", type=["csv"])
+if uploaded_file and st.button("✅ Accepter l'import"):
+    try:
+        full_df = pd.read_csv(uploaded_file)
+        cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
+        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
+        st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
+        st.session_state["data"] = trade_rows
+        save_data()
+        st.success("✅ Données et capital importés.")
+        st.rerun()
+    except Exception as e:
+        st.error(f"❌ Erreur d'importation : {e}")
