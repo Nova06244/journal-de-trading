@@ -53,13 +53,14 @@ with st.form("add_trade_form"):
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
+        gain = 0.0
         if resultat == "SL":
             gain = -mise * risk
         elif resultat == "TP":
             gain = mise * reward
         elif resultat == "Breakeven":
             gain = mise
-        else:
+        elif resultat == "Pas de trade":
             gain = 0.0
 
         new_row = {
@@ -102,14 +103,7 @@ df = st.session_state["data"]
 for i in df.index:
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
     result = df.loc[i, "Résultat"]
-    if result == "TP":
-        color = "green"
-    elif result == "SL":
-        color = "red"
-    elif result == "Breakeven":
-        color = "blue"
-    else:
-        color = "white"
+    color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
@@ -119,29 +113,3 @@ for i in df.index:
             st.session_state["data"] = df.drop(i).reset_index(drop=True)
             save_data()
             st.rerun()
-
-# 📈 Statistiques
-st.subheader("📈 Statistiques")
-df["Risk (%)"] = pd.to_numeric(df["Risk (%)"], errors="coerce").fillna(0)
-df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
-
-total_tp = (df["Résultat"] == "TP").sum()
-total_sl = (df["Résultat"] == "SL").sum()
-total_be = (df["Résultat"] == "Breakeven").sum()
-total_gain = df["Gain (€)"].sum()
-total_reward = df[df["Résultat"] == "TP"]["Reward (%)"].sum()
-winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
-capital_total = st.session_state["capital"] + total_gain
-
-col1, col2, col3 = st.columns(3)
-col1.metric("✅ Total TP", total_tp)
-col2.metric("❌ Total SL", total_sl)
-col3.metric("🟦 Total Breakeven", total_be)
-
-col4, col5, col6 = st.columns(3)
-col4.metric("🏆 Winrate", f"{winrate:.2f}%")
-col5.metric("📈 Total Reward (%)", f"{total_reward:.2f}")
-col6.metric("💰 Gain total (€)", f"{total_gain:.2f}")
-
-st.markdown("### 🧮 Capital total (Capital + Gains)")
-st.success(f"💼 {capital_total:.2f} €")
