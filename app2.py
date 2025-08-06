@@ -1,15 +1,14 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import datetime
 import os
+from datetime import datetime
 
 SAVE_FILE = "journal_trading.csv"
-
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# Chargement automatique du fichier si présent
+# Chargement des données
 if "data" not in st.session_state:
     if os.path.exists(SAVE_FILE):
         try:
@@ -37,7 +36,7 @@ def save_data():
     export_df = pd.concat([st.session_state["data"], capital_row], ignore_index=True)
     export_df.to_csv(SAVE_FILE, index=False)
 
-# 📋 Entrée d'un trade
+# 📋 Formulaire d'ajout de trade
 st.subheader("📋 Entrée d'un trade")
 with st.form("add_trade_form"):
     col1, col2, col3 = st.columns(3)
@@ -50,23 +49,26 @@ with st.form("add_trade_form"):
         resultat = st.selectbox("Résultat", ["TP", "SL", "Breakeven", "Pas de trade"])
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
     with col3:
-        total_tp = (st.session_state["data"]["Résultat"] == "TP").sum()
-        total_sl = (st.session_state["data"]["Résultat"] == "SL").sum()
-        fig, ax = plt.subplots()
-        ax.pie([total_tp, total_sl], labels=["TP", "SL"], autopct="%1.1f%%", colors=["green", "red"])
-        ax.set_title("Winrate")
-        st.pyplot(fig)
+        # 📊 Camembert winrate
+        df_stats = st.session_state["data"]
+        total_tp = (df_stats["Résultat"] == "TP").sum()
+        total_sl = (df_stats["Résultat"] == "SL").sum()
+        total = total_tp + total_sl
+        if total > 0:
+            fig, ax = plt.subplots()
+            ax.pie([total_tp, total_sl], labels=["TP", "SL"], autopct="%1.1f%%", colors=["green", "red"])
+            st.pyplot(fig)
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
-        risk = 1.0
-        if resultat == "TP":
+        gain = 0.0
+        if resultat == "SL":
+            gain = -mise * 1
+        elif resultat == "TP":
             gain = mise * reward
-        elif resultat == "SL":
-            gain = -mise * risk
         elif resultat == "Breakeven":
             gain = mise
-        else:
+        elif resultat == "Pas de trade":
             gain = 0.0
 
         new_row = {
@@ -75,12 +77,14 @@ with st.form("add_trade_form"):
             "Actif": actif,
             "Résultat": resultat,
             "Mise (€)": mise,
-            "Risk (%)": risk,
+            "Risk (%)": 1,
             "Reward (%)": reward,
             "Gain (€)": gain
         }
-
-        st.session_state["data"] = pd.concat([st.session_state["data"], pd.DataFrame([new_row])], ignore_index=True)
+        st.session_state["data"] = pd.concat(
+            [st.session_state["data"], pd.DataFrame([new_row])],
+            ignore_index=True
+        )
         save_data()
         st.success("✅ Trade ajouté")
 
@@ -107,12 +111,7 @@ df = st.session_state["data"]
 for i in df.index:
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
     result = df.loc[i, "Résultat"]
-    color = (
-        "green" if result == "TP" else
-        "red" if result == "SL" else
-        "blue" if result == "Breakeven" else
-        "white" if result == "Pas de trade" else "black"
-    )
+    color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
@@ -125,32 +124,37 @@ for i in df.index:
 
 # 📈 Statistiques
 st.subheader("📈 Statistiques")
-df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
 df["Risk (%)"] = pd.to_numeric(df["Risk (%)"], errors="coerce").fillna(0)
-df["Gain (€)"] = pd.to_numeric(df["Gain (€)"], errors="coerce").fillna(0)
+df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
 
 total_tp = (df["Résultat"] == "TP").sum()
 total_sl = (df["Résultat"] == "SL").sum()
 total_be = (df["Résultat"] == "Breakeven").sum()
 total_nt = (df["Résultat"] == "Pas de trade").sum()
-total_reward = df[df["Résultat"] == "TP"]["Reward (%)"].sum()
-total_risk = df[df["Résultat"] == "SL"]["Risk (%)"].sum()
-winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
 total_gain = df["Gain (€)"].sum()
+total_risk = df[df["Résultat"] == "SL"]["Risk (%)"].sum()
+total_reward = df[df["Résultat"] == "TP"]["Reward (%)"].sum()
+winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
+capital_total = st.session_state["capital"] + total_gain
 
+# Ligne 1
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("✅ Total TP", total_tp)
 col2.metric("❌ Total SL", total_sl)
-col3.metric("⚖️ Breakeven", total_be)
-col4.metric("🚫 Pas de trade", total_nt)
+col3.metric("🟦 Breakeven", total_be)
+col4.metric("⛔ Pas de trade", total_nt)
 
+# Ligne 2
 col5, col6, col7, col8 = st.columns(4)
-col5.metric("📈 Total Reward", f"{total_reward:.2f}")
-col6.metric("📉 Total Risk", f"{total_risk:.2f}")
+col5.metric("📈 Total Reward (%)", f"{total_reward:.2f}")
+col6.metric("📉 Total Risk (%)", f"{total_risk:.2f}")
 col7.metric("🏆 Winrate", f"{winrate:.2f}%")
 col8.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
-# 💾 Export / Import
+st.success(f"💼 Capital total : {capital_total:.2f} €")
+
+# 📥 Export / Import
+st.markdown("---")
 st.subheader("💾 Exporter / Importer manuellement")
 csv = pd.concat([
     st.session_state["data"],
@@ -159,7 +163,6 @@ csv = pd.concat([
         "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
 ], ignore_index=True).to_csv(index=False).encode("utf-8")
-
 st.download_button(
     label="📤 Exporter tout (CSV)",
     data=csv,
