@@ -69,11 +69,12 @@ with st.form("add_trade_form"):
         new_row = {
             "Date": date,
             "Session": session,
+            "Reward (%)": reward,            
             "Actif": actif,
             "Résultat": resultat,
             "Mise (€)": mise,
             "Risk (%)": risk,
-            "Reward (%)": reward,
+            
             "Gain (€)": gain
         }
         st.session_state["data"] = pd.concat(
