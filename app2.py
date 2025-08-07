@@ -102,8 +102,7 @@ for i in df.index:
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
     for j, col_name in enumerate(df.columns):
-        value = df.loc[i, col_name]
-        value = "" if pd.isna(value) else value
+        value = df.loc[i, col_name]        value = "" if pd.isna(value) else value
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
     with cols[-1]:
         if st.button("🗑️", key=f"delete_{i}"):
