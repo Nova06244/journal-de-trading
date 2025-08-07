@@ -8,7 +8,7 @@ SAVE_FILE = "journal_trading.csv"
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# Chargement automatique du fichier si présent
+# Chargement automatique du fichier
 if "data" not in st.session_state:
     if os.path.exists(SAVE_FILE):
         try:
@@ -96,7 +96,6 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 
 # 📊 Liste des trades
 st.subheader("📊 Liste des trades")
-
 df = st.session_state["data"].copy()
 df_display = df.copy()
 df_display["Date"] = pd.to_datetime(df_display["Date"], format="%d/%m/%Y", errors="coerce")
@@ -145,7 +144,7 @@ col8.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
 st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
 
-# 📅 Bilan annuel
+# 📆 Bilan annuel
 st.subheader("📆 Bilan annuel")
 
 df_filtered = df[df["Actif"] != "__CAPITAL__"].copy()
