@@ -97,16 +97,17 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 # 📊 Liste des trades
 st.subheader("📊 Liste des trades")
 
-# Suppression de l’heure dans l’affichage de la date
 df = st.session_state["data"].copy()
-df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce").dt.strftime("%d/%m/%Y")
+df_display = df.copy()
+df_display["Date"] = pd.to_datetime(df_display["Date"], format="%d/%m/%Y", errors="coerce")
+df_display["Date"] = df_display["Date"].dt.strftime("%d/%m/%Y")
 
-for i in df.index:
-    result = df.loc[i, "Résultat"]
+for i in df_display.index:
+    result = df_display.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
-    for j, col_name in enumerate(df.columns):
-        value = df.loc[i, col_name]
+    for j, col_name in enumerate(df_display.columns):
+        value = df_display.loc[i, col_name]
         value = "" if pd.isna(value) else value
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
     with cols[-1]:
@@ -144,10 +145,12 @@ col8.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
 st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
 
-# 📅 Bilan annuel par mois sélectionnable
+# 📅 Bilan annuel
 st.subheader("📆 Bilan annuel")
-df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
-df_valid = df.dropna(subset=["Date"]).copy()
+
+df_filtered = df[df["Actif"] != "__CAPITAL__"].copy()
+df_filtered["Date"] = pd.to_datetime(df_filtered["Date"], format="%d/%m/%Y", errors="coerce")
+df_valid = df_filtered.dropna(subset=["Date"]).copy()
 df_valid["Year"] = df_valid["Date"].dt.year
 df_valid["Month"] = df_valid["Date"].dt.month
 df_valid["MonthName"] = df_valid["Date"].dt.strftime("%B")
@@ -171,8 +174,8 @@ for month in months_in_year:
     sl = (month_data["Résultat"] == "SL").sum()
     gain = month_data["Gain (€)"].sum()
     winrate_month = (tp / (tp + sl)) * 100 if (tp + sl) > 0 else 0
-
     is_current = (month == datetime.now().month and selected_year == datetime.now().year)
+
     with st.expander(f"📅 {month_names[month]} {selected_year}", expanded=is_current):
         col1, col2, col3 = st.columns(3)
         col1.metric("🧾 Trades", nb_trades)
