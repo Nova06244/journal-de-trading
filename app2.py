@@ -102,7 +102,13 @@ for i in df.index:
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
     for j, col_name in enumerate(df.columns):
-        value = df.loc[i, col_name]        value = "" if pd.isna(value) else value
+        value = df.loc[i, col_name]
+        value = "" if pd.isna(value) else value
+        if col_name == "Date" and pd.notna(value):
+            try:
+                value = pd.to_datetime(value).strftime("%d/%m/%Y")
+            except:
+                pass
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
     with cols[-1]:
         if st.button("🗑️", key=f"delete_{i}"):
@@ -139,7 +145,7 @@ col8.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
 st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
 
-# 📅 Bilan annuel par mois sélectionnable
+# 📅 Bilan annuel
 st.subheader("📆 Bilan annuel")
 
 df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
@@ -172,7 +178,9 @@ for month in months_in_year:
         col1, col2, col3 = st.columns(3)
         col1.metric("🧾 Trades", nb_trades)
         col2.metric("🏆 Winrate", f"{winrate_month:.2f}%")
-        col3.metric("💰 Gain", f"{gain:.2f} €")# 💾 Export & Import
+        col3.metric("💰 Gain", f"{gain:.2f} €")
+
+# 💾 Export & Import
 st.markdown("---")
 st.subheader("💾 Exporter / Importer manuellement")
 csv = pd.concat([
