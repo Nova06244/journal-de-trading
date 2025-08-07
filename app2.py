@@ -41,7 +41,7 @@ st.subheader("📋 Entrée d'un trade")
 with st.form("add_trade_form"):
     col1, col2 = st.columns(2)
     with col1:
-        date = st.date_input("Date", value=date.now()).strftime("%d/%m/%Y")
+        date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
         actif = st.text_input("Actif", value="XAU-USD")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
