@@ -97,7 +97,7 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 # 📊 Liste des trades
 st.subheader("📊 Liste des trades")
 
-# ➕ Correction ici : suppression de l’heure dans l’affichage de la date
+# Corriger le format de la date pour l'affichage (sans heure)
 df["Date"] = pd.to_datetime(df["Date"], errors="coerce").dt.strftime("%d/%m/%Y")
 
 for i in df.index:
