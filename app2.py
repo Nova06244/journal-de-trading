@@ -43,7 +43,7 @@ with st.form("add_trade_form"):
     with col1:
         date_raw = st.date_input("📅 Date du trade", value=datetime.now())
         st.markdown(f"🗓️ **Date sélectionnée :** `{date_raw.strftime('%d/%m/%Y')}`")
-        date = date_raw.strftime("%d/%m/%Y")
+        date = date_raw.strftime("%d/%m/%Y")  # Format utilisé pour l’enregistrement
         actif = st.text_input("Actif", value="XAU-USD")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
