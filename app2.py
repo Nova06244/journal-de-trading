@@ -96,7 +96,10 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 
 # 📊 Liste des trades
 st.subheader("📊 Liste des trades")
-df = st.session_state["data"]
+
+# ➕ Correction ici : suppression de l’heure dans l’affichage de la date
+df["Date"] = pd.to_datetime(df["Date"], errors="coerce").dt.strftime("%d/%m/%Y")
+
 for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
