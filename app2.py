@@ -56,7 +56,7 @@ with st.form("add_trade_form"):
         elif resultat == "SL":
             gain = -mise
         elif resultat == "Breakeven":
-            gain = mise
+            gain = 0.0
         else:
             gain = 0.0
 
@@ -66,7 +66,7 @@ with st.form("add_trade_form"):
             "Actif": actif,
             "Résultat": resultat,
             "Mise (€)": mise,
-            "Risk (%)": 1.00,  # Risque fixé à 1
+            "Risk (%)": 1.00,
             "Reward (%)": reward,
             "Gain (€)": gain
         }
@@ -96,7 +96,11 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 
 # 📊 Liste des trades
 st.subheader("📊 Liste des trades")
-df = st.session_state["data"]
+
+# Suppression de l’heure dans l’affichage de la date
+df = st.session_state["data"].copy()
+df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce").dt.strftime("%d/%m/%Y")
+
 for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
@@ -142,7 +146,6 @@ st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
 
 # 📅 Bilan annuel par mois sélectionnable
 st.subheader("📆 Bilan annuel")
-
 df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
 df_valid = df.dropna(subset=["Date"]).copy()
 df_valid["Year"] = df_valid["Date"].dt.year
@@ -169,11 +172,14 @@ for month in months_in_year:
     gain = month_data["Gain (€)"].sum()
     winrate_month = (tp / (tp + sl)) * 100 if (tp + sl) > 0 else 0
 
-    with st.expander(f"📅 {month_names[month]} {selected_year}"):
+    is_current = (month == datetime.now().month and selected_year == datetime.now().year)
+    with st.expander(f"📅 {month_names[month]} {selected_year}", expanded=is_current):
         col1, col2, col3 = st.columns(3)
         col1.metric("🧾 Trades", nb_trades)
         col2.metric("🏆 Winrate", f"{winrate_month:.2f}%")
-        col3.metric("💰 Gain", f"{gain:.2f} €")# 💾 Export & Import
+        col3.metric("💰 Gain", f"{gain:.2f} €")
+
+# 💾 Export & Import
 st.markdown("---")
 st.subheader("💾 Exporter / Importer manuellement")
 csv = pd.concat([
