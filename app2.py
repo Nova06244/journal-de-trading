@@ -56,7 +56,7 @@ with st.form("add_trade_form"):
         elif resultat == "SL":
             gain = -mise
         elif resultat == "Breakeven":
-            gain = mise
+            gain = 0.0
         else:
             gain = 0.0
 
@@ -66,7 +66,7 @@ with st.form("add_trade_form"):
             "Actif": actif,
             "Résultat": resultat,
             "Mise (€)": mise,
-            "Risk (%)": 1.00,  # Risque fixé à 1
+            "Risk (%)": 1.00,
             "Reward (%)": reward,
             "Gain (€)": gain
         }
@@ -111,7 +111,7 @@ for i in df.index:
             save_data()
             st.rerun()
 
-# 📈 Statistiques
+# 📈 Statistiques globales
 st.subheader("📈 Statistiques")
 df["Risk (%)"] = pd.to_numeric(df["Risk (%)"], errors="coerce").fillna(0)
 df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
@@ -139,6 +139,26 @@ col7.metric("🏆 Winrate", f"{winrate:.2f}%")
 col8.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
 st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
+
+# 📅 Bilan mensuel
+st.subheader("📅 Bilan mensuel")
+df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
+df_monthly = df.dropna(subset=["Date"]).copy()
+df_monthly["YearMonth"] = df_monthly["Date"].dt.to_period("M")
+
+grouped = df_monthly.groupby("YearMonth")
+for period, group in grouped:
+    month_str = period.strftime("%B %Y")
+    nb_trades = group[group["Résultat"].isin(["TP", "SL", "Breakeven", "Pas de trade"])].shape[0]
+    tp = (group["Résultat"] == "TP").sum()
+    sl = (group["Résultat"] == "SL").sum()
+    gain = group["Gain (€)"].sum()
+    winrate_mensuel = (tp / (tp + sl)) * 100 if (tp + sl) > 0 else 0
+
+    with st.expander(f"📆 {month_str}"):
+        st.write(f"**Nombre de trades** : {nb_trades}")
+        st.write(f"**Winrate** : {winrate_mensuel:.2f}%")
+        st.write(f"**Gain total** : {gain:.2f} €")
 
 # 💾 Export & Import
 st.markdown("---")
