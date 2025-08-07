@@ -156,9 +156,10 @@ for period, group in grouped:
     winrate_mensuel = (tp / (tp + sl)) * 100 if (tp + sl) > 0 else 0
 
     with st.expander(f"📆 {month_str}"):
-        st.write(f"**Nombre de trades** : {nb_trades}")
-        st.write(f"**Winrate** : {winrate_mensuel:.2f}%")
-        st.write(f"**Gain total** : {gain:.2f} €")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("🧾 Trades", nb_trades)
+        col2.metric("🏆 Winrate", f"{winrate_mensuel:.2f}%")
+        col3.metric("💰 Gain", f"{gain:.2f} €")
 
 # 💾 Export & Import
 st.markdown("---")
