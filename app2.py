@@ -143,29 +143,24 @@ st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
 # 📅 Bilan annuel par mois sélectionnable
 st.subheader("📆 Bilan annuel")
 
-# Nettoyage et préparation des données
 df["Date"] = pd.to_datetime(df["Date"], format="%d/%m/%Y", errors="coerce")
 df_valid = df.dropna(subset=["Date"]).copy()
 df_valid["Year"] = df_valid["Date"].dt.year
 df_valid["Month"] = df_valid["Date"].dt.month
 df_valid["MonthName"] = df_valid["Date"].dt.strftime("%B")
 
-# Liste des années disponibles
 available_years = sorted(df_valid["Year"].dropna().unique(), reverse=True)
 selected_year = st.selectbox("📤 Choisir une année", available_years)
 
-# Filtrage par année sélectionnée
 df_year = df_valid[df_valid["Year"] == selected_year]
 months_in_year = df_year["Month"].unique()
 months_in_year.sort()
 
-# Dictionnaire français des mois
 month_names = {
     1: "Janvier", 2: "Février", 3: "Mars", 4: "Avril", 5: "Mai", 6: "Juin",
     7: "Juillet", 8: "Août", 9: "Septembre", 10: "Octobre", 11: "Novembre", 12: "Décembre"
 }
 
-# Affichage des bilans mensuels de l'année choisie
 for month in months_in_year:
     month_data = df_year[df_year["Month"] == month]
     nb_trades = month_data[month_data["Résultat"].isin(["TP", "SL", "Breakeven", "Pas de trade"])].shape[0]
@@ -174,9 +169,7 @@ for month in months_in_year:
     gain = month_data["Gain (€)"].sum()
     winrate_month = (tp / (tp + sl)) * 100 if (tp + sl) > 0 else 0
 
-    # Déploiement automatique si mois en cours
-    is_current = (month == datetime.now().month and selected_year == datetime.now().year)
-    with st.expander(f"📅 {month_names[month]} {selected_year}", expanded=is_current):
+    with st.expander(f"📅 {month_names[month]} {selected_year}"):
         col1, col2, col3 = st.columns(3)
         col1.metric("🧾 Trades", nb_trades)
         col2.metric("🏆 Winrate", f"{winrate_month:.2f}%")
