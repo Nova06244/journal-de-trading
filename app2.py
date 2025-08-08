@@ -96,7 +96,7 @@ with st.form("add_trade_form"):
     with col1:
         date_obj = st.date_input("Date", value=datetime.now())
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
-        actif = st.text_input("Actif", value="XAU/USD")
+        actif = st.text_input("Actif", value="XAU-USD")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
