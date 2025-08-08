@@ -8,45 +8,99 @@ SAVE_FILE = "journal_trading.csv"
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# Chargement automatique du fichier si présent
+# ------------------------------------------------------------
+# Utils dates & normalisation
+# ------------------------------------------------------------
+EXPECTED_COLS = ["Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]
+VALID_RESULTS = ["TP", "SL", "Breakeven", "Pas de trade"]
+
+def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
+    """Assure que le DataFrame de trades est propre + Date en ISO (YYYY-MM-DD)."""
+    df = df_in.copy()
+
+    # Colonnes manquantes
+    for c in EXPECTED_COLS:
+        if c not in df.columns:
+            df[c] = ""
+
+    df = df[EXPECTED_COLS]
+
+    # Date -> ISO
+    # 1) ISO strict
+    dt_iso = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
+    # 2) tolérance pour anciens CSV FR (dd/mm/YYYY)
+    mask_fr = dt_iso.isna() & df["Date"].astype(str).str.contains(r"/")
+    dt_fr = pd.to_datetime(df.loc[mask_fr, "Date"], format="%d/%m/%Y", errors="coerce")
+    dt_iso.loc[mask_fr] = dt_fr
+    # 3) autre tolérance: dd-mm-YYYY
+    mask_fr2 = dt_iso.isna() & df["Date"].astype(str).str.contains(r"-")
+    dt_fr2 = pd.to_datetime(df.loc[mask_fr2, "Date"], format="%d-%m-%Y", errors="coerce")
+    dt_iso.loc[mask_fr2] = dt_fr2
+
+    df["Date"] = dt_iso.dt.strftime("%Y-%m-%d").fillna("")
+
+    # Nombres
+    for c in ["Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]:
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    return df.reset_index(drop=True)
+
+def us_fmt(date_iso: str) -> str:
+    """YYYY-MM-DD -> MM/DD/YYYY pour affichage."""
+    if not date_iso:
+        return ""
+    dt = pd.to_datetime(date_iso, format="%Y-%m-%d", errors="coerce")
+    return dt.strftime("%m/%d/%Y") if pd.notna(dt) else ""
+
+def save_data():
+    """Écrit le CSV avec Date en ISO et la ligne CAPITAL en fin."""
+    df_out = st.session_state["data"].copy()
+    # Force Date en ISO au moment de l'écriture
+    dt = pd.to_datetime(df_out["Date"], errors="coerce", format="%Y-%m-%d")
+    df_out["Date"] = dt.dt.strftime("%Y-%m-%d").fillna("")
+
+    capital_row = pd.DataFrame([{
+        "Date": "", "Session": "", "Actif": "__CAPITAL__",
+        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
+        "Gain (€)": st.session_state["capital"]
+    }])
+
+    export_df = pd.concat([df_out, capital_row], ignore_index=True)
+    export_df.to_csv(SAVE_FILE, index=False, encoding="utf-8")
+
+# ------------------------------------------------------------
+# Chargement initial (depuis CSV si présent)
+# ------------------------------------------------------------
 if "data" not in st.session_state:
     if os.path.exists(SAVE_FILE):
         try:
-            full_df = pd.read_csv(SAVE_FILE)
-            cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
-            trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
+            raw = pd.read_csv(SAVE_FILE, dtype=str).fillna("")
+            # split capital / trades
+            cap_rows = raw[raw["Actif"] == "__CAPITAL__"]
+            trade_rows = raw[raw["Actif"] != "__CAPITAL__"]
             st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
-            st.session_state["data"] = trade_rows
-        except:
-            st.session_state["data"] = pd.DataFrame(columns=[
-                "Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
-            ])
+            st.session_state["data"] = normalize_trades_to_iso(trade_rows)
+        except Exception:
+            st.session_state["data"] = pd.DataFrame(columns=EXPECTED_COLS)
             st.session_state["capital"] = 0.0
     else:
-        st.session_state["data"] = pd.DataFrame(columns=[
-            "Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
-        ])
+        st.session_state["data"] = pd.DataFrame(columns=EXPECTED_COLS)
         st.session_state["capital"] = 0.0
 
-def save_data():
-    capital_row = pd.DataFrame([{
-        "Date": "", "Session": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
-    }])
-    export_df = pd.concat([st.session_state["data"], capital_row], ignore_index=True)
-    export_df.to_csv(SAVE_FILE, index=False)
-
+# ------------------------------------------------------------
 # 📋 Entrée d'un trade
+# ------------------------------------------------------------
 st.subheader("📋 Entrée d'un trade")
 with st.form("add_trade_form"):
     col1, col2 = st.columns(2)
     with col1:
-        date = st.date_input("Date", value=datetime.now()).strftime("%d/%m/%Y")
+        date_obj = st.date_input("Date", value=datetime.now())
+        date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
         actif = st.text_input("Actif", value="XAU-USD")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
     with col2:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
-        resultat = st.selectbox("Résultat", ["TP", "SL", "Breakeven", "Pas de trade"])
+        resultat = st.selectbox("Résultat", VALID_RESULTS)
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
@@ -57,16 +111,16 @@ with st.form("add_trade_form"):
             gain = -mise
         elif resultat == "Breakeven":
             gain = mise
-        else:
+        else:  # "Pas de trade"
             gain = 0.0
 
         new_row = {
-            "Date": date,
+            "Date": date_iso,                      # ISO
             "Session": session,
             "Actif": actif,
             "Résultat": resultat,
             "Mise (€)": mise,
-            "Risk (%)": 1.00,  # Risque fixé à 1
+            "Risk (%)": 1.00,                      # Risque fixé à 1
             "Reward (%)": reward,
             "Gain (€)": gain
         }
@@ -77,7 +131,9 @@ with st.form("add_trade_form"):
         save_data()
         st.success("✅ Trade ajouté")
 
+# ------------------------------------------------------------
 # 💰 Mise de départ
+# ------------------------------------------------------------
 st.subheader("💰 Mise de départ ou ajout de capital")
 col_cap1, col_cap2 = st.columns([2, 1])
 with col_cap1:
@@ -94,9 +150,12 @@ with col_cap2:
 
 st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €")
 
-# 📊 Liste des trades
+# ------------------------------------------------------------
+# 📊 Liste des trades (affichage US)
+# ------------------------------------------------------------
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
+
 for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
@@ -104,11 +163,8 @@ for i in df.index:
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
-        if col_name == "Date" and pd.notna(value):
-            try:
-                value = pd.to_datetime(value).strftime("%d/%m/%Y")
-            except:
-                pass
+        if col_name == "Date" and value:
+            value = us_fmt(value)  # ISO -> US
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
     with cols[-1]:
         if st.button("🗑️", key=f"delete_{i}"):
@@ -116,18 +172,22 @@ for i in df.index:
             save_data()
             st.rerun()
 
-# 📈 Statistiques
+# ------------------------------------------------------------
+# 📈 Statistiques (ne modifie pas le state)
+# ------------------------------------------------------------
 st.subheader("📈 Statistiques")
-df["Risk (%)"] = pd.to_numeric(df["Risk (%)"], errors="coerce").fillna(0)
-df["Reward (%)"] = pd.to_numeric(df["Reward (%)"], errors="coerce").fillna(0)
+df_stats = st.session_state["data"].copy()
+df_stats["Risk (%)"] = pd.to_numeric(df_stats["Risk (%)"], errors="coerce").fillna(0)
+df_stats["Reward (%)"] = pd.to_numeric(df_stats["Reward (%)"], errors="coerce").fillna(0)
+df_stats["Gain (€)"] = pd.to_numeric(df_stats["Gain (€)"], errors="coerce").fillna(0)
 
-total_tp = (df["Résultat"] == "TP").sum()
-total_sl = (df["Résultat"] == "SL").sum()
-total_be = (df["Résultat"] == "Breakeven").sum()
-total_nt = (df["Résultat"] == "Pas de trade").sum()
-total_gain = df["Gain (€)"].sum()
-total_risk = df[df["Résultat"] == "SL"]["Risk (%)"].sum()
-total_reward = df[df["Résultat"] == "TP"]["Reward (%)"].sum()
+total_tp = (df_stats["Résultat"] == "TP").sum()
+total_sl = (df_stats["Résultat"] == "SL").sum()
+total_be = (df_stats["Résultat"] == "Breakeven").sum()
+total_nt = (df_stats["Résultat"] == "Pas de trade").sum()
+total_gain = df_stats["Gain (€)"].sum()
+total_risk = df_stats[df_stats["Résultat"] == "SL"]["Risk (%)"].sum()
+total_reward = df_stats[df_stats["Résultat"] == "TP"]["Reward (%)"].sum()
 winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
 capital_total = st.session_state["capital"] + total_gain
 
@@ -145,21 +205,15 @@ col8.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 
 st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
 
-# 📅 Bilan annuel
+# ------------------------------------------------------------
+# 📆 Bilan annuel (parse ISO, affiche US, mois avec ≥1 trade)
+# ------------------------------------------------------------
 st.subheader("📆 Bilan annuel")
 
-# Travailler sur une copie, jamais sur le state direct
 df_an = st.session_state["data"].copy()
-
-# 🔒 Parsing STRICT: dd/mm/YYYY (c'est le format qu'on a figé à l'export)
-df_an["Date"] = pd.to_datetime(df_an["Date"], format="%d/%m/%Y", errors="coerce")
-
-# Garder uniquement les dates valides
+df_an["Date"] = pd.to_datetime(df_an["Date"], format="%Y-%m-%d", errors="coerce")
 df_valid = df_an.dropna(subset=["Date"]).copy()
-
-# Garder uniquement les vraies lignes de trade
-valid_results = ["TP", "SL", "Breakeven", "Pas de trade"]
-df_valid = df_valid[df_valid["Résultat"].isin(valid_results)]
+df_valid = df_valid[df_valid["Résultat"].isin(VALID_RESULTS)]
 
 if df_valid.empty:
     st.info("Aucune date valide trouvée pour établir un bilan annuel.")
@@ -167,11 +221,12 @@ else:
     df_valid["Year"] = df_valid["Date"].dt.year
     df_valid["Month"] = df_valid["Date"].dt.month
 
-    years = sorted(df_valid["Year"].unique(), reverse=True)
-    selected_year = st.selectbox("📤 Choisir une année", years, index=0)
+    available_years = sorted(df_valid["Year"].unique(), reverse=True)
+    selected_year = st.selectbox("📤 Choisir une année", available_years, index=0)
 
-    # ➜ Mois réellement présents (≥1 trade) dans l'année choisie
-    df_year = df_valid[df_valid["Year"] == selected_year]
+    df_year = df_valid[df_valid["Year"] == selected_year].copy()
+
+    # Mois réellement présents (au moins 1 trade)
     months_with_trades = (
         df_year.groupby("Month").size().loc[lambda s: s > 0].sort_index().index.tolist()
     )
@@ -184,36 +239,45 @@ else:
     if not months_with_trades:
         st.info(f"Aucun trade pour {selected_year}.")
     else:
-        for m in months_with_trades:
-            mdata = df_year[df_year["Month"] == m].copy()
-            # sécurité numériques
-            mdata["Gain (€)"] = pd.to_numeric(mdata["Gain (€)"], errors="coerce").fillna(0)
+        for month in months_with_trades:
+            month_data = df_year[df_year["Month"] == month].copy()
+            month_data["Gain (€)"] = pd.to_numeric(month_data["Gain (€)"], errors="coerce").fillna(0)
 
-            nb = len(mdata)
-            tp = (mdata["Résultat"] == "TP").sum()
-            sl = (mdata["Résultat"] == "SL").sum()
-            gain = mdata["Gain (€)"].sum()
-            win = (tp / (tp + sl) * 100) if (tp + sl) > 0 else 0.0
+            nb_trades = len(month_data)
+            tp = (month_data["Résultat"] == "TP").sum()
+            sl = (month_data["Résultat"] == "SL").sum()
+            gain = month_data["Gain (€)"].sum()
+            winrate_month = (tp / (tp + sl) * 100) if (tp + sl) > 0 else 0.0
 
-            with st.expander(f"📅 {month_names.get(m, str(m))} {selected_year}"):
+            with st.expander(f"📅 {month_names.get(month, str(month))} {selected_year}"):
                 c1, c2, c3 = st.columns(3)
-                c1.metric("🧾 Trades", int(nb))
-                c2.metric("🏆 Winrate", f"{win:.2f}%")
+                c1.metric("🧾 Trades", int(nb_trades))
+                c2.metric("🏆 Winrate", f"{winrate_month:.2f}%")
                 c3.metric("💰 Gain", f"{gain:.2f} €")
-                
+
+# ------------------------------------------------------------
 # 💾 Export & Import
+# ------------------------------------------------------------
 st.markdown("---")
 st.subheader("💾 Exporter / Importer manuellement")
+
+# Export: on réutilise save_data() qui écrit déjà en ISO
 csv = pd.concat([
-    st.session_state["data"],
+    st.session_state["data"].copy(),
     pd.DataFrame([{
         "Date": "", "Session": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
+        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
+        "Gain (€)": st.session_state["capital"]
     }])
-], ignore_index=True).to_csv(index=False).encode("utf-8")
+], ignore_index=True)
+# Force visuellement l'ISO pour l'export bouton:
+dt = pd.to_datetime(csv["Date"], errors="coerce", format="%Y-%m-%d")
+csv["Date"] = dt.dt.strftime("%Y-%m-%d").fillna("")
+csv_bytes = csv.to_csv(index=False).encode("utf-8")
+
 st.download_button(
     label="📤 Exporter tout (CSV)",
-    data=csv,
+    data=csv_bytes,
     file_name="journal_trading.csv",
     mime="text/csv"
 )
@@ -221,34 +285,11 @@ st.download_button(
 uploaded_file = st.file_uploader("📥 Importer un fichier CSV", type=["csv"])
 if uploaded_file and st.button("✅ Accepter l'import"):
     try:
-        # Lire brut sans inférence de dates
         full_df = pd.read_csv(uploaded_file, dtype=str).fillna("")
-
-        # Séparer capital / trades
         cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
-        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"].copy()
-
-        # Normaliser colonnes attendues
-        expected_cols = ["Date","Session","Actif","Résultat","Mise (€)","Risk (%)","Reward (%)","Gain (€)"]
-        for c in expected_cols:
-            if c not in trade_rows.columns:
-                trade_rows[c] = ""
-
-        trade_rows = trade_rows[expected_cols]
-
-        # Nettoyage des nombres
-        for c in ["Mise (€)","Risk (%)","Reward (%)","Gain (€)"]:
-            trade_rows[c] = pd.to_numeric(trade_rows[c], errors="coerce")
-
-        # 🔒 Normaliser la Date au format texte "dd/mm/YYYY" (pas de datetime dans le state)
-        dt = pd.to_datetime(trade_rows["Date"], errors="coerce", dayfirst=True)
-        trade_rows["Date"] = dt.dt.strftime("%d/%m/%Y")
-        trade_rows["Date"] = trade_rows["Date"].fillna("")
-
-        # Capital
+        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
         st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
-        st.session_state["data"] = trade_rows.reset_index(drop=True)
-
+        st.session_state["data"] = normalize_trades_to_iso(trade_rows)
         save_data()
         st.success("✅ Données et capital importés.")
         st.rerun()
