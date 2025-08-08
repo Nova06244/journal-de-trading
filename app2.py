@@ -148,50 +148,32 @@ st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
 # 📅 Bilan annuel
 st.subheader("📆 Bilan annuel")
 
-# On repart d'une copie propre
+# Travailler sur une copie, jamais sur le state direct
 df_an = st.session_state["data"].copy()
 
-# --- Parsing de la date : privilégie dd/mm/YYYY (format de l'appli) + ISO ---
-# 1) d'abord exact dd/mm/YYYY pour les chaînes de ce type
-mask_ddmmyyyy = df_an["Date"].astype(str).str.match(r"^\d{2}/\d{2}/\d{4}$", na=False)
-df_an.loc[mask_ddmmyyyy, "Date"] = pd.to_datetime(
-    df_an.loc[mask_ddmmyyyy, "Date"], format="%d/%m/%Y", errors="coerce"
-)
+# 🔒 Parsing STRICT: dd/mm/YYYY (c'est le format qu'on a figé à l'export)
+df_an["Date"] = pd.to_datetime(df_an["Date"], format="%d/%m/%Y", errors="coerce")
 
-# 2) ISO (YYYY-MM-DD) en secours
-mask_iso = df_an["Date"].astype(str).str.match(r"^\d{4}-\d{2}-\d{2}$", na=False)
-df_an.loc[mask_iso, "Date"] = pd.to_datetime(
-    df_an.loc[mask_iso, "Date"], format="%Y-%m-%d", errors="coerce"
-)
-
-# 3) dernier filet de sécurité : parser large avec dayfirst (évite mm/dd)
-df_an["Date"] = pd.to_datetime(df_an["Date"], errors="coerce", dayfirst=True)
-
-# Filtrer les dates valides
+# Garder uniquement les dates valides
 df_valid = df_an.dropna(subset=["Date"]).copy()
+
+# Garder uniquement les vraies lignes de trade
+valid_results = ["TP", "SL", "Breakeven", "Pas de trade"]
+df_valid = df_valid[df_valid["Résultat"].isin(valid_results)]
+
 if df_valid.empty:
     st.info("Aucune date valide trouvée pour établir un bilan annuel.")
 else:
     df_valid["Year"] = df_valid["Date"].dt.year
     df_valid["Month"] = df_valid["Date"].dt.month
 
-    # On restreint aux lignes qui sont vraiment des trades (pas d'autres artefacts)
-    valid_results = ["TP", "SL", "Breakeven", "Pas de trade"]
-    df_valid = df_valid[df_valid["Résultat"].isin(valid_results)]
+    years = sorted(df_valid["Year"].unique(), reverse=True)
+    selected_year = st.selectbox("📤 Choisir une année", years, index=0)
 
-    # Choix d'année
-    available_years = sorted(df_valid["Year"].unique(), reverse=True)
-    selected_year = st.selectbox("📤 Choisir une année", available_years)
-
-    # Regroupement par mois dans l'année choisie
-    df_year = df_valid[df_valid["Year"] == selected_year].copy()
-    # Garder UNIQUEMENT les mois avec au moins 1 trade
+    # ➜ Mois réellement présents (≥1 trade) dans l'année choisie
+    df_year = df_valid[df_valid["Year"] == selected_year]
     months_with_trades = (
-        df_year.groupby("Month")
-               .size()
-               .loc[lambda s: s > 0]
-               .sort_index()
-               .index.tolist()
+        df_year.groupby("Month").size().loc[lambda s: s > 0].sort_index().index.tolist()
     )
 
     month_names = {
@@ -202,23 +184,23 @@ else:
     if not months_with_trades:
         st.info(f"Aucun trade pour {selected_year}.")
     else:
-        for month in months_with_trades:
-            month_data = df_year[df_year["Month"] == month].copy()
+        for m in months_with_trades:
+            mdata = df_year[df_year["Month"] == m].copy()
+            # sécurité numériques
+            mdata["Gain (€)"] = pd.to_numeric(mdata["Gain (€)"], errors="coerce").fillna(0)
 
-            # Sécuriser les numériques
-            month_data["Gain (€)"] = pd.to_numeric(month_data["Gain (€)"], errors="coerce").fillna(0)
+            nb = len(mdata)
+            tp = (mdata["Résultat"] == "TP").sum()
+            sl = (mdata["Résultat"] == "SL").sum()
+            gain = mdata["Gain (€)"].sum()
+            win = (tp / (tp + sl) * 100) if (tp + sl) > 0 else 0.0
 
-            nb_trades = len(month_data)
-            tp = (month_data["Résultat"] == "TP").sum()
-            sl = (month_data["Résultat"] == "SL").sum()
-            gain = month_data["Gain (€)"].sum()
-            winrate_month = (tp / (tp + sl) * 100) if (tp + sl) > 0 else 0.0
-
-            with st.expander(f"📅 {month_names.get(month, str(month))} {selected_year}"):
+            with st.expander(f"📅 {month_names.get(m, str(m))} {selected_year}"):
                 c1, c2, c3 = st.columns(3)
-                c1.metric("🧾 Trades", int(nb_trades))
-                c2.metric("🏆 Winrate", f"{winrate_month:.2f}%")
+                c1.metric("🧾 Trades", int(nb))
+                c2.metric("🏆 Winrate", f"{win:.2f}%")
                 c3.metric("💰 Gain", f"{gain:.2f} €")
+                
 # 💾 Export & Import
 st.markdown("---")
 st.subheader("💾 Exporter / Importer manuellement")
