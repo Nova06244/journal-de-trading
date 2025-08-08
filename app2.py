@@ -239,11 +239,34 @@ st.download_button(
 uploaded_file = st.file_uploader("📥 Importer un fichier CSV", type=["csv"])
 if uploaded_file and st.button("✅ Accepter l'import"):
     try:
-        full_df = pd.read_csv(uploaded_file)
+        # Lire brut sans inférence de dates
+        full_df = pd.read_csv(uploaded_file, dtype=str).fillna("")
+
+        # Séparer capital / trades
         cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
-        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
+        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"].copy()
+
+        # Normaliser colonnes attendues
+        expected_cols = ["Date","Session","Actif","Résultat","Mise (€)","Risk (%)","Reward (%)","Gain (€)"]
+        for c in expected_cols:
+            if c not in trade_rows.columns:
+                trade_rows[c] = ""
+
+        trade_rows = trade_rows[expected_cols]
+
+        # Nettoyage des nombres
+        for c in ["Mise (€)","Risk (%)","Reward (%)","Gain (€)"]:
+            trade_rows[c] = pd.to_numeric(trade_rows[c], errors="coerce")
+
+        # 🔒 Normaliser la Date au format texte "dd/mm/YYYY" (pas de datetime dans le state)
+        dt = pd.to_datetime(trade_rows["Date"], errors="coerce", dayfirst=True)
+        trade_rows["Date"] = dt.dt.strftime("%d/%m/%Y")
+        trade_rows["Date"] = trade_rows["Date"].fillna("")
+
+        # Capital
         st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
-        st.session_state["data"] = trade_rows
+        st.session_state["data"] = trade_rows.reset_index(drop=True)
+
         save_data()
         st.success("✅ Données et capital importés.")
         st.rerun()
