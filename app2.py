@@ -87,6 +87,14 @@ if "data" not in st.session_state:
         st.session_state["data"] = pd.DataFrame(columns=EXPECTED_COLS)
         st.session_state["capital"] = 0.0
 
+# Petites clés de state pour l'édition
+if "show_edit_form" not in st.session_state:
+    st.session_state["show_edit_form"] = False
+if "edit_index" not in st.session_state:
+    st.session_state["edit_index"] = None
+if "edit_row" not in st.session_state:
+    st.session_state["edit_row"] = {}
+
 # ------------------------------------------------------------
 # 📋 Entrée d'un trade
 # ------------------------------------------------------------
@@ -159,17 +167,98 @@ df = st.session_state["data"]
 for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
-    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.1])
+    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.2])  # dernière col pour boutons
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
         if col_name == "Date" and value:
             value = us_fmt(value)  # ISO -> US
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
+
+    # --- Ajout : bouton ✏️ modifier + bouton 🗑️ supprimer ---
     with cols[-1]:
-        if st.button("🗑️", key=f"delete_{i}"):
-            st.session_state["data"] = df.drop(i).reset_index(drop=True)
+        edit_col, delete_col = st.columns(2)
+        with edit_col:
+            if st.button("✏️", key=f"edit_{i}"):
+                st.session_state["edit_index"] = i
+                # stocke la ligne telle quelle (dict) pour pré-remplir le formulaire
+                st.session_state["edit_row"] = df.loc[i].to_dict()
+                st.session_state["show_edit_form"] = True
+                st.rerun()
+        with delete_col:
+            if st.button("🗑️", key=f"delete_{i}"):
+                st.session_state["data"] = df.drop(i).reset_index(drop=True)
+                save_data()
+                st.rerun()
+
+# --- Formulaire d'édition (s’affiche uniquement après clic sur ✏️) ---
+if st.session_state.get("show_edit_form", False):
+    st.subheader("✏️ Modifier le trade")
+    row = st.session_state.get("edit_row", {})
+
+    # valeurs par défaut sûres
+    _date_iso = row.get("Date", "")
+    _date_val = pd.to_datetime(_date_iso, errors="coerce")
+    if pd.isna(_date_val):
+        _date_val = datetime.now()
+
+    _actif = str(row.get("Actif", ""))
+    _session = str(row.get("Session", "OPR 9h"))
+    _reward = float(pd.to_numeric(row.get("Reward (%)", 0), errors="coerce") or 0.0)
+    _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
+    _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
+
+    with st.form("edit_trade_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            date_obj = st.date_input("Date", value=_date_val)
+            actif = st.text_input("Actif", value=_actif)
+            session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"],
+                                   index=["OPR 9h", "OPR 15h30", "OPRR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPRR 18h30"] else 0)
+        with col2:
+            reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f", value=_reward)
+            resultat = st.selectbox("Résultat", VALID_RESULTS,
+                                    index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
+            mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", value=_mise)
+
+        c_save, c_cancel = st.columns([1, 1])
+        with c_save:
+            submitted_edit = st.form_submit_button("💾 Sauvegarder")
+        with c_cancel:
+            cancel_edit = st.form_submit_button("❌ Annuler")
+
+        if cancel_edit:
+            st.session_state["show_edit_form"] = False
+            st.session_state["edit_index"] = None
+            st.session_state["edit_row"] = {}
+            st.rerun()
+
+        if submitted_edit:
+            # Recalcule le gain avec la même logique que l’ajout
+            if resultat == "TP":
+                gain = mise * reward
+            elif resultat == "SL":
+                gain = -mise
+            elif resultat == "Breakeven":
+                gain = mise
+            else:  # "Pas de trade"
+                gain = 0.0
+
+            st.session_state["data"].iloc[st.session_state["edit_index"]] = {
+                "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
+                "Session": session,
+                "Actif": actif,
+                "Résultat": resultat,
+                "Mise (€)": mise,
+                "Risk (%)": 1.00,
+                "Reward (%)": reward,
+                "Gain (€)": gain
+            }
             save_data()
+            st.session_state["show_edit_form"] = False
+            st.session_state["edit_index"] = None
+            st.session_state["edit_row"] = {}
+            st.success("✅ Trade modifié")
             st.rerun()
 
 # ------------------------------------------------------------
