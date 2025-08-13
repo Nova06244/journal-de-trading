@@ -164,6 +164,9 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
 
+# Colonnes numériques à formater (2 décimales)
+NUM_COLS = {"Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"}
+
 for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
@@ -171,17 +174,25 @@ for i in df.index:
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
+
+        # ✅ Formater les numériques à 2 décimales (au maximum)
+        if col_name in NUM_COLS:
+            num_val = pd.to_numeric(value, errors="coerce")
+            if pd.notna(num_val):
+                value = f"{num_val:.2f}"
+
+        # Date -> format US pour l'affichage
         if col_name == "Date" and value:
-            value = us_fmt(value)  # ISO -> US
+            value = us_fmt(value)
+
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
 
-    # --- Ajout : bouton ✏️ modifier + bouton 🗑️ supprimer ---
+    # --- Boutons ✏️ modifier / 🗑️ supprimer ---
     with cols[-1]:
         edit_col, delete_col = st.columns(2)
         with edit_col:
             if st.button("✏️", key=f"edit_{i}"):
                 st.session_state["edit_index"] = i
-                # stocke la ligne telle quelle (dict) pour pré-remplir le formulaire
                 st.session_state["edit_row"] = df.loc[i].to_dict()
                 st.session_state["show_edit_form"] = True
                 st.rerun()
