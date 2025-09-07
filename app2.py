@@ -105,9 +105,9 @@ with st.form("add_trade_form"):
         date_obj = st.date_input("Date", value=datetime.now())
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
         actif = st.text_input("Actif", value="XAU-USD")
-        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
+        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 19h"])
     with col2:
-        reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
+        reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f", value=3.00)
         resultat = st.selectbox("Résultat", VALID_RESULTS)
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
@@ -224,9 +224,8 @@ if st.session_state.get("show_edit_form", False):
         with col1:
             date_obj = st.date_input("Date", value=_date_val)
             actif = st.text_input("Actif", value=_actif)
-            session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"],
-                                   index=["OPR 9h", "OPR 15h30", "OPRR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPRR 18h30"] else 0)
-        with col2:
+            session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 19h"],
+                                   index=["OPR 9h", "OPR 15h30", "OPR 19h"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 19h"] else 0)
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f", value=_reward)
             resultat = st.selectbox("Résultat", VALID_RESULTS,
                                     index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
