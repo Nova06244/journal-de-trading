@@ -296,7 +296,7 @@ col1, col2, col3, col4 = st.columns(4)
 col1.metric("✅ Total TP", total_tp)
 col2.metric("❌ Total SL", total_sl)
 col3.metric("🟦 Breakeven", total_be)
-col4.metric("⚪ Pas de trade", total_nt)
+col4.metric("⛔️ No Trades", total_nt)
 
 col5, col6, col7, col8 = st.columns(4)
 col5.metric("📈 Total Reward", f"{total_reward:.2f}")
@@ -362,7 +362,7 @@ else:
                 c1.metric("🧾 Trades", int(executed_trades))
                 c2.metric("🏆 Winrate", f"{winrate_month:.2f}%")
                 c3.metric("💰 Gain", f"{gain:.2f} €")
-                c4.metric("⛔ NO TRADES", int(nt))
+                c4.metric("⛔ No Trades", int(nt))
 
 # ------------------------------------------------------------
 # 💾 Export & Import
