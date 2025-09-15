@@ -108,7 +108,7 @@ with st.form("add_trade_form"):
         date_obj = st.date_input("Date", value=datetime.now())
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
         actif = st.text_input("Actif", value="XAU-USD")
-        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 19h"])
+        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
     with col2:
         # Reward en unités entières (±1)
         reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=3.0)
@@ -228,8 +228,8 @@ if st.session_state.get("show_edit_form", False):
         with col1:
             date_obj = st.date_input("Date", value=_date_val)
             actif = st.text_input("Actif", value=_actif)
-            session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 19h"],
-                                   index=["OPR 9h", "OPR 15h30", "OPR 19h"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 19h"] else 0)
+            session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"],
+                                   index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0)
             # Reward en unités entières (±1)
             reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
