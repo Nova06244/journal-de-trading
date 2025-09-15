@@ -120,7 +120,7 @@ with st.form("add_trade_form"):
             gain = -mise
         elif resultat == "Breakeven":
             gain = mise
-        else:  # "Pas de trade"
+        else:  # "No Trade"
             gain = 0.0
 
         new_row = {
