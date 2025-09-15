@@ -24,8 +24,9 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
             df[c] = ""
 
     df = df[EXPECTED_COLS]
+    
     # Compatibilité anciens fichiers : remappe "Pas de trade" -> "No Trade"
-df["Résultat"] = df["Résultat"].replace({"Pas de trade": "No Trade"}).astype(str).str.strip()
+    df["Résultat"] = df["Résultat"].replace({"Pas de trade": "No Trade"}).astype(str).str.strip()
 
     # Date -> ISO
     # 1) ISO strict
