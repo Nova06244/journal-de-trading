@@ -12,7 +12,7 @@ st.title("📘 Journal de Trading")
 # Utils dates & normalisation
 # ------------------------------------------------------------
 EXPECTED_COLS = ["Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]
-VALID_RESULTS = ["TP", "SL", "Breakeven", "Pas de trade"]
+VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     """Assure que le DataFrame de trades est propre + Date en ISO (YYYY-MM-DD)."""
@@ -24,6 +24,8 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
             df[c] = ""
 
     df = df[EXPECTED_COLS]
+    # Compatibilité anciens fichiers : remappe "Pas de trade" -> "No Trade"
+df["Résultat"] = df["Résultat"].replace({"Pas de trade": "No Trade"}).astype(str).str.strip()
 
     # Date -> ISO
     # 1) ISO strict
@@ -253,7 +255,7 @@ if st.session_state.get("show_edit_form", False):
                 gain = -mise
             elif resultat == "Breakeven":
                 gain = mise
-            else:  # "Pas de trade"
+            else:  # "No Trade"
                 gain = 0.0
 
             st.session_state["data"].iloc[st.session_state["edit_index"]] = {
@@ -285,7 +287,7 @@ df_stats["Gain (€)"] = pd.to_numeric(df_stats["Gain (€)"], errors="coerce").
 total_tp = (df_stats["Résultat"] == "TP").sum()
 total_sl = (df_stats["Résultat"] == "SL").sum()
 total_be = (df_stats["Résultat"] == "Breakeven").sum()
-total_nt = (df_stats["Résultat"] == "Pas de trade").sum()
+total_nt = (df_stats["Résultat"] == "No Trade").sum()
 total_gain = df_stats["Gain (€)"].sum()
 total_risk = df_stats[df_stats["Résultat"] == "SL"]["Risk (%)"].sum()
 total_reward = df_stats[df_stats["Résultat"] == "TP"]["Reward (%)"].sum()
@@ -348,7 +350,7 @@ else:
             tp = (month_data["Résultat"] == "TP").sum()
             sl = (month_data["Résultat"] == "SL").sum()
             be = (month_data["Résultat"] == "Breakeven").sum()
-            nt = (month_data["Résultat"] == "Pas de trade").sum()
+            nt = (month_data["Résultat"] == "No Trade").sum()
 
             # Trades exécutés = TP + SL + Breakeven (NO TRADES exclus)
             executed_trades = tp + sl + be
