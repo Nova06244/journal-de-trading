@@ -360,9 +360,10 @@ else:
                 # 4 colonnes pour inclure NO TRADES
                 c1, c2, c3, c4 = st.columns(4)
                 c1.metric("🧾 Trades", int(executed_trades))
-                c2.metric("🏆 Winrate", f"{winrate_month:.2f}%")
-                c3.metric("💰 Gain", f"{gain:.2f} €")
-                c4.metric("⛔ No Trades", int(nt))
+                c2.metric("⛔ No Trades", int(nt))                
+                c3.metric("🏆 Winrate", f"{winrate_month:.2f}%")
+                c4.metric("💰 Gain", f"{gain:.2f} €")
+                
 
 # ------------------------------------------------------------
 # 💾 Export & Import
