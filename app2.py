@@ -107,7 +107,7 @@ with st.form("add_trade_form"):
         actif = st.text_input("Actif", value="XAU-USD")
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 19h"])
     with col2:
-        reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f", value=3.00)
+        reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=3.0)
         resultat = st.selectbox("Résultat", VALID_RESULTS)
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
@@ -226,7 +226,7 @@ if st.session_state.get("show_edit_form", False):
             actif = st.text_input("Actif", value=_actif)
             session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 19h"],
                                    index=["OPR 9h", "OPR 15h30", "OPR 19h"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 19h"] else 0)
-            reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f", value=_reward)
+            reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
                                     index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
             mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", value=_mise)
@@ -243,16 +243,23 @@ if st.session_state.get("show_edit_form", False):
             st.session_state["edit_row"] = {}
             st.rerun()
 
-        if submitted_edit:
-            # Recalcule le gain avec la même logique que l’ajout
-            if resultat == "TP":
-                gain = mise * reward
-            elif resultat == "SL":
-                gain = -mise
-            elif resultat == "Breakeven":
-                gain = mise
-            else:  # "Pas de trade"
-                gain = 0.0
+        tp = (month_data["Résultat"] == "TP").sum()
+sl = (month_data["Résultat"] == "SL").sum()
+be = (month_data["Résultat"] == "Breakeven").sum()
+nt = (month_data["Résultat"] == "Pas de trade").sum()
+
+# Trades exécutés = TP + SL + Breakeven
+executed_trades = tp + sl + be
+
+gain = month_data["Gain (€)"].sum()
+winrate_month = (tp / (tp + sl) * 100) if (tp + sl) > 0 else 0.0
+
+with st.expander(f"📅 {month_names.get(month, str(month))} {selected_year}"):
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("🧾 Trades", int(executed_trades))
+    c2.metric("🏆 Winrate", f"{winrate_month:.2f}%")
+    c3.metric("💰 Gain", f"{gain:.2f} €")
+    c4.metric("⛔ NO TRADES", int(nt))
 
             st.session_state["data"].iloc[st.session_state["edit_index"]] = {
                 "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
