@@ -107,7 +107,11 @@ with st.form("add_trade_form"):
     with col1:
         date_obj = st.date_input("Date", value=datetime.now())
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
-        actif = st.text_input("Actif", value="XAU-USD")
+
+        # ▼ Menu déroulant des actifs
+        assets = ["GOLD", "NASDAQ", "S&P500", "DAX", "WTI", "BTC"]
+        actif = st.selectbox("Actif", assets, index=0)
+
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
     with col2:
         # Reward en unités entières (±1)
