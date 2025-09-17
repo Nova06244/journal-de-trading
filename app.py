@@ -12,7 +12,7 @@ st.title("📘 Journal de Trading")
 # Utils dates & normalisation
 # ------------------------------------------------------------
 EXPECTED_COLS = ["Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]
-VALID_RESULTS = ["TP", "SL", "Breakeven", "Pas de trade"]
+VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     """Assure que le DataFrame de trades est propre + Date en ISO (YYYY-MM-DD)."""
@@ -24,6 +24,9 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
             df[c] = ""
 
     df = df[EXPECTED_COLS]
+    
+    # Compatibilité anciens fichiers : remappe "Pas de trade" -> "No Trade"
+    df["Résultat"] = df["Résultat"].replace({"Pas de trade": "No Trade"}).astype(str).str.strip()
 
     # Date -> ISO
     # 1) ISO strict
@@ -104,10 +107,15 @@ with st.form("add_trade_form"):
     with col1:
         date_obj = st.date_input("Date", value=datetime.now())
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
-        actif = st.text_input("Actif", value="XAU-USD")
-        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"])
+
+        # ▼ Menu déroulant des actifs
+        assets = ["GOLD", "NASDAQ", "S&P500", "DAX", "WTI", "BTC"]
+        actif = st.selectbox("Actif", assets, index=0)
+
+        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
     with col2:
-        reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f")
+        # Reward en unités entières (±1)
+        reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=3.0)
         resultat = st.selectbox("Résultat", VALID_RESULTS)
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
@@ -119,7 +127,7 @@ with st.form("add_trade_form"):
             gain = -mise
         elif resultat == "Breakeven":
             gain = mise
-        else:  # "Pas de trade"
+        else:  # "No Trade"
             gain = 0.0
 
         new_row = {
@@ -164,6 +172,9 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
 
+# Colonnes numériques à formater (2 décimales)
+NUM_COLS = {"Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"}
+
 for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
@@ -171,17 +182,25 @@ for i in df.index:
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
+
+        # ✅ Formater les numériques à 2 décimales (au maximum)
+        if col_name in NUM_COLS:
+            num_val = pd.to_numeric(value, errors="coerce")
+            if pd.notna(num_val):
+                value = f"{num_val:.2f}"
+
+        # Date -> format US pour l'affichage
         if col_name == "Date" and value:
-            value = us_fmt(value)  # ISO -> US
+            value = us_fmt(value)
+
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
 
-    # --- Ajout : bouton ✏️ modifier + bouton 🗑️ supprimer ---
+    # --- Boutons ✏️ modifier / 🗑️ supprimer ---
     with cols[-1]:
         edit_col, delete_col = st.columns(2)
         with edit_col:
             if st.button("✏️", key=f"edit_{i}"):
                 st.session_state["edit_index"] = i
-                # stocke la ligne telle quelle (dict) pour pré-remplir le formulaire
                 st.session_state["edit_row"] = df.loc[i].to_dict()
                 st.session_state["show_edit_form"] = True
                 st.rerun()
@@ -213,10 +232,10 @@ if st.session_state.get("show_edit_form", False):
         with col1:
             date_obj = st.date_input("Date", value=_date_val)
             actif = st.text_input("Actif", value=_actif)
-            session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPRR 18h30"],
-                                   index=["OPR 9h", "OPR 15h30", "OPRR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPRR 18h30"] else 0)
-        with col2:
-            reward = st.number_input("Reward (%)", min_value=0.0, step=0.01, format="%.2f", value=_reward)
+            session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"],
+                                   index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0)
+            # Reward en unités entières (±1)
+            reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
                                     index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
             mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", value=_mise)
@@ -241,7 +260,7 @@ if st.session_state.get("show_edit_form", False):
                 gain = -mise
             elif resultat == "Breakeven":
                 gain = mise
-            else:  # "Pas de trade"
+            else:  # "No Trade"
                 gain = 0.0
 
             st.session_state["data"].iloc[st.session_state["edit_index"]] = {
@@ -273,7 +292,7 @@ df_stats["Gain (€)"] = pd.to_numeric(df_stats["Gain (€)"], errors="coerce").
 total_tp = (df_stats["Résultat"] == "TP").sum()
 total_sl = (df_stats["Résultat"] == "SL").sum()
 total_be = (df_stats["Résultat"] == "Breakeven").sum()
-total_nt = (df_stats["Résultat"] == "Pas de trade").sum()
+total_nt = (df_stats["Résultat"] == "No Trade").sum()
 total_gain = df_stats["Gain (€)"].sum()
 total_risk = df_stats[df_stats["Résultat"] == "SL"]["Risk (%)"].sum()
 total_reward = df_stats[df_stats["Résultat"] == "TP"]["Reward (%)"].sum()
@@ -284,7 +303,7 @@ col1, col2, col3, col4 = st.columns(4)
 col1.metric("✅ Total TP", total_tp)
 col2.metric("❌ Total SL", total_sl)
 col3.metric("🟦 Breakeven", total_be)
-col4.metric("⚪ Pas de trade", total_nt)
+col4.metric("⛔️ No Trades", total_nt)
 
 col5, col6, col7, col8 = st.columns(4)
 col5.metric("📈 Total Reward", f"{total_reward:.2f}")
@@ -332,17 +351,26 @@ else:
             month_data = df_year[df_year["Month"] == month].copy()
             month_data["Gain (€)"] = pd.to_numeric(month_data["Gain (€)"], errors="coerce").fillna(0)
 
-            nb_trades = len(month_data)
+            # Comptes par type
             tp = (month_data["Résultat"] == "TP").sum()
             sl = (month_data["Résultat"] == "SL").sum()
+            be = (month_data["Résultat"] == "Breakeven").sum()
+            nt = (month_data["Résultat"] == "No Trade").sum()
+
+            # Trades exécutés = TP + SL + Breakeven (NO TRADES exclus)
+            executed_trades = tp + sl + be
+
             gain = month_data["Gain (€)"].sum()
             winrate_month = (tp / (tp + sl) * 100) if (tp + sl) > 0 else 0.0
 
             with st.expander(f"📅 {month_names.get(month, str(month))} {selected_year}"):
-                c1, c2, c3 = st.columns(3)
-                c1.metric("🧾 Trades", int(nb_trades))
-                c2.metric("🏆 Winrate", f"{winrate_month:.2f}%")
-                c3.metric("💰 Gain", f"{gain:.2f} €")
+                # 4 colonnes pour inclure NO TRADES
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("🧾 Trades", int(executed_trades))
+                c2.metric("⛔ No Trades", int(nt))                
+                c3.metric("🏆 Winrate", f"{winrate_month:.2f}%")
+                c4.metric("💰 Gain", f"{gain:.2f} €")
+                
 
 # ------------------------------------------------------------
 # 💾 Export & Import
