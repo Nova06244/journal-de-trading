@@ -13,7 +13,7 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 EXPECTED_COLS = ["Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
-ASSETS = ["GOLD", "NASDAQ", "S&P500", "DAX", "WTI", "BTC"]
+ASSETS = ["GOLD", "NASDAQ", "S&P500", "DAX", "WTI", "BTC", "EURUSD", "GBPUSD"]
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     """Assure que le DataFrame de trades est propre + Date en ISO (YYYY-MM-DD)."""
