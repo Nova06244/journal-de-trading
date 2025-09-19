@@ -11,7 +11,13 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 # Utils dates & normalisation
 # ------------------------------------------------------------
-EXPECTED_COLS = ["Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]
+PHRASES_NO_TRADE = [
+    "Cassure de l’OPR, mais pas de PULLBACK dans FIBONACCI",
+    "VWAP trop proche de l’OPR, pas de marge exploitable",
+    "MOMENTUM respecté, mais le prix est parti à contre TENDANCE"
+]
+
+EXPECTED_COLS = ["Date", "Session", "Actif", "Résultat", "Motif", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 ASSETS = ["GOLD", "NASDAQ", "S&P500", "DAX", "WTI", "BTC"]
 
@@ -55,6 +61,9 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     for c in ["Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
+    # Motif -> string propre
+    df["Motif"] = df["Motif"].astype(str).fillna("").str.strip()
+
     return df.reset_index(drop=True)
 
 def us_fmt(date_iso: str) -> str:
@@ -73,7 +82,7 @@ def save_data():
 
     capital_row = pd.DataFrame([{
         "Date": "", "Session": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
+        "Résultat": "", "Motif": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
         "Gain (€)": st.session_state["capital"]
     }])
 
@@ -125,6 +134,12 @@ with st.form("add_trade_form"):
         # Reward en unités entières (±1)
         reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=3.0)
         resultat = st.selectbox("Résultat", VALID_RESULTS)
+
+        # ▼ Menu déroulant conditionnel (No Trade)
+        motif = ""
+        if resultat == "No Trade":
+            motif = st.selectbox("Motif (No Trade)", PHRASES_NO_TRADE)
+
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
@@ -143,6 +158,7 @@ with st.form("add_trade_form"):
             "Session": session,
             "Actif": actif,
             "Résultat": resultat,
+            "Motif": motif if resultat == "No Trade" else "",
             "Mise (€)": mise,
             "Risk (%)": 1.00,                      # Risque fixé à 1
             "Reward (%)": reward,
@@ -186,7 +202,7 @@ NUM_COLS = {"Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"}
 for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
-    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 0.2])  # dernière col pour boutons
+    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1, 0.2])  # dernière col pour boutons (ajout d'une col pour Motif)
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
@@ -234,6 +250,7 @@ if st.session_state.get("show_edit_form", False):
     _reward = float(pd.to_numeric(row.get("Reward (%)", 0), errors="coerce") or 0.0)
     _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
     _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
+    _motif = str(row.get("Motif", ""))
 
     with st.form("edit_trade_form"):
         col1, col2 = st.columns(2)
@@ -257,6 +274,17 @@ if st.session_state.get("show_edit_form", False):
             reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
                                     index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
+
+            # ▼ Menu conditionnel lors de l’édition
+            motif = _motif
+            if resultat == "No Trade":
+                motif = st.selectbox(
+                    "Motif (No Trade)", PHRASES_NO_TRADE,
+                    index=PHRASES_NO_TRADE.index(_motif) if _motif in PHRASES_NO_TRADE else 0
+                )
+            else:
+                motif = ""
+
             mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", value=_mise)
 
         c_save, c_cancel = st.columns([1, 1])
@@ -287,6 +315,7 @@ if st.session_state.get("show_edit_form", False):
                 "Session": session,
                 "Actif": actif,
                 "Résultat": resultat,
+                "Motif": motif,
                 "Mise (€)": mise,
                 "Risk (%)": 1.00,
                 "Reward (%)": reward,
@@ -402,7 +431,7 @@ csv = pd.concat([
     st.session_state["data"].copy(),
     pd.DataFrame([{
         "Date": "", "Session": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
+        "Résultat": "", "Motif": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
         "Gain (€)": st.session_state["capital"]
     }])
 ], ignore_index=True)
