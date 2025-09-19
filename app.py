@@ -13,6 +13,7 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 EXPECTED_COLS = ["Date", "Session", "Actif", "Résultat", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
+ASSETS = ["GOLD", "NASDAQ", "S&P500", "DAX", "WTI", "BTC"]
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     """Assure que le DataFrame de trades est propre + Date en ISO (YYYY-MM-DD)."""
@@ -27,6 +28,14 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     
     # Compatibilité anciens fichiers : remappe "Pas de trade" -> "No Trade"
     df["Résultat"] = df["Résultat"].replace({"Pas de trade": "No Trade"}).astype(str).str.strip()
+
+    # ✅ Patch actifs (anciens symboles -> nouveaux noms)
+    df["Actif"] = df["Actif"].replace({
+        "XAUUSD": "GOLD",
+        "BTCUSD": "BTC",
+        "XAU-USD": "GOLD",
+        "BTC-USD": "BTC"
+    }).astype(str).str.strip()
 
     # Date -> ISO
     # 1) ISO strict
@@ -109,8 +118,7 @@ with st.form("add_trade_form"):
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
 
         # ▼ Menu déroulant des actifs
-        assets = ["GOLD", "NASDAQ", "S&P500", "DAX", "WTI", "BTC"]
-        actif = st.selectbox("Actif", assets, index=0)
+        actif = st.selectbox("Actif", ASSETS, index=0)
 
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
     with col2:
@@ -231,9 +239,20 @@ if st.session_state.get("show_edit_form", False):
         col1, col2 = st.columns(2)
         with col1:
             date_obj = st.date_input("Date", value=_date_val)
-            actif = st.text_input("Actif", value=_actif)
-            session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"],
-                                   index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0)
+
+            # Liste d'actifs pour édition : inclut l'actif existant s'il n'est pas dans ASSETS (compat anciens)
+            _edit_assets = ASSETS if (_actif in ASSETS or _actif == "") else [*ASSETS, _actif]
+            actif = st.selectbox(
+                "Actif",
+                _edit_assets,
+                index=_edit_assets.index(_actif) if _actif in _edit_assets else 0
+            )
+
+            session = st.selectbox(
+                "Session",
+                ["OPR 9h", "OPR 15h30", "OPR 18h30"],
+                index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
+            )
             # Reward en unités entières (±1)
             reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
