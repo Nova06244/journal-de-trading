@@ -14,7 +14,9 @@ st.title("📘 Journal de Trading")
 PHRASES_NO_TRADE = [
     "Cassure de l’OPR, mais pas de PULLBACK dans FIBONACCI",
     "VWAP trop proche de l’OPR, pas de marge exploitable",
-    "MOMENTUM respecté, mais le prix est parti à contre TENDANCE"
+    "MOMENTUM respecté, mais le prix est parti à contre TENDANCE",
+    "EGT",
+    "Communiquer plus haut"
 ]
 
 EXPECTED_COLS = ["Date", "Session", "Actif", "Résultat", "Motif", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]
@@ -135,10 +137,18 @@ with st.form("add_trade_form"):
         reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=3.0)
         resultat = st.selectbox("Résultat", VALID_RESULTS)
 
-        # ▼ Menu déroulant conditionnel (No Trade)
-        motif = ""
+        # ▼ Motif conditionnel (No Trade) — clé stable pour éviter la disparition dans le form
+        motif_slot = st.container()
         if resultat == "No Trade":
-            motif = st.selectbox("Motif (No Trade)", PHRASES_NO_TRADE)
+            motif = motif_slot.selectbox(
+                "Motif (No Trade)",
+                PHRASES_NO_TRADE,
+                key="motif_no_trade"
+            )
+        else:
+            # Nettoie la sélection précédente si on quitte "No Trade"
+            st.session_state["motif_no_trade"] = ""
+            motif = ""
 
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
@@ -202,7 +212,7 @@ NUM_COLS = {"Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"}
 for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
-    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1, 0.2])  # dernière col pour boutons (ajout d'une col pour Motif)
+    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1, 0.2])  # dernière col pour boutons (inclut Motif)
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
@@ -275,12 +285,14 @@ if st.session_state.get("show_edit_form", False):
             resultat = st.selectbox("Résultat", VALID_RESULTS,
                                     index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
 
-            # ▼ Menu conditionnel lors de l’édition
-            motif = _motif
+            # ▼ Motif conditionnel (édition) — clé stable distincte
             if resultat == "No Trade":
+                default_index = PHRASES_NO_TRADE.index(_motif) if _motif in PHRASES_NO_TRADE else 0
                 motif = st.selectbox(
-                    "Motif (No Trade)", PHRASES_NO_TRADE,
-                    index=PHRASES_NO_TRADE.index(_motif) if _motif in PHRASES_NO_TRADE else 0
+                    "Motif (No Trade)",
+                    PHRASES_NO_TRADE,
+                    index=default_index,
+                    key="motif_no_trade_edit"
                 )
             else:
                 motif = ""
