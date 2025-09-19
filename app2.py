@@ -14,7 +14,8 @@ st.title("📘 Journal de Trading")
 PHRASES_NO_TRADE = [
     "Cassure de l’OPR, mais pas de PULLBACK dans FIBONACCI",
     "VWAP trop proche de l’OPR, pas de marge exploitable",
-    "MOMENTUM respecté, mais le prix est parti à contre TENDANCE",
+    "MOMENTUM OK, mais le prix est parti à contre TENDANCE",
+    "MOMENTUM OK, mais le trade est parti sans mon ENTREE",
 ]
 
 SETUP_TYPES = ["", "REVERSAL", "CONTINUATION"]  # menu vide par défaut
