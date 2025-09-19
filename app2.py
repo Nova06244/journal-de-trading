@@ -351,6 +351,76 @@ col8.metric("💰 Gain total (€)", f"{total_gain:.2f}")
 st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
 
 # ------------------------------------------------------------
+# ⚖️ Stats comparatives : REVERSAL vs CONTINUATION
+# ------------------------------------------------------------
+st.subheader("⚖️ Stats comparatives — REVERSAL vs CONTINUATION")
+
+df_setup = st.session_state["data"].copy()
+df_setup["Gain (€)"] = pd.to_numeric(df_setup["Gain (€)"], errors="coerce").fillna(0)
+df_setup["Setup"] = df_setup["Setup"].astype(str).str.upper().fillna("")
+
+def setup_metrics(subdf: pd.DataFrame) -> dict:
+    tp = (subdf["Résultat"] == "TP").sum()
+    sl = (subdf["Résultat"] == "SL").sum()
+    be = (subdf["Résultat"] == "Breakeven").sum()
+    nt = (subdf["Résultat"] == "No Trade").sum()
+
+    executed = tp + sl + be
+    total_gain = subdf["Gain (€)"].sum()
+
+    gross_win = subdf.loc[subdf["Gain (€)"] > 0, "Gain (€)"].sum()
+    gross_loss_abs = -subdf.loc[subdf["Gain (€)"] < 0, "Gain (€)"].sum()
+    if gross_loss_abs > 0:
+        pf = gross_win / gross_loss_abs
+    else:
+        pf = float("inf") if gross_win > 0 else 0.0
+
+    winrate = (tp / (tp + sl) * 100) if (tp + sl) > 0 else 0.0
+    expectancy = (total_gain / executed) if executed > 0 else 0.0
+
+    return {
+        "Trades exécutés": int(executed),
+        "TP": int(tp),
+        "SL": int(sl),
+        "No Trades": int(nt),
+        "Winrate (%)": round(winrate, 2),
+        "Gain total (€)": round(total_gain, 2),
+        "Profit Factor": (round(pf, 2) if pf != float("inf") else "∞"),
+        "Expectancy (€ / trade exé.)": round(expectancy, 2)
+    }
+
+rev_metrics = setup_metrics(df_setup[df_setup["Setup"] == "REVERSAL"])
+cont_metrics = setup_metrics(df_setup[df_setup["Setup"] == "CONTINUATION"])
+
+# Affichage côte-à-côte
+c1, c2 = st.columns(2)
+
+with c1:
+    st.markdown("**REVERSAL**")
+    st.metric("Trades exécutés", rev_metrics["Trades exécutés"])
+    st.metric("TP / SL", f"{rev_metrics['TP']} / {rev_metrics['SL']}")
+    st.metric("Winrate", f"{rev_metrics['Winrate (%)']}%")
+    st.metric("Gain total", f"{rev_metrics['Gain total (€)']:.2f} €")
+    st.metric("Profit Factor", rev_metrics["Profit Factor"])
+    st.metric("Expectancy", f"{rev_metrics['Expectancy (€ / trade exé.)']:.2f} €")
+
+with c2:
+    st.markdown("**CONTINUATION**")
+    st.metric("Trades exécutés", cont_metrics["Trades exécutés"])
+    st.metric("TP / SL", f"{cont_metrics['TP']} / {cont_metrics['SL']}")
+    st.metric("Winrate", f"{cont_metrics['Winrate (%)']}%")
+    st.metric("Gain total", f"{cont_metrics['Gain total (€)']:.2f} €")
+    st.metric("Profit Factor", cont_metrics["Profit Factor"])
+    st.metric("Expectancy", f"{cont_metrics['Expectancy (€ / trade exé.)']:.2f} €")
+
+# Petit tableau récap si tu veux voir tout d’un coup
+summary_df = pd.DataFrame.from_dict({
+    "REVERSAL": rev_metrics,
+    "CONTINUATION": cont_metrics
+}, orient="index")
+st.dataframe(summary_df)
+
+# ------------------------------------------------------------
 # 📆 Bilan annuel
 # ------------------------------------------------------------
 st.subheader("📆 Bilan annuel")
