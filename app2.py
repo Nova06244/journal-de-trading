@@ -15,8 +15,6 @@ PHRASES_NO_TRADE = [
     "Cassure de l’OPR, mais pas de PULLBACK dans FIBONACCI",
     "VWAP trop proche de l’OPR, pas de marge exploitable",
     "MOMENTUM respecté, mais le prix est parti à contre TENDANCE",
-    "EGT",
-    "Communiquer plus haut"
 ]
 
 SETUP_TYPES = ["", "REVERSAL", "CONTINUATION"]  # menu vide par défaut
