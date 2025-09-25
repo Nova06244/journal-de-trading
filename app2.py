@@ -11,14 +11,7 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
-PHRASES_NO_TRADE = [
-    "Cassure de l’OPR, mais pas de PULLBACK dans FIBONACCI",
-    "VWAP trop proche de l’OPR, pas de marge exploitable",
-    "MOMENTUM OK, mais le prix est parti à contre TENDANCE",
-    "MOMENTUM OK, mais le trade est parti sans mon ENTREE",
-]
-
-SETUP_TYPES = ["", "REVERSAL", "CONTINUATION"]  # menu vide par défaut
+SETUP_TYPES = ["CASSURE OPR M30 + RSI 7 🟢"]  # menu vide par défaut
 
 EXPECTED_COLS = [
     "Date", "Session", "Setup", "Actif", "Résultat", "Motif",
