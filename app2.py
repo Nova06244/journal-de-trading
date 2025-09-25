@@ -14,11 +14,8 @@ st.title("📘 Journal de Trading")
 # Un seul type de setup
 SETUP_TYPES = ["CASSURE OPR M30 + RSI 7 🟢"]
 
-# Plus de phrases : liste vide pour compatibilité
-PHRASES_NO_TRADE = []
-
 EXPECTED_COLS = [
-    "Date", "Session", "Setup", "Actif", "Résultat", "Motif",
+    "Date", "Session", "Setup", "Actif", "Résultat",
     "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
 ]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
@@ -28,7 +25,7 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     """Assure que le DataFrame de trades est propre + Date en ISO (YYYY-MM-DD)."""
     df = df_in.copy()
 
-    # Colonnes manquantes -> ajout + ordre
+    # Colonnes manquantes -> ajout + ordre (ignore tout le reste, ex: anciens 'Motif')
     for c in EXPECTED_COLS:
         if c not in df.columns:
             df[c] = ""
@@ -56,7 +53,6 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
     # Champs texte propres
-    df["Motif"] = df["Motif"].astype(str).fillna("").str.strip()
     df["Setup"] = df["Setup"].astype(str).fillna("").str.strip()
 
     return df.reset_index(drop=True)
@@ -76,7 +72,7 @@ def save_data():
 
     capital_row = pd.DataFrame([{
         "Date": "", "Session": "", "Setup": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Motif": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
+        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
         "Gain (€)": st.session_state["capital"]
     }])
 
@@ -127,11 +123,9 @@ with st.form("add_trade_form"):
         # Reward par défaut à 2.50, décimales autorisées
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=2.50)
         resultat = st.selectbox("Résultat", VALID_RESULTS)
-        # Plus de phrases : uniquement vide
-        motif = st.selectbox("Motif (optionnel)", [""], index=0, key="motif_any")
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
-    # Bouton de soumission (à l'intérieur du form)
+    # Bouton de soumission (à l’intérieur du form)
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
         if resultat == "TP":
@@ -149,7 +143,6 @@ with st.form("add_trade_form"):
             "Setup": setup,
             "Actif": actif,
             "Résultat": resultat,
-            "Motif": motif,  # reste vide
             "Mise (€)": mise,
             "Risk (%)": 1.00,
             "Reward (%)": reward,
@@ -246,7 +239,6 @@ if st.session_state.get("show_edit_form", False):
     _reward = float(pd.to_numeric(row.get("Reward (%)", 2.5), errors="coerce") or 2.5)
     _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
     _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
-    _motif = str(row.get("Motif", ""))
 
     with st.form("edit_trade_form"):
         col1, col2 = st.columns(2)
@@ -269,9 +261,6 @@ if st.session_state.get("show_edit_form", False):
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
                                     index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
-
-            # Plus de phrases : uniquement vide
-            motif = st.selectbox("Motif (optionnel)", [""], index=0, key="motif_any_edit")
 
             mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", value=_mise)
 
@@ -303,7 +292,6 @@ if st.session_state.get("show_edit_form", False):
                 "Setup": setup,
                 "Actif": actif,
                 "Résultat": resultat,
-                "Motif": motif,
                 "Mise (€)": mise,
                 "Risk (%)": 1.00,
                 "Reward (%)": reward,
@@ -412,7 +400,7 @@ csv = pd.concat([
     st.session_state["data"].copy(),
     pd.DataFrame([{
         "Date": "", "Session": "", "Setup": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Motif": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
+        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
         "Gain (€)": st.session_state["capital"]
     }])
 ], ignore_index=True)
