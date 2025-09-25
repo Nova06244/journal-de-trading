@@ -11,7 +11,11 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
-SETUP_TYPES = ["CASSURE OPR M30 + RSI 7 🟢"]  # menu vide par défaut
+# Un seul type de setup
+SETUP_TYPES = ["CASSURE OPR M30 + RSI 7 🟢"]
+
+# Plus de phrases : liste vide pour compatibilité
+PHRASES_NO_TRADE = []
 
 EXPECTED_COLS = [
     "Date", "Session", "Setup", "Actif", "Résultat", "Motif",
@@ -117,13 +121,14 @@ with st.form("add_trade_form"):
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
         actif = st.selectbox("Actif", ASSETS, index=0)
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
-        setup = st.selectbox("Type de Setup", SETUP_TYPES, index=0)  # <-- NOUVEAU
+        setup = st.selectbox("Type de Setup", SETUP_TYPES, index=0)
 
     with col2:
-        reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=3.0)
+        # Reward par défaut à 2.50, décimales autorisées
+        reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=2.50)
         resultat = st.selectbox("Résultat", VALID_RESULTS)
-        motif_options = [""] + PHRASES_NO_TRADE
-        motif = st.selectbox("Motif (optionnel)", motif_options, index=0, key="motif_any")
+        # Plus de phrases : uniquement vide
+        motif = st.selectbox("Motif (optionnel)", [""], index=0, key="motif_any")
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
     # Bouton de soumission (à l'intérieur du form)
@@ -141,10 +146,10 @@ with st.form("add_trade_form"):
         new_row = {
             "Date": date_iso,
             "Session": session,
-            "Setup": setup,            # <-- enregistré
+            "Setup": setup,
             "Actif": actif,
             "Résultat": resultat,
-            "Motif": motif,            # peut rester vide
+            "Motif": motif,  # reste vide
             "Mise (€)": mise,
             "Risk (%)": 1.00,
             "Reward (%)": reward,
@@ -237,7 +242,8 @@ if st.session_state.get("show_edit_form", False):
     _actif = str(row.get("Actif", ""))
     _session = str(row.get("Session", "OPR 9h"))
     _setup = str(row.get("Setup", ""))
-    _reward = float(pd.to_numeric(row.get("Reward (%)", 0), errors="coerce") or 0.0)
+    # Par défaut 2.50 si vide/NaN
+    _reward = float(pd.to_numeric(row.get("Reward (%)", 2.5), errors="coerce") or 2.5)
     _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
     _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
     _motif = str(row.get("Motif", ""))
@@ -259,13 +265,13 @@ if st.session_state.get("show_edit_form", False):
             setup = st.selectbox("Type de Setup", SETUP_TYPES,
                                  index=SETUP_TYPES.index(_setup) if _setup in SETUP_TYPES else 0)
 
-            reward = st.number_input("Reward (%)", min_value=0.0, step=1.0, format="%.0f", value=float(_reward))
+            # Reward éditable avec défaut 2.50
+            reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
                                     index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
 
-            motif_options = [""] + PHRASES_NO_TRADE
-            default_index = motif_options.index(_motif) if _motif in motif_options else 0
-            motif = st.selectbox("Motif (optionnel)", motif_options, index=default_index, key="motif_any_edit")
+            # Plus de phrases : uniquement vide
+            motif = st.selectbox("Motif (optionnel)", [""], index=0, key="motif_any_edit")
 
             mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", value=_mise)
 
@@ -294,7 +300,7 @@ if st.session_state.get("show_edit_form", False):
             st.session_state["data"].iloc[st.session_state["edit_index"]] = {
                 "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
                 "Session": session,
-                "Setup": setup,        # <-- mis à jour
+                "Setup": setup,
                 "Actif": actif,
                 "Résultat": resultat,
                 "Motif": motif,
