@@ -11,21 +11,24 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
-# Un seul type de setup
-SETUP_TYPES = ["CASSURE OPR M30 + RSI 7 🟢"]
+# Setup fixe (plus de menu)
+SETUP_FIXED = "CASSURE OPR M30 + RSI 7 🟢"
 
 EXPECTED_COLS = [
     "Date", "Session", "Setup", "Actif", "Résultat",
-    "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
+    "Motif", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
 ]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 ASSETS = ["NASDAQ", "DAX"]
+
+# Options de motif (ligne vide par défaut)
+MOTIF_OPTIONS = ["", "stratégie validée", "faux Breakout", "tranche horaire dépassé"]
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     """Assure que le DataFrame de trades est propre + Date en ISO (YYYY-MM-DD)."""
     df = df_in.copy()
 
-    # Colonnes manquantes -> ajout + ordre (ignore tout le reste, ex: anciens 'Motif')
+    # Colonnes manquantes -> ajout + ordre (ignore tout le reste)
     for c in EXPECTED_COLS:
         if c not in df.columns:
             df[c] = ""
@@ -54,6 +57,7 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
 
     # Champs texte propres
     df["Setup"] = df["Setup"].astype(str).fillna("").str.strip()
+    df["Motif"] = df["Motif"].astype(str).fillna("").strip()
 
     return df.reset_index(drop=True)
 
@@ -72,8 +76,8 @@ def save_data():
 
     capital_row = pd.DataFrame([{
         "Date": "", "Session": "", "Setup": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
-        "Gain (€)": st.session_state["capital"]
+        "Résultat": "", "Motif": "", "Mise (€)": "", "Risk (%)": "",
+        "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
 
     export_df = pd.concat([df_out, capital_row], ignore_index=True)
@@ -117,7 +121,15 @@ with st.form("add_trade_form"):
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
         actif = st.selectbox("Actif", ASSETS, index=0)
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
-        setup = st.selectbox("Type de Setup", SETUP_TYPES, index=0)
+        # Setup fixe (affichage en lecture seule)
+        st.text_input("Type de Setup (fixe)", value=SETUP_FIXED, disabled=True)
+
+        # --- Motif (ligne vide par défaut + options) ---
+        motif_choice = st.selectbox("Motif", MOTIF_OPTIONS, index=0)
+        motif_custom = ""
+        if motif_choice == "":
+            motif_custom = st.text_input("Motif personnalisé (optionnel)", value="")
+        motif_value = motif_custom.strip() if motif_choice == "" else motif_choice
 
     with col2:
         # Reward par défaut à 2.50, décimales autorisées
@@ -140,9 +152,10 @@ with st.form("add_trade_form"):
         new_row = {
             "Date": date_iso,
             "Session": session,
-            "Setup": setup,
+            "Setup": SETUP_FIXED,         # <-- Fixe
             "Actif": actif,
             "Résultat": resultat,
+            "Motif": motif_value,         # <-- Nouveau champ
             "Mise (€)": mise,
             "Risk (%)": 1.00,
             "Reward (%)": reward,
@@ -234,11 +247,12 @@ if st.session_state.get("show_edit_form", False):
 
     _actif = str(row.get("Actif", ""))
     _session = str(row.get("Session", "OPR 9h"))
-    _setup = str(row.get("Setup", ""))
+    _setup = SETUP_FIXED  # toujours fixe
     # Par défaut 2.50 si vide/NaN
     _reward = float(pd.to_numeric(row.get("Reward (%)", 2.5), errors="coerce") or 2.5)
     _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
     _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
+    _motif_val = str(row.get("Motif", "") or "")
 
     with st.form("edit_trade_form"):
         col1, col2 = st.columns(2)
@@ -254,8 +268,15 @@ if st.session_state.get("show_edit_form", False):
                 index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
             )
 
-            setup = st.selectbox("Type de Setup", SETUP_TYPES,
-                                 index=SETUP_TYPES.index(_setup) if _setup in SETUP_TYPES else 0)
+            st.text_input("Type de Setup (fixe)", value=_setup, disabled=True)
+
+            # --- Motif (édition) ---
+            default_idx = MOTIF_OPTIONS.index(_motif_val) if _motif_val in MOTIF_OPTIONS else 0
+            motif_choice = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
+            motif_custom = ""
+            if motif_choice == "":
+                motif_custom = st.text_input("Motif personnalisé (optionnel)", value=("" if _motif_val in MOTIF_OPTIONS else _motif_val))
+            motif_value = motif_custom.strip() if motif_choice == "" else motif_choice
 
             # Reward éditable avec défaut 2.50
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
@@ -289,9 +310,10 @@ if st.session_state.get("show_edit_form", False):
             st.session_state["data"].iloc[st.session_state["edit_index"]] = {
                 "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
                 "Session": session,
-                "Setup": setup,
+                "Setup": SETUP_FIXED,      # fixe
                 "Actif": actif,
                 "Résultat": resultat,
+                "Motif": motif_value,      # nouveau champ
                 "Mise (€)": mise,
                 "Risk (%)": 1.00,
                 "Reward (%)": reward,
@@ -400,8 +422,8 @@ csv = pd.concat([
     st.session_state["data"].copy(),
     pd.DataFrame([{
         "Date": "", "Session": "", "Setup": "", "Actif": "__CAPITAL__",
-        "Résultat": "", "Mise (€)": "", "Risk (%)": "", "Reward (%)": "",
-        "Gain (€)": st.session_state["capital"]
+        "Résultat": "", "Motif": "", "Mise (€)": "", "Risk (%)": "",
+        "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
 ], ignore_index=True)
 
