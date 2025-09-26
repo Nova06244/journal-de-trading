@@ -8,6 +8,15 @@ SAVE_FILE = "journal_trading.csv"
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
+# --- Styles (texte blanc pour le setup + titre Cassure) ---
+st.markdown("""
+<style>
+.setup-pill { color: white; background:#111; border:1px solid #444;
+              border-radius:6px; padding:8px 10px; display:inline-block; font-weight:600; }
+.cassure-title { color: white; }
+</style>
+""", unsafe_allow_html=True)
+
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
@@ -128,11 +137,11 @@ with st.form("add_trade_form"):
         actif = st.selectbox("Actif", ASSETS, index=0)
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
 
-        # Type de Setup (champ verrouillé)
-        st.text_input("Type de Setup", value=SETUP_FIXED, disabled=True)
+        # Type de Setup (affiché en blanc, non modifiable)
+        st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
         # --- Cassure de l'OPR ---
-        st.markdown("**Cassure de l’OPR**")
+        st.markdown("<span class='cassure-title'><strong>Cassure de l’OPR</strong></span>", unsafe_allow_html=True)
         c_opr1, c_opr2 = st.columns(2)
         with c_opr1:
             cassure_menu = st.selectbox(" ",
@@ -279,13 +288,14 @@ if st.session_state.get("show_edit_form", False):
                 index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
             )
 
-            st.text_input("Type de Setup", value=SETUP_FIXED, disabled=True)
+            # Type de Setup (affiché en blanc, non modifiable)
+            st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
             default_idx = MOTIF_OPTIONS.index(_motif_val) if _motif_val in MOTIF_OPTIONS else 0
             motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
 
             # Cassure de l’OPR (menu + note)
-            st.markdown("**Cassure de l’OPR**")
+            st.markdown("<span class='cassure-title'><strong>Cassure de l’OPR</strong></span>", unsafe_allow_html=True)
             c_opr1, c_opr2 = st.columns(2)
             with c_opr1:
                 cassure_menu = st.selectbox(" ", CASSURE_MENU,
