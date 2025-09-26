@@ -160,6 +160,9 @@ with st.form("add_trade_form"):
         if hour_required and cassure_note == "":
             st.error("⛔ Sélectionne une heure de cassure (non vide pour OPR HIGH/LOW).")
         else:
+            if cassure_menu == "Pas de Cassure":
+                cassure_note = ""  # autorise '----' (pas d'horaire)
+
             if resultat == "TP":
                 gain = mise * reward
             elif resultat == "SL":
@@ -168,10 +171,6 @@ with st.form("add_trade_form"):
                 gain = mise
             else:
                 gain = 0.0
-
-            # Si 'Pas de Cassure', on stocke vide ("") pour l'heure
-            if cassure_menu == "Pas de Cassure":
-                cassure_note = ""
 
             new_row = {
                 "Date": date_iso,
@@ -333,6 +332,9 @@ if st.session_state.get("show_edit_form", False):
             if hour_required and cassure_note == "":
                 st.error("⛔ Sélectionne une heure de cassure (non vide pour OPR HIGH/LOW).")
             else:
+                if cassure_menu == "Pas de Cassure":
+                    cassure_note = ""  # accepte '----'
+
                 if resultat == "TP":
                     gain = mise * reward
                 elif resultat == "SL":
@@ -341,9 +343,6 @@ if st.session_state.get("show_edit_form", False):
                     gain = mise
                 else:
                     gain = 0.0
-
-                if cassure_menu == "Pas de Cassure":
-                    cassure_note = ""
 
                 st.session_state["data"].iloc[st.session_state["edit_index"]] = {
                     "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
