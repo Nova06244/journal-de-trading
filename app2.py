@@ -11,24 +11,26 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
-# Setup fixe
 SETUP_FIXED = "CASSURE OPR M30 + RSI 7 🟢"
 
 EXPECTED_COLS = [
-    "Date", "Session", "Setup", "Heure cassure", "OPR HIGH", "OPR LOW",
-    "Actif", "Résultat", "Motif", "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
+    "Date", "Session", "Setup",
+    "Heure cassure", "Cassure OPR", "Cassure note",
+    "Actif", "Résultat", "Motif",
+    "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
 ]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 ASSETS = ["NASDAQ", "DAX"]
 
-# Options de motif (ligne vide par défaut)
+# Motifs
 MOTIF_OPTIONS = ["", "Strategie ✅", "Faux Breakout ❌", "Tranche HORRAIRE Dépassée ⛔️", "ANNONCE Economique 🚫"]
 
+# Menu « Cassure de l’OPR »
+CASSURE_MENU = ["", "OPR HIGH", "OPR LOW"]
+
 def _fmt_time(x: str) -> str:
-    """Normalise une heure sous forme HH:MM (si possible)."""
     if not isinstance(x, str) or not x.strip():
         return ""
-    # Essais classiques
     for fmt in ("%H:%M", "%H:%M:%S"):
         try:
             t = datetime.strptime(x.strip(), fmt).time()
@@ -38,10 +40,10 @@ def _fmt_time(x: str) -> str:
     return ""
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
-    """Assure que le DataFrame de trades est propre + Date ISO + Heure cassure HH:MM."""
+    """Nettoyage + Date ISO + Heure cassure HH:MM."""
     df = df_in.copy()
 
-    # Colonnes manquantes -> ajout + ordre (ignore tout le reste)
+    # Colonnes manquantes -> ajout + ordre
     for c in EXPECTED_COLS:
         if c not in df.columns:
             df[c] = ""
@@ -68,31 +70,34 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     df["Heure cassure"] = df["Heure cassure"].astype(str).map(_fmt_time)
 
     # Nombres
-    for c in ["Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)", "OPR HIGH", "OPR LOW"]:
+    for c in ["Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    # Champs texte propres
-    df["Setup"] = df["Setup"].astype(str).fillna("").str.strip()
-    df["Motif"] = df["Motif"].astype(str).fillna("").str.strip()
+    # Textes
+    for c in ["Setup", "Motif", "Cassure OPR", "Cassure note"]:
+        df[c] = df[c].astype(str).fillna("").str.strip()
+
+    # Normalise valeurs du menu de cassure (optionnel)
+    df["Cassure OPR"] = df["Cassure OPR"].where(df["Cassure OPR"].isin(CASSURE_MENU), "")
 
     return df.reset_index(drop=True)
 
 def us_fmt(date_iso: str) -> str:
-    """YYYY-MM-DD -> MM/DD/YYYY pour affichage."""
     if not date_iso:
         return ""
     dt = pd.to_datetime(date_iso, format="%Y-%m-%d", errors="coerce")
     return dt.strftime("%m/%d/%Y") if pd.notna(dt) else ""
 
 def save_data():
-    """Écrit le CSV avec Date en ISO et la ligne CAPITAL en fin."""
+    """Écrit le CSV (Date ISO) + ligne CAPITAL."""
     df_out = st.session_state["data"].copy()
     dt = pd.to_datetime(df_out["Date"], errors="coerce", format="%Y-%m-%d")
     df_out["Date"] = dt.dt.strftime("%Y-%m-%d").fillna("")
 
     capital_row = pd.DataFrame([{
-        "Date": "", "Session": "", "Setup": "", "Heure cassure": "", "OPR HIGH": "",
-        "OPR LOW": "", "Actif": "__CAPITAL__", "Résultat": "", "Motif": "",
+        "Date": "", "Session": "", "Setup": "",
+        "Heure cassure": "", "Cassure OPR": "", "Cassure note": "",
+        "Actif": "__CAPITAL__", "Résultat": "", "Motif": "",
         "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
 
@@ -117,7 +122,6 @@ if "data" not in st.session_state:
         st.session_state["data"] = pd.DataFrame(columns=EXPECTED_COLS)
         st.session_state["capital"] = 0.0
 
-# State édition
 if "show_edit_form" not in st.session_state:
     st.session_state["show_edit_form"] = False
 if "edit_index" not in st.session_state:
@@ -134,29 +138,32 @@ with st.form("add_trade_form"):
 
     with col1:
         date_obj = st.date_input("Date", value=datetime.now())
-        date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
+        date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")
         actif = st.selectbox("Actif", ASSETS, index=0)
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
 
-        # Type de Setup (affichage façon champ, comme la date)
+        # Type de Setup (champ verrouillé)
         st.text_input("Type de Setup", value=SETUP_FIXED, disabled=True)
 
-        # --- NOUVEAU : Heure cassure & OPR ---
-        heure_cassure = st.time_input("Heure de cassure", value=datetime.now().time())
-        opr_high = st.number_input("OPR HIGH", min_value=0.0, step=0.5, format="%.2f")
-        opr_low = st.number_input("OPR LOW", min_value=0.0, step=0.5, format="%.2f")
+        # Heure de cassure
+        heure_cassure_time = st.time_input("Heure de cassure", value=datetime.now().time())
+
+        # --- Cassure de l'OPR ---
+        st.markdown("**Cassure de l’OPR**")
+        c_opr1, c_opr2 = st.columns(2)
+        with c_opr1:
+            cassure_menu = st.selectbox(" ",
+                                        CASSURE_MENU, index=0,
+                                        help="Sélectionne OPR HIGH / OPR LOW ou laisse vide.")
+        with c_opr2:
+            cassure_note = st.text_input(" ", value="", placeholder="Écris un détail / note ici")
 
     with col2:
-        # Reward par défaut à 2.50, décimales autorisées
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=2.50)
-
-        # --- Motif placé ici, entre Reward et Mise ---
         motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=0)
-
         resultat = st.selectbox("Résultat", VALID_RESULTS)
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
-    # Bouton de soumission (à l’intérieur du form)
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
         if resultat == "TP":
@@ -165,19 +172,19 @@ with st.form("add_trade_form"):
             gain = -mise
         elif resultat == "Breakeven":
             gain = mise
-        else:  # "No Trade"
+        else:
             gain = 0.0
 
         new_row = {
             "Date": date_iso,
             "Session": session,
-            "Setup": SETUP_FIXED,         # fixe
-            "Heure cassure": heure_cassure.strftime("%H:%M"),
-            "OPR HIGH": opr_high,
-            "OPR LOW": opr_low,
+            "Setup": SETUP_FIXED,
+            "Heure cassure": heure_cassure_time.strftime("%H:%M"),
+            "Cassure OPR": cassure_menu,
+            "Cassure note": cassure_note,
             "Actif": actif,
             "Résultat": resultat,
-            "Motif": motif_value,         # uniquement le menu
+            "Motif": motif_value,
             "Mise (€)": mise,
             "Risk (%)": 1.00,
             "Reward (%)": reward,
@@ -215,16 +222,14 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"]
 
-# Colonnes numériques à formater (2 décimales) — inclut OPR HIGH/LOW
-NUM_COLS = {"Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)", "OPR HIGH", "OPR LOW"}
+NUM_COLS = {"Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"}
 
 for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
 
-    # largeur dynamique = nb de colonnes + 1 (colonne actions un peu plus large)
     n_cols = len(df.columns)
-    cols = st.columns([1]*n_cols + [1.2])  # <-- élargi pour éviter le chevauchement
+    cols = st.columns([1]*n_cols + [1.2])
 
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
@@ -240,7 +245,6 @@ for i in df.index:
 
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
 
-    # Colonne d'actions : boutons en pleine largeur pour éviter l'écrasement
     with cols[-1]:
         c1, c2 = st.columns(2)
         with c1:
@@ -248,7 +252,6 @@ for i in df.index:
         with c2:
             st.button("🗑️", key=f"delete_{i}", use_container_width=True)
 
-        # Gestion des clics (via session_state des boutons)
         if st.session_state.get(f"edit_{i}", False):
             st.session_state["edit_index"] = i
             st.session_state["edit_row"] = df.loc[i].to_dict()
@@ -273,7 +276,6 @@ if st.session_state.get("show_edit_form", False):
 
     _actif = str(row.get("Actif", ""))
     _session = str(row.get("Session", "OPR 9h"))
-    # Par défaut 2.50 si vide/NaN
     _reward = float(pd.to_numeric(row.get("Reward (%)", 2.5), errors="coerce") or 2.5)
     _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
     _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
@@ -283,8 +285,8 @@ if st.session_state.get("show_edit_form", False):
         _heure_time = datetime.strptime(_heure_val, "%H:%M").time() if _heure_val else time(9, 0)
     except Exception:
         _heure_time = time(9, 0)
-    _opr_high = float(pd.to_numeric(row.get("OPR HIGH", 0), errors="coerce") or 0.0)
-    _opr_low = float(pd.to_numeric(row.get("OPR LOW", 0), errors="coerce") or 0.0)
+    _cassure_menu = row.get("Cassure OPR", "")
+    _cassure_note = row.get("Cassure note", "")
 
     with st.form("edit_trade_form"):
         col1, col2 = st.columns(2)
@@ -300,23 +302,24 @@ if st.session_state.get("show_edit_form", False):
                 index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
             )
 
-            # Type de Setup (champ, verrouillé)
             st.text_input("Type de Setup", value=SETUP_FIXED, disabled=True)
 
-            # --- Motif (édition, uniquement menu) ---
             default_idx = MOTIF_OPTIONS.index(_motif_val) if _motif_val in MOTIF_OPTIONS else 0
             motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
 
-            # --- NOUVEAU : Heure + OPRs ---
+            # Heure + Cassure de l’OPR
             heure_cassure = st.time_input("Heure de cassure", value=_heure_time)
-            opr_high = st.number_input("OPR HIGH", min_value=0.0, step=0.5, format="%.2f", value=_opr_high)
-            opr_low = st.number_input("OPR LOW", min_value=0.0, step=0.5, format="%.2f", value=_opr_low)
+            st.markdown("**Cassure de l’OPR**")
+            c_opr1, c_opr2 = st.columns(2)
+            with c_opr1:
+                cassure_menu = st.selectbox(" ", CASSURE_MENU,
+                                            index=CASSURE_MENU.index(_cassure_menu) if _cassure_menu in CASSURE_MENU else 0)
+            with c_opr2:
+                cassure_note = st.text_input(" ", value=_cassure_note, placeholder="Écris un détail / note ici")
 
-            # Reward éditable avec défaut 2.50
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
                                     index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
-
             mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", value=_mise)
 
         c_save, c_cancel = st.columns([1, 1])
@@ -346,8 +349,8 @@ if st.session_state.get("show_edit_form", False):
                 "Session": session,
                 "Setup": SETUP_FIXED,
                 "Heure cassure": heure_cassure.strftime("%H:%M"),
-                "OPR HIGH": opr_high,
-                "OPR LOW": opr_low,
+                "Cassure OPR": cassure_menu,
+                "Cassure note": cassure_note,
                 "Actif": actif,
                 "Résultat": resultat,
                 "Motif": motif_value,
@@ -416,7 +419,6 @@ else:
     selected_year = st.selectbox("📤 Choisir une année", available_years, index=0)
 
     df_year = df_valid[df_valid["Year"] == selected_year].copy()
-
     months_with_trades = (
         df_year.groupby("Month").size().loc[lambda s: s > 0].sort_index().index.tolist()
     )
@@ -458,8 +460,9 @@ st.subheader("💾 Exporter / Importer manuellement")
 csv = pd.concat([
     st.session_state["data"].copy(),
     pd.DataFrame([{
-        "Date": "", "Session": "", "Setup": "", "Heure cassure": "", "OPR HIGH": "",
-        "OPR LOW": "", "Actif": "__CAPITAL__", "Résultat": "", "Motif": "",
+        "Date": "", "Session": "", "Setup": "",
+        "Heure cassure": "", "Cassure OPR": "", "Cassure note": "",
+        "Actif": "__CAPITAL__", "Résultat": "", "Motif": "",
         "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
 ], ignore_index=True)
