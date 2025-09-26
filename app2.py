@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, time
 import os
 
 SAVE_FILE = "journal_trading.csv"
@@ -8,14 +8,11 @@ SAVE_FILE = "journal_trading.csv"
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# --- Styles : rendre blanc le texte des inputs désactivés (ex: Type de Setup) ---
+# --- Styles (badge blanc pour le setup) ---
 st.markdown("""
 <style>
-.stTextInput input:disabled{
-  color:#fff !important;
-  -webkit-text-fill-color:#fff !important;
-  opacity:1 !important;
-}
+.setup-pill { color:#fff; background:#111; border:1px solid #444;
+              border-radius:6px; padding:8px 10px; display:inline-block; font-weight:600; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -23,6 +20,8 @@ st.markdown("""
 # Constantes & normalisation
 # ------------------------------------------------------------
 SETUP_FIXED = "CASSURE OPR M30 + RSI 14 🟢"
+MIN_CASSURE = time(9, 0)
+MAX_CASSURE = time(21, 0)
 
 EXPECTED_COLS = [
     "Date", "Session", "Setup",
@@ -32,11 +31,7 @@ EXPECTED_COLS = [
 ]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 ASSETS = ["NASDAQ", "DAX"]
-
-# Motifs
 MOTIF_OPTIONS = ["", "Strategie ✅", "Faux Breakout ❌", "Tranche HORRAIRE Dépassée ⛔️", "ANNONCE Economique 🚫"]
-
-# Menu « Cassure de l’OPR »
 CASSURE_MENU = ["", "OPR HIGH", "OPR LOW", "Pas de Cassure"]
 
 def _parse_hhmm(s: str):
@@ -45,24 +40,21 @@ def _parse_hhmm(s: str):
     except Exception:
         return None
 
-def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
-    """Nettoyage + Date ISO."""
-    df = df_in.copy()
+def _is_valid_cassure(t: time) -> bool:
+    if t is None:
+        return False
+    return (MIN_CASSURE <= t <= MAX_CASSURE) and (t.minute % 5 == 0) and (t.second == 0)
 
-    # Colonnes manquantes -> ajout + ordre
+def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
+    df = df_in.copy()
     for c in EXPECTED_COLS:
         if c not in df.columns:
             df[c] = ""
     df = df[EXPECTED_COLS]
-
-    # Compat anciens fichiers
     df["Résultat"] = df["Résultat"].replace({"Pas de trade": "No Trade"}).astype(str).str.strip()
     df["Actif"] = df["Actif"].replace({
-        "XAUUSD": "GOLD", "BTCUSD": "BTC",
-        "XAU-USD": "GOLD", "BTC-USD": "BTC"
+        "XAUUSD": "GOLD", "BTCUSD": "BTC", "XAU-USD": "GOLD", "BTC-USD": "BTC"
     }).astype(str).str.strip()
-
-    # Dates -> ISO
     dt_iso = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
     mask_fr = dt_iso.isna() & df["Date"].astype(str).str.contains(r"/")
     dt_fr = pd.to_datetime(df.loc[mask_fr, "Date"], format="%d/%m/%Y", errors="coerce")
@@ -71,18 +63,11 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     dt_fr2 = pd.to_datetime(df.loc[mask_fr2, "Date"], format="%d-%m-%Y", errors="coerce")
     dt_iso.loc[mask_fr2] = dt_fr2
     df["Date"] = dt_iso.dt.strftime("%Y-%m-%d").fillna("")
-
-    # Nombres
     for c in ["Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
-
-    # Textes
     for c in ["Setup", "Motif", "Cassure OPR", "Cassure note"]:
         df[c] = df[c].astype(str).fillna("").str.strip()
-
-    # Normalise valeurs du menu de cassure (optionnel)
     df["Cassure OPR"] = df["Cassure OPR"].where(df["Cassure OPR"].isin(CASSURE_MENU), "")
-
     return df.reset_index(drop=True)
 
 def us_fmt(date_iso: str) -> str:
@@ -92,18 +77,15 @@ def us_fmt(date_iso: str) -> str:
     return dt.strftime("%m/%d/%Y") if pd.notna(dt) else ""
 
 def save_data():
-    """Écrit le CSV (Date ISO) + ligne CAPITAL."""
     df_out = st.session_state["data"].copy()
     dt = pd.to_datetime(df_out["Date"], errors="coerce", format="%Y-%m-%d")
     df_out["Date"] = dt.dt.strftime("%Y-%m-%d").fillna("")
-
     capital_row = pd.DataFrame([{
         "Date": "", "Session": "", "Setup": "",
         "Cassure OPR": "", "Cassure note": "",
         "Actif": "__CAPITAL__", "Résultat": "", "Motif": "",
         "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
-
     export_df = pd.concat([df_out, capital_row], ignore_index=True)
     export_df.to_csv(SAVE_FILE, index=False, encoding="utf-8")
 
@@ -145,20 +127,21 @@ with st.form("add_trade_form"):
         actif = st.selectbox("Actif", ASSETS, index=0)
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
 
-        # Type de Setup (champ verrouillé mais texte en blanc via CSS)
-        st.text_input("Type de Setup", value=SETUP_FIXED, disabled=True)
+        # Type de Setup -> badge blanc (non modifiable)
+        st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
         # --- Cassure de l'OPR ---
         st.markdown("**Cassure de l’OPR**")
-        c_opr1, c_opr2 = st.columns(2)
+        c_opr1, c_opr2 = st.columns([1,1])
         with c_opr1:
-            cassure_menu = st.selectbox(" ",
-                                        CASSURE_MENU, index=0,
+            cassure_menu = st.selectbox(" ", CASSURE_MENU, index=0,
                                         help="Sélectionne OPR HIGH / OPR LOW ou laisse vide.")
         with c_opr2:
-            # Saisie d'heure uniquement -> stockée dans 'Cassure note' au format HH:MM
-            cassure_time = st.time_input("Heure cassure", value=None, step=60)
-            cassure_note = cassure_time.strftime("%H:%M") if cassure_time is not None else ""
+            cassure_time = st.time_input("Heure cassure",
+                                         value=MIN_CASSURE, step=300)  # 5 minutes
+            if not _is_valid_cassure(cassure_time):
+                st.warning("Heure entre 09:00 et 21:00, par pas de 5 min.")
+            cassure_note = cassure_time.strftime("%H:%M") if _is_valid_cassure(cassure_time) else ""
 
     with col2:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=2.50)
@@ -168,35 +151,38 @@ with st.form("add_trade_form"):
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
-        if resultat == "TP":
-            gain = mise * reward
-        elif resultat == "SL":
-            gain = -mise
-        elif resultat == "Breakeven":
-            gain = mise
+        if not _is_valid_cassure(cassure_time):
+            st.error("⛔ Heure cassure invalide (09:00–21:00, pas de 5 min).")
         else:
-            gain = 0.0
+            if resultat == "TP":
+                gain = mise * reward
+            elif resultat == "SL":
+                gain = -mise
+            elif resultat == "Breakeven":
+                gain = mise
+            else:
+                gain = 0.0
 
-        new_row = {
-            "Date": date_iso,
-            "Session": session,
-            "Setup": SETUP_FIXED,
-            "Cassure OPR": cassure_menu,
-            "Cassure note": cassure_note,  # HH:MM
-            "Actif": actif,
-            "Résultat": resultat,
-            "Motif": motif_value,
-            "Mise (€)": mise,
-            "Risk (%)": 1.00,
-            "Reward (%)": reward,
-            "Gain (€)": gain
-        }
-        st.session_state["data"] = pd.concat(
-            [st.session_state["data"], pd.DataFrame([new_row])],
-            ignore_index=True
-        )
-        save_data()
-        st.success("✅ Trade ajouté")
+            new_row = {
+                "Date": date_iso,
+                "Session": session,
+                "Setup": SETUP_FIXED,
+                "Cassure OPR": cassure_menu,
+                "Cassure note": cassure_note,  # HH:MM validé
+                "Actif": actif,
+                "Résultat": resultat,
+                "Motif": motif_value,
+                "Mise (€)": mise,
+                "Risk (%)": 1.00,
+                "Reward (%)": reward,
+                "Gain (€)": gain
+            }
+            st.session_state["data"] = pd.concat(
+                [st.session_state["data"], pd.DataFrame([new_row])],
+                ignore_index=True
+            )
+            save_data()
+            st.success("✅ Trade ajouté")
 
 # ------------------------------------------------------------
 # 💰 Mise de départ
@@ -298,22 +284,24 @@ if st.session_state.get("show_edit_form", False):
                 index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
             )
 
-            # Type de Setup (champ verrouillé mais texte en blanc via CSS)
-            st.text_input("Type de Setup", value=SETUP_FIXED, disabled=True)
+            # Type de Setup -> badge blanc (non modifiable)
+            st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
             default_idx = MOTIF_OPTIONS.index(_motif_val) if _motif_val in MOTIF_OPTIONS else 0
             motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
 
-            # Cassure de l’OPR (menu + heure HH:MM)
+            # Cassure de l’OPR (menu + heure HH:MM validée)
             st.markdown("**Cassure de l’OPR**")
-            c_opr1, c_opr2 = st.columns(2)
+            c_opr1, c_opr2 = st.columns([1,1])
             with c_opr1:
                 cassure_menu = st.selectbox(" ", CASSURE_MENU,
                                             index=CASSURE_MENU.index(_cassure_menu) if _cassure_menu in CASSURE_MENU else 0)
             with c_opr2:
-                init_time = _parse_hhmm(_cassure_note)
-                cassure_time = st.time_input("Heure cassure", value=init_time, step=60)
-                cassure_note = cassure_time.strftime("%H:%M") if cassure_time is not None else ""
+                init_time = _parse_hhmm(_cassure_note) or MIN_CASSURE
+                cassure_time = st.time_input("Heure cassure", value=init_time, step=300)
+                if not _is_valid_cassure(cassure_time):
+                    st.warning("Heure entre 09:00 et 21:00, par pas de 5 min.")
+                cassure_note = cassure_time.strftime("%H:%M") if _is_valid_cassure(cassure_time) else ""
 
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
@@ -333,35 +321,38 @@ if st.session_state.get("show_edit_form", False):
             st.rerun()
 
         if submitted_edit:
-            if resultat == "TP":
-                gain = mise * reward
-            elif resultat == "SL":
-                gain = -mise
-            elif resultat == "Breakeven":
-                gain = mise
+            if not _is_valid_cassure(cassure_time):
+                st.error("⛔ Heure cassure invalide (09:00–21:00, pas de 5 min).")
             else:
-                gain = 0.0
+                if resultat == "TP":
+                    gain = mise * reward
+                elif resultat == "SL":
+                    gain = -mise
+                elif resultat == "Breakeven":
+                    gain = mise
+                else:
+                    gain = 0.0
 
-            st.session_state["data"].iloc[st.session_state["edit_index"]] = {
-                "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
-                "Session": session,
-                "Setup": SETUP_FIXED,
-                "Cassure OPR": cassure_menu,
-                "Cassure note": cassure_note,  # HH:MM
-                "Actif": actif,
-                "Résultat": resultat,
-                "Motif": motif_value,
-                "Mise (€)": mise,
-                "Risk (%)": 1.00,
-                "Reward (%)": reward,
-                "Gain (€)": gain
-            }
-            save_data()
-            st.session_state["show_edit_form"] = False
-            st.session_state["edit_index"] = None
-            st.session_state["edit_row"] = {}
-            st.success("✅ Trade modifié")
-            st.rerun()
+                st.session_state["data"].iloc[st.session_state["edit_index"]] = {
+                    "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
+                    "Session": session,
+                    "Setup": SETUP_FIXED,
+                    "Cassure OPR": cassure_menu,
+                    "Cassure note": cassure_note,  # HH:MM validé
+                    "Actif": actif,
+                    "Résultat": resultat,
+                    "Motif": motif_value,
+                    "Mise (€)": mise,
+                    "Risk (%)": 1.00,
+                    "Reward (%)": reward,
+                    "Gain (€)": gain
+                }
+                save_data()
+                st.session_state["show_edit_form"] = False
+                st.session_state["edit_index"] = None
+                st.session_state["edit_row"] = {}
+                st.success("✅ Trade modifié")
+                st.rerun()
 
 # ------------------------------------------------------------
 # 📈 Statistiques
