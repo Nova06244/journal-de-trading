@@ -8,12 +8,14 @@ SAVE_FILE = "journal_trading.csv"
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# --- Styles (texte blanc pour le setup + titre Cassure) ---
+# --- Styles : rendre blanc le texte des inputs désactivés (ex: Type de Setup) ---
 st.markdown("""
 <style>
-.setup-pill { color: white; background:#111; border:1px solid #444;
-              border-radius:6px; padding:8px 10px; display:inline-block; font-weight:600; }
-.cassure-title { color: white; }
+.stTextInput input:disabled{
+  color:#fff !important;
+  -webkit-text-fill-color:#fff !important;
+  opacity:1 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -36,6 +38,12 @@ MOTIF_OPTIONS = ["", "Strategie ✅", "Faux Breakout ❌", "Tranche HORRAIRE Dé
 
 # Menu « Cassure de l’OPR »
 CASSURE_MENU = ["", "OPR HIGH", "OPR LOW", "Pas de Cassure"]
+
+def _parse_hhmm(s: str):
+    try:
+        return datetime.strptime(str(s), "%H:%M").time()
+    except Exception:
+        return None
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     """Nettoyage + Date ISO."""
@@ -137,18 +145,20 @@ with st.form("add_trade_form"):
         actif = st.selectbox("Actif", ASSETS, index=0)
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
 
-        # Type de Setup (affiché en blanc, non modifiable)
-        st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
+        # Type de Setup (champ verrouillé mais texte en blanc via CSS)
+        st.text_input("Type de Setup", value=SETUP_FIXED, disabled=True)
 
         # --- Cassure de l'OPR ---
-        st.markdown("<span class='cassure-title'><strong>Cassure de l’OPR</strong></span>", unsafe_allow_html=True)
+        st.markdown("**Cassure de l’OPR**")
         c_opr1, c_opr2 = st.columns(2)
         with c_opr1:
             cassure_menu = st.selectbox(" ",
                                         CASSURE_MENU, index=0,
                                         help="Sélectionne OPR HIGH / OPR LOW ou laisse vide.")
         with c_opr2:
-            cassure_note = st.text_input(" ", value="", placeholder="Écris un détail / note ici")
+            # Saisie d'heure uniquement -> stockée dans 'Cassure note' au format HH:MM
+            cassure_time = st.time_input("Heure cassure", value=None, step=60)
+            cassure_note = cassure_time.strftime("%H:%M") if cassure_time is not None else ""
 
     with col2:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=2.50)
@@ -172,7 +182,7 @@ with st.form("add_trade_form"):
             "Session": session,
             "Setup": SETUP_FIXED,
             "Cassure OPR": cassure_menu,
-            "Cassure note": cassure_note,
+            "Cassure note": cassure_note,  # HH:MM
             "Actif": actif,
             "Résultat": resultat,
             "Motif": motif_value,
@@ -288,20 +298,22 @@ if st.session_state.get("show_edit_form", False):
                 index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
             )
 
-            # Type de Setup (affiché en blanc, non modifiable)
-            st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
+            # Type de Setup (champ verrouillé mais texte en blanc via CSS)
+            st.text_input("Type de Setup", value=SETUP_FIXED, disabled=True)
 
             default_idx = MOTIF_OPTIONS.index(_motif_val) if _motif_val in MOTIF_OPTIONS else 0
             motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
 
-            # Cassure de l’OPR (menu + note)
-            st.markdown("<span class='cassure-title'><strong>Cassure de l’OPR</strong></span>", unsafe_allow_html=True)
+            # Cassure de l’OPR (menu + heure HH:MM)
+            st.markdown("**Cassure de l’OPR**")
             c_opr1, c_opr2 = st.columns(2)
             with c_opr1:
                 cassure_menu = st.selectbox(" ", CASSURE_MENU,
                                             index=CASSURE_MENU.index(_cassure_menu) if _cassure_menu in CASSURE_MENU else 0)
             with c_opr2:
-                cassure_note = st.text_input(" ", value=_cassure_note, placeholder="Écris un détail / note ici")
+                init_time = _parse_hhmm(_cassure_note)
+                cassure_time = st.time_input("Heure cassure", value=init_time, step=60)
+                cassure_note = cassure_time.strftime("%H:%M") if cassure_time is not None else ""
 
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
@@ -335,7 +347,7 @@ if st.session_state.get("show_edit_form", False):
                 "Session": session,
                 "Setup": SETUP_FIXED,
                 "Cassure OPR": cassure_menu,
-                "Cassure note": cassure_note,
+                "Cassure note": cassure_note,  # HH:MM
                 "Actif": actif,
                 "Résultat": resultat,
                 "Motif": motif_value,
