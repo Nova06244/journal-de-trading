@@ -11,7 +11,7 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
-SETUP_FIXED = "CASSURE OPR M30 + RSI 7 🟢"
+SETUP_FIXED = "CASSURE OPR M30 + RSI 14 🟢"
 
 EXPECTED_COLS = [
     "Date", "Session", "Setup",
