@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, time
+from datetime import datetime
 import os
 
 SAVE_FILE = "journal_trading.csv"
@@ -15,7 +15,7 @@ SETUP_FIXED = "CASSURE OPR M30 + RSI 7 🟢"
 
 EXPECTED_COLS = [
     "Date", "Session", "Setup",
-    "Heure cassure", "Cassure OPR", "Cassure note",
+    "Cassure OPR", "Cassure note",
     "Actif", "Résultat", "Motif",
     "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
 ]
@@ -28,19 +28,8 @@ MOTIF_OPTIONS = ["", "Strategie ✅", "Faux Breakout ❌", "Tranche HORRAIRE Dé
 # Menu « Cassure de l’OPR »
 CASSURE_MENU = ["", "OPR HIGH", "OPR LOW"]
 
-def _fmt_time(x: str) -> str:
-    if not isinstance(x, str) or not x.strip():
-        return ""
-    for fmt in ("%H:%M", "%H:%M:%S"):
-        try:
-            t = datetime.strptime(x.strip(), fmt).time()
-            return t.strftime("%H:%M")
-        except Exception:
-            pass
-    return ""
-
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
-    """Nettoyage + Date ISO + Heure cassure HH:MM."""
+    """Nettoyage + Date ISO."""
     df = df_in.copy()
 
     # Colonnes manquantes -> ajout + ordre
@@ -65,9 +54,6 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     dt_fr2 = pd.to_datetime(df.loc[mask_fr2, "Date"], format="%d-%m-%Y", errors="coerce")
     dt_iso.loc[mask_fr2] = dt_fr2
     df["Date"] = dt_iso.dt.strftime("%Y-%m-%d").fillna("")
-
-    # Heure cassure -> HH:MM
-    df["Heure cassure"] = df["Heure cassure"].astype(str).map(_fmt_time)
 
     # Nombres
     for c in ["Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]:
@@ -96,7 +82,7 @@ def save_data():
 
     capital_row = pd.DataFrame([{
         "Date": "", "Session": "", "Setup": "",
-        "Heure cassure": "", "Cassure OPR": "", "Cassure note": "",
+        "Cassure OPR": "", "Cassure note": "",
         "Actif": "__CAPITAL__", "Résultat": "", "Motif": "",
         "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
@@ -145,9 +131,6 @@ with st.form("add_trade_form"):
         # Type de Setup (champ verrouillé)
         st.text_input("Type de Setup", value=SETUP_FIXED, disabled=True)
 
-        # Heure de cassure
-        heure_cassure_time = st.time_input("Heure de cassure", value=datetime.now().time())
-
         # --- Cassure de l'OPR ---
         st.markdown("**Cassure de l’OPR**")
         c_opr1, c_opr2 = st.columns(2)
@@ -179,7 +162,6 @@ with st.form("add_trade_form"):
             "Date": date_iso,
             "Session": session,
             "Setup": SETUP_FIXED,
-            "Heure cassure": heure_cassure_time.strftime("%H:%M"),
             "Cassure OPR": cassure_menu,
             "Cassure note": cassure_note,
             "Actif": actif,
@@ -280,11 +262,6 @@ if st.session_state.get("show_edit_form", False):
     _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
     _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
     _motif_val = str(row.get("Motif", "") or "")
-    _heure_val = row.get("Heure cassure", "")
-    try:
-        _heure_time = datetime.strptime(_heure_val, "%H:%M").time() if _heure_val else time(9, 0)
-    except Exception:
-        _heure_time = time(9, 0)
     _cassure_menu = row.get("Cassure OPR", "")
     _cassure_note = row.get("Cassure note", "")
 
@@ -307,8 +284,7 @@ if st.session_state.get("show_edit_form", False):
             default_idx = MOTIF_OPTIONS.index(_motif_val) if _motif_val in MOTIF_OPTIONS else 0
             motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
 
-            # Heure + Cassure de l’OPR
-            heure_cassure = st.time_input("Heure de cassure", value=_heure_time)
+            # Cassure de l’OPR (menu + note)
             st.markdown("**Cassure de l’OPR**")
             c_opr1, c_opr2 = st.columns(2)
             with c_opr1:
@@ -348,7 +324,6 @@ if st.session_state.get("show_edit_form", False):
                 "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
                 "Session": session,
                 "Setup": SETUP_FIXED,
-                "Heure cassure": heure_cassure.strftime("%H:%M"),
                 "Cassure OPR": cassure_menu,
                 "Cassure note": cassure_note,
                 "Actif": actif,
@@ -461,7 +436,7 @@ csv = pd.concat([
     st.session_state["data"].copy(),
     pd.DataFrame([{
         "Date": "", "Session": "", "Setup": "",
-        "Heure cassure": "", "Cassure OPR": "", "Cassure note": "",
+        "Cassure OPR": "", "Cassure note": "",
         "Actif": "__CAPITAL__", "Résultat": "", "Motif": "",
         "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
