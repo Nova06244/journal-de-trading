@@ -127,11 +127,11 @@ with st.form("add_trade_form"):
         actif = st.selectbox("Actif", ASSETS, index=0)
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
 
-        # Type de Setup -> badge blanc (non modifiable)
+        # --- Type de Setup ---
+        st.subheader("📌 Type de Setup")
         st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
         # --- Cassure de l'OPR ---
-        st.markdown("**Cassure de l’OPR**")
         c_opr1, c_opr2 = st.columns([1,1])
         with c_opr1:
             cassure_menu = st.selectbox(" ", CASSURE_MENU, index=0,
@@ -284,14 +284,14 @@ if st.session_state.get("show_edit_form", False):
                 index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
             )
 
-            # Type de Setup -> badge blanc (non modifiable)
+            # --- Type de Setup ---
+            st.subheader("📌 Type de Setup")
             st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
             default_idx = MOTIF_OPTIONS.index(_motif_val) if _motif_val in MOTIF_OPTIONS else 0
             motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
 
-            # Cassure de l’OPR (menu + heure HH:MM validée)
-            st.markdown("**Cassure de l’OPR**")
+            # --- Cassure de l’OPR ---
             c_opr1, c_opr2 = st.columns([1,1])
             with c_opr1:
                 cassure_menu = st.selectbox(" ", CASSURE_MENU,
