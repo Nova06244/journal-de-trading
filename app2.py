@@ -26,7 +26,7 @@ ASSETS = ["NASDAQ", "DAX"]
 MOTIF_OPTIONS = ["", "Strategie ✅", "Faux Breakout ❌", "Tranche HORRAIRE Dépassée ⛔️", "ANNONCE Economique 🚫"]
 
 # Menu « Cassure de l’OPR »
-CASSURE_MENU = ["", "OPR HIGH", "OPR LOW"]
+CASSURE_MENU = ["", "OPR HIGH", "OPR LOW", "Pas de Cassure"]
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     """Nettoyage + Date ISO."""
