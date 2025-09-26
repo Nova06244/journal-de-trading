@@ -155,8 +155,10 @@ with st.form("add_trade_form"):
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
-        if cassure_note == "":
-            st.error("⛔ Sélectionne une heure de cassure (option '----' non valide).")
+        # Heure requise seulement si cassure effective (HIGH/LOW)
+        hour_required = cassure_menu in ("OPR HIGH", "OPR LOW")
+        if hour_required and cassure_note == "":
+            st.error("⛔ Sélectionne une heure de cassure (non vide pour OPR HIGH/LOW).")
         else:
             if resultat == "TP":
                 gain = mise * reward
@@ -167,12 +169,16 @@ with st.form("add_trade_form"):
             else:
                 gain = 0.0
 
+            # Si 'Pas de Cassure', on stocke vide ("") pour l'heure
+            if cassure_menu == "Pas de Cassure":
+                cassure_note = ""
+
             new_row = {
                 "Date": date_iso,
                 "Session": session,
                 "Setup": SETUP_FIXED,
                 "Cassure OPR": cassure_menu,
-                "Cassure note": cassure_note,  # HH:MM choisi
+                "Cassure note": cassure_note,  # "" si Pas de Cassure, sinon HH:MM
                 "Actif": actif,
                 "Résultat": resultat,
                 "Motif": motif_value,
@@ -323,8 +329,9 @@ if st.session_state.get("show_edit_form", False):
             st.rerun()
 
         if submitted_edit:
-            if cassure_note == "":
-                st.error("⛔ Sélectionne une heure de cassure (option '----' non valide).")
+            hour_required = cassure_menu in ("OPR HIGH", "OPR LOW")
+            if hour_required and cassure_note == "":
+                st.error("⛔ Sélectionne une heure de cassure (non vide pour OPR HIGH/LOW).")
             else:
                 if resultat == "TP":
                     gain = mise * reward
@@ -335,12 +342,15 @@ if st.session_state.get("show_edit_form", False):
                 else:
                     gain = 0.0
 
+                if cassure_menu == "Pas de Cassure":
+                    cassure_note = ""
+
                 st.session_state["data"].iloc[st.session_state["edit_index"]] = {
                     "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
                     "Session": session,
                     "Setup": SETUP_FIXED,
                     "Cassure OPR": cassure_menu,
-                    "Cassure note": cassure_note,  # HH:MM choisi
+                    "Cassure note": cassure_note,
                     "Actif": actif,
                     "Résultat": resultat,
                     "Motif": motif_value,
@@ -370,7 +380,7 @@ total_sl = (df_stats["Résultat"] == "SL").sum()
 total_be = (df_stats["Résultat"] == "Breakeven").sum()
 total_nt = (df_stats["Résultat"] == "No Trade").sum()
 total_gain = df_stats["Gain (€)"].sum()
-total_risk = df_stats[dfstats := (df_stats["Résultat"] == "SL")]["Risk (%)"].sum() if "dfstats" else df_stats[df_stats["Résultat"] == "SL"]["Risk (%)"].sum()
+total_risk = df_stats[df_stats["Résultat"] == "SL"]["Risk (%)"].sum()
 total_reward = df_stats[df_stats["Résultat"] == "TP"]["Reward (%)"].sum()
 winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
 capital_total = st.session_state["capital"] + total_gain
