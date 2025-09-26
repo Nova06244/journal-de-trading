@@ -40,10 +40,17 @@ def _parse_hhmm(s: str):
     except Exception:
         return None
 
-def _is_valid_cassure(t: time) -> bool:
-    if t is None:
-        return False
-    return (MIN_CASSURE <= t <= MAX_CASSURE) and (t.minute % 5 == 0) and (t.second == 0)
+# Liste d'heures 09:00→21:00 toutes les 5 minutes (+ option "----")
+def time_range_strings(start: time, end: time, step_minutes: int = 5):
+    t = datetime.combine(datetime.today(), start)
+    end_dt = datetime.combine(datetime.today(), end)
+    out = []
+    while t <= end_dt:
+        out.append(t.strftime("%H:%M"))
+        t = t + pd.Timedelta(minutes=step_minutes)
+    return out
+
+TIME_OPTIONS = ["----"] + time_range_strings(MIN_CASSURE, MAX_CASSURE, 5)
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     df = df_in.copy()
@@ -137,11 +144,8 @@ with st.form("add_trade_form"):
             cassure_menu = st.selectbox(" ", CASSURE_MENU, index=0,
                                         help="Sélectionne OPR HIGH / OPR LOW ou laisse vide.")
         with c_opr2:
-            cassure_time = st.time_input("Heure cassure",
-                                         value=MIN_CASSURE, step=300)  # 5 minutes
-            if not _is_valid_cassure(cassure_time):
-                st.warning("Heure entre 09:00 et 21:00, par pas de 5 min.")
-            cassure_note = cassure_time.strftime("%H:%M") if _is_valid_cassure(cassure_time) else ""
+            cassure_choice = st.selectbox("Heure cassure", TIME_OPTIONS, index=0)
+            cassure_note = "" if cassure_choice == "----" else cassure_choice
 
     with col2:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=2.50)
@@ -151,8 +155,8 @@ with st.form("add_trade_form"):
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
-        if not _is_valid_cassure(cassure_time):
-            st.error("⛔ Heure cassure invalide (09:00–21:00, pas de 5 min).")
+        if cassure_note == "":
+            st.error("⛔ Sélectionne une heure de cassure (option '----' non valide).")
         else:
             if resultat == "TP":
                 gain = mise * reward
@@ -168,7 +172,7 @@ with st.form("add_trade_form"):
                 "Session": session,
                 "Setup": SETUP_FIXED,
                 "Cassure OPR": cassure_menu,
-                "Cassure note": cassure_note,  # HH:MM validé
+                "Cassure note": cassure_note,  # HH:MM choisi
                 "Actif": actif,
                 "Résultat": resultat,
                 "Motif": motif_value,
@@ -297,11 +301,9 @@ if st.session_state.get("show_edit_form", False):
                 cassure_menu = st.selectbox(" ", CASSURE_MENU,
                                             index=CASSURE_MENU.index(_cassure_menu) if _cassure_menu in CASSURE_MENU else 0)
             with c_opr2:
-                init_time = _parse_hhmm(_cassure_note) or MIN_CASSURE
-                cassure_time = st.time_input("Heure cassure", value=init_time, step=300)
-                if not _is_valid_cassure(cassure_time):
-                    st.warning("Heure entre 09:00 et 21:00, par pas de 5 min.")
-                cassure_note = cassure_time.strftime("%H:%M") if _is_valid_cassure(cassure_time) else ""
+                current = _cassure_note if _cassure_note in TIME_OPTIONS else "----"
+                cassure_choice = st.selectbox("Heure cassure", TIME_OPTIONS, index=TIME_OPTIONS.index(current))
+                cassure_note = "" if cassure_choice == "----" else cassure_choice
 
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
@@ -321,8 +323,8 @@ if st.session_state.get("show_edit_form", False):
             st.rerun()
 
         if submitted_edit:
-            if not _is_valid_cassure(cassure_time):
-                st.error("⛔ Heure cassure invalide (09:00–21:00, pas de 5 min).")
+            if cassure_note == "":
+                st.error("⛔ Sélectionne une heure de cassure (option '----' non valide).")
             else:
                 if resultat == "TP":
                     gain = mise * reward
@@ -338,7 +340,7 @@ if st.session_state.get("show_edit_form", False):
                     "Session": session,
                     "Setup": SETUP_FIXED,
                     "Cassure OPR": cassure_menu,
-                    "Cassure note": cassure_note,  # HH:MM validé
+                    "Cassure note": cassure_note,  # HH:MM choisi
                     "Actif": actif,
                     "Résultat": resultat,
                     "Motif": motif_value,
@@ -368,7 +370,7 @@ total_sl = (df_stats["Résultat"] == "SL").sum()
 total_be = (df_stats["Résultat"] == "Breakeven").sum()
 total_nt = (df_stats["Résultat"] == "No Trade").sum()
 total_gain = df_stats["Gain (€)"].sum()
-total_risk = df_stats[df_stats["Résultat"] == "SL"]["Risk (%)"].sum()
+total_risk = df_stats[dfstats := (df_stats["Résultat"] == "SL")]["Risk (%)"].sum() if "dfstats" else df_stats[df_stats["Résultat"] == "SL"]["Risk (%)"].sum()
 total_reward = df_stats[df_stats["Résultat"] == "TP"]["Reward (%)"].sum()
 winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
 capital_total = st.session_state["capital"] + total_gain
