@@ -11,7 +11,7 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
-# Setup fixe (plus de menu)
+# Setup fixe
 SETUP_FIXED = "CASSURE OPR M30 + RSI 7 🟢"
 
 EXPECTED_COLS = [
@@ -22,7 +22,7 @@ VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 ASSETS = ["NASDAQ", "DAX"]
 
 # Options de motif (ligne vide par défaut)
-MOTIF_OPTIONS = ["", "stratégie validée", "faux Breakout", "tranche horaire dépassé"]
+MOTIF_OPTIONS = ["", "Strategie ✅", "Faux Breakout ❌", "Tranche HORRAIRE Dépassée ⛔️", "ANNONCE Economique 🚫"]
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     """Assure que le DataFrame de trades est propre + Date en ISO (YYYY-MM-DD)."""
@@ -57,7 +57,7 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
 
     # Champs texte propres
     df["Setup"] = df["Setup"].astype(str).fillna("").str.strip()
-    df["Motif"] = df["Motif"].astype(str).fillna("").strip()
+    df["Motif"] = df["Motif"].astype(str).fillna("").str.strip()
 
     return df.reset_index(drop=True)
 
@@ -121,19 +121,17 @@ with st.form("add_trade_form"):
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")  # stockage ISO
         actif = st.selectbox("Actif", ASSETS, index=0)
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
-        # Setup fixe (affichage en lecture seule)
-        st.text_input("Type de Setup (fixe)", value=SETUP_FIXED, disabled=True)
 
-        # --- Motif (ligne vide par défaut + options) ---
-        motif_choice = st.selectbox("Motif", MOTIF_OPTIONS, index=0)
-        motif_custom = ""
-        if motif_choice == "":
-            motif_custom = st.text_input("Motif personnalisé (optionnel)", value="")
-        motif_value = motif_custom.strip() if motif_choice == "" else motif_choice
+        # Setup affiché en clair (non grisé)
+        st.markdown(f"**Type de Setup :** {SETUP_FIXED}")
 
     with col2:
         # Reward par défaut à 2.50, décimales autorisées
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=2.50)
+
+        # --- Motif placé ici, entre Reward et Mise ---
+        motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=0)
+
         resultat = st.selectbox("Résultat", VALID_RESULTS)
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
@@ -152,10 +150,10 @@ with st.form("add_trade_form"):
         new_row = {
             "Date": date_iso,
             "Session": session,
-            "Setup": SETUP_FIXED,         # <-- Fixe
+            "Setup": SETUP_FIXED,         # fixe
             "Actif": actif,
             "Résultat": resultat,
-            "Motif": motif_value,         # <-- Nouveau champ
+            "Motif": motif_value,         # uniquement le menu
             "Mise (€)": mise,
             "Risk (%)": 1.00,
             "Reward (%)": reward,
@@ -200,9 +198,9 @@ for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
 
-    # largeur dynamique = nb de colonnes + 1 (boutons)
+    # largeur dynamique = nb de colonnes + 1 (colonne actions un peu plus large)
     n_cols = len(df.columns)
-    cols = st.columns([1]*n_cols + [0.2])
+    cols = st.columns([1]*n_cols + [1.2])  # <-- élargi pour éviter le chevauchement
 
     for j, col_name in enumerate(df.columns):
         value = df.loc[i, col_name]
@@ -218,20 +216,24 @@ for i in df.index:
 
         cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
 
-    # Boutons ✏️ / 🗑️
+    # Colonne d'actions : boutons en pleine largeur pour éviter l'écrasement
     with cols[-1]:
-        edit_col, delete_col = st.columns(2)
-        with edit_col:
-            if st.button("✏️", key=f"edit_{i}"):
-                st.session_state["edit_index"] = i
-                st.session_state["edit_row"] = df.loc[i].to_dict()
-                st.session_state["show_edit_form"] = True
-                st.rerun()
-        with delete_col:
-            if st.button("🗑️", key=f"delete_{i}"):
-                st.session_state["data"] = df.drop(i).reset_index(drop=True)
-                save_data()
-                st.rerun()
+        c1, c2 = st.columns(2)
+        with c1:
+            st.button("✏️", key=f"edit_{i}", use_container_width=True)
+        with c2:
+            st.button("🗑️", key=f"delete_{i}", use_container_width=True)
+
+        # Gestion des clics (via session_state des boutons)
+        if st.session_state.get(f"edit_{i}", False):
+            st.session_state["edit_index"] = i
+            st.session_state["edit_row"] = df.loc[i].to_dict()
+            st.session_state["show_edit_form"] = True
+            st.rerun()
+        if st.session_state.get(f"delete_{i}", False):
+            st.session_state["data"] = df.drop(i).reset_index(drop=True)
+            save_data()
+            st.rerun()
 
 # ------------------------------------------------------------
 # ✏️ Formulaire d'édition
@@ -247,7 +249,6 @@ if st.session_state.get("show_edit_form", False):
 
     _actif = str(row.get("Actif", ""))
     _session = str(row.get("Session", "OPR 9h"))
-    _setup = SETUP_FIXED  # toujours fixe
     # Par défaut 2.50 si vide/NaN
     _reward = float(pd.to_numeric(row.get("Reward (%)", 2.5), errors="coerce") or 2.5)
     _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
@@ -268,15 +269,12 @@ if st.session_state.get("show_edit_form", False):
                 index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
             )
 
-            st.text_input("Type de Setup (fixe)", value=_setup, disabled=True)
+            # Setup affiché en clair
+            st.markdown(f"**Type de Setup :** {SETUP_FIXED}")
 
-            # --- Motif (édition) ---
+            # --- Motif (édition, uniquement menu) ---
             default_idx = MOTIF_OPTIONS.index(_motif_val) if _motif_val in MOTIF_OPTIONS else 0
-            motif_choice = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
-            motif_custom = ""
-            if motif_choice == "":
-                motif_custom = st.text_input("Motif personnalisé (optionnel)", value=("" if _motif_val in MOTIF_OPTIONS else _motif_val))
-            motif_value = motif_custom.strip() if motif_choice == "" else motif_choice
+            motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
 
             # Reward éditable avec défaut 2.50
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
@@ -310,10 +308,10 @@ if st.session_state.get("show_edit_form", False):
             st.session_state["data"].iloc[st.session_state["edit_index"]] = {
                 "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
                 "Session": session,
-                "Setup": SETUP_FIXED,      # fixe
+                "Setup": SETUP_FIXED,
                 "Actif": actif,
                 "Résultat": resultat,
-                "Motif": motif_value,      # nouveau champ
+                "Motif": motif_value,
                 "Mise (€)": mise,
                 "Risk (%)": 1.00,
                 "Reward (%)": reward,
