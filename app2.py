@@ -30,7 +30,7 @@ EXPECTED_COLS = [
     "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
 ]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
-ASSETS = ["NASDAQ", "DAX"]
+ASSETS = ["Gold"]
 MOTIF_OPTIONS = ["", "Strategie ✅", "Faux Breakout ❌", "Tranche HORRAIRE Dépassée ⛔️", "ANNONCE Economique 🚫"]
 CASSURE_MENU = ["", "RSI 🟢", "RSI 🔴", "Pas de Cassure"]
 
