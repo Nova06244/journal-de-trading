@@ -1,12 +1,3 @@
-for key, default in {
-    "data": pd.DataFrame(columns=EXPECTED_COLS),
-    "capital": 0.0,
-    "show_edit_form": False,
-    "edit_index": None,
-    "edit_row": {}
-}.items():
-    if key not in st.session_state:
-        st.session_state[key] = default
 import streamlit as st
 import pandas as pd
 from datetime import datetime, time
