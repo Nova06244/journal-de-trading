@@ -19,7 +19,7 @@ st.markdown("""
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
-SETUP_FIXED = "CASSURE OPR M30 + RSI 14 🟢"
+SETUP_FIXED = "PULLBACK dans GOLDEN ZONE avec TENDANCE H1/M30/M5 alignées"
 MIN_CASSURE = time(9, 0)
 MAX_CASSURE = time(21, 0)
 
