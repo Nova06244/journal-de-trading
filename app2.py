@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, time
+from datetime import datetime
 import os
 
 SAVE_FILE = "journal_trading.csv"
@@ -31,34 +31,20 @@ VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 ASSETS = ["Gold"]
 MOTIF_OPTIONS = ["", "Strategie ✅", "Faux Breakout ❌", "Tranche HORRAIRE Dépassée ⛔️", "ANNONCE Economique 🚫"]
 
-def _parse_hhmm(s: str):
-    try:
-        return datetime.strptime(str(s), "%H:%M").time()
-    except Exception:
-        return None
-
-# Liste d'heures 09:00→21:00 toutes les 5 minutes (+ option "----")
-def time_range_strings(start: time, end: time, step_minutes: int = 5):
-    t = datetime.combine(datetime.today(), start)
-    end_dt = datetime.combine(datetime.today(), end)
-    out = []
-    while t <= end_dt:
-        out.append(t.strftime("%H:%M"))
-        t = t + pd.Timedelta(minutes=step_minutes)
-    return out
-
-TIME_OPTIONS = ["----"] + time_range_strings(MIN_CASSURE, MAX_CASSURE, 5)
-
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     df = df_in.copy()
     for c in EXPECTED_COLS:
         if c not in df.columns:
             df[c] = ""
     df = df[EXPECTED_COLS]
+
+    # Normalisations
     df["Résultat"] = df["Résultat"].replace({"Pas de trade": "No Trade"}).astype(str).str.strip()
     df["Actif"] = df["Actif"].replace({
         "XAUUSD": "GOLD", "BTCUSD": "BTC", "XAU-USD": "GOLD", "BTC-USD": "BTC"
     }).astype(str).str.strip()
+
+    # Dates → ISO
     dt_iso = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
     mask_fr = dt_iso.isna() & df["Date"].astype(str).str.contains(r"/")
     dt_fr = pd.to_datetime(df.loc[mask_fr, "Date"], format="%d/%m/%Y", errors="coerce")
@@ -67,11 +53,15 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     dt_fr2 = pd.to_datetime(df.loc[mask_fr2, "Date"], format="%d-%m-%Y", errors="coerce")
     dt_iso.loc[mask_fr2] = dt_fr2
     df["Date"] = dt_iso.dt.strftime("%Y-%m-%d").fillna("")
+
+    # Numériques
     for c in ["Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
+
+    # Texte
     for c in ["Setup", "Motif", "Cassure OPR", "Cassure note"]:
         df[c] = df[c].astype(str).fillna("").str.strip()
-    df["Cassure OPR"] = df["Cassure OPR"].where(df["Cassure OPR"].isin(CASSURE_MENU), "")
+
     return df.reset_index(drop=True)
 
 def us_fmt(date_iso: str) -> str:
@@ -118,6 +108,13 @@ if "edit_index" not in st.session_state:
 if "edit_row" not in st.session_state:
     st.session_state["edit_row"] = {}
 
+# Petit helper pour gérer le motif libre
+def _resolve_motif(selected_option: str, typed_text: str) -> str:
+    typed_text = (typed_text or "").strip()
+    if selected_option == "" and typed_text:
+        return typed_text
+    return selected_option
+
 # ------------------------------------------------------------
 # 📋 Entrée d'un trade
 # ------------------------------------------------------------
@@ -135,60 +132,49 @@ with st.form("add_trade_form"):
         st.subheader("📌 Type de Setup")
         st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
-        # --- Cassure de l'OPR ---
-        c_opr1, c_opr2 = st.columns([1,1])
-        with c_opr1:
-            cassure_menu = st.selectbox(" ", CASSURE_MENU, index=0,
-                                        help="Sélectionne OPR HIGH / OPR LOW ou laisse vide.")
-        with c_opr2:
-            cassure_choice = st.selectbox("Heure cassure", TIME_OPTIONS, index=0)
-            cassure_note = "" if cassure_choice == "----" else cassure_choice
-
     with col2:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=2.50)
-        motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=0)
+        motif_option = st.selectbox("Motif (choix rapide ou laisser vide pour saisir)", MOTIF_OPTIONS, index=0)
+        motif_free = ""
+        if motif_option == "":
+            motif_free = st.text_input("Motif (saisie libre)", value="", placeholder="Tape ici ton motif…")
         resultat = st.selectbox("Résultat", VALID_RESULTS)
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f")
 
     submitted = st.form_submit_button("Ajouter le trade")
     if submitted:
-        # Heure requise seulement si cassure effective (HIGH/LOW)
-        hour_required = cassure_menu in ("OPR HIGH", "OPR LOW")
-        if hour_required and cassure_note == "":
-            st.error("⛔ Sélectionne une heure de cassure (non vide pour OPR HIGH/LOW).")
+        motif_value = _resolve_motif(motif_option, motif_free)
+
+        # Calcul du gain
+        if resultat == "TP":
+            gain = mise * reward
+        elif resultat == "SL":
+            gain = -mise
+        elif resultat == "Breakeven":
+            gain = mise  # si tu préfères 0 pour BE, mets 0.0
         else:
-            if cassure_menu == "Pas de Cassure":
-                cassure_note = ""  # autorise '----' (pas d'horaire)
+            gain = 0.0
 
-            if resultat == "TP":
-                gain = mise * reward
-            elif resultat == "SL":
-                gain = -mise
-            elif resultat == "Breakeven":
-                gain = mise
-            else:
-                gain = 0.0
-
-            new_row = {
-                "Date": date_iso,
-                "Session": session,
-                "Setup": SETUP_FIXED,
-                "Cassure OPR": cassure_menu,
-                "Cassure note": cassure_note,  # "" si Pas de Cassure, sinon HH:MM
-                "Actif": actif,
-                "Résultat": resultat,
-                "Motif": motif_value,
-                "Mise (€)": mise,
-                "Risk (%)": 1.00,
-                "Reward (%)": reward,
-                "Gain (€)": gain
-            }
-            st.session_state["data"] = pd.concat(
-                [st.session_state["data"], pd.DataFrame([new_row])],
-                ignore_index=True
-            )
-            save_data()
-            st.success("✅ Trade ajouté")
+        new_row = {
+            "Date": date_iso,
+            "Session": session,
+            "Setup": SETUP_FIXED,
+            "Cassure OPR": "",     # supprimé du formulaire → on stocke vide
+            "Cassure note": "",    # idem
+            "Actif": actif,
+            "Résultat": resultat,
+            "Motif": motif_value,
+            "Mise (€)": mise,
+            "Risk (%)": 1.00,
+            "Reward (%)": reward,
+            "Gain (€)": gain
+        }
+        st.session_state["data"] = pd.concat(
+            [st.session_state["data"], pd.DataFrame([new_row])],
+            ignore_index=True
+        )
+        save_data()
+        st.success("✅ Trade ajouté")
 
 # ------------------------------------------------------------
 # 💰 Mise de départ
@@ -273,8 +259,6 @@ if st.session_state.get("show_edit_form", False):
     _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
     _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
     _motif_val = str(row.get("Motif", "") or "")
-    _cassure_menu = row.get("Cassure OPR", "")
-    _cassure_note = row.get("Cassure note", "")
 
     with st.form("edit_trade_form"):
         col1, col2 = st.columns(2)
@@ -294,18 +278,12 @@ if st.session_state.get("show_edit_form", False):
             st.subheader("📌 Type de Setup")
             st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
+            # Motif (sélecteur + libre)
             default_idx = MOTIF_OPTIONS.index(_motif_val) if _motif_val in MOTIF_OPTIONS else 0
-            motif_value = st.selectbox("Motif", MOTIF_OPTIONS, index=default_idx)
-
-            # --- Cassure de l’OPR ---
-            c_opr1, c_opr2 = st.columns([1,1])
-            with c_opr1:
-                cassure_menu = st.selectbox(" ", CASSURE_MENU,
-                                            index=CASSURE_MENU.index(_cassure_menu) if _cassure_menu in CASSURE_MENU else 0)
-            with c_opr2:
-                current = _cassure_note if _cassure_note in TIME_OPTIONS else "----"
-                cassure_choice = st.selectbox("Heure cassure", TIME_OPTIONS, index=TIME_OPTIONS.index(current))
-                cassure_note = "" if cassure_choice == "----" else cassure_choice
+            motif_option = st.selectbox("Motif (choix rapide ou laisser vide pour saisir)", MOTIF_OPTIONS, index=default_idx)
+            motif_free = ""
+            if motif_option == "":
+                motif_free = st.text_input("Motif (saisie libre)", value=_motif_val if default_idx == 0 else "")
 
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
@@ -325,42 +303,38 @@ if st.session_state.get("show_edit_form", False):
             st.rerun()
 
         if submitted_edit:
-            hour_required = cassure_menu in ("OPR HIGH", "OPR LOW")
-            if hour_required and cassure_note == "":
-                st.error("⛔ Sélectionne une heure de cassure (non vide pour OPR HIGH/LOW).")
+            motif_value = _resolve_motif(motif_option, motif_free)
+
+            # Recalcul du gain
+            if resultat == "TP":
+                gain = mise * reward
+            elif resultat == "SL":
+                gain = -mise
+            elif resultat == "Breakeven":
+                gain = mise
             else:
-                if cassure_menu == "Pas de Cassure":
-                    cassure_note = ""  # accepte '----'
+                gain = 0.0
 
-                if resultat == "TP":
-                    gain = mise * reward
-                elif resultat == "SL":
-                    gain = -mise
-                elif resultat == "Breakeven":
-                    gain = mise
-                else:
-                    gain = 0.0
-
-                st.session_state["data"].iloc[st.session_state["edit_index"]] = {
-                    "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
-                    "Session": session,
-                    "Setup": SETUP_FIXED,
-                    "Cassure OPR": cassure_menu,
-                    "Cassure note": cassure_note,
-                    "Actif": actif,
-                    "Résultat": resultat,
-                    "Motif": motif_value,
-                    "Mise (€)": mise,
-                    "Risk (%)": 1.00,
-                    "Reward (%)": reward,
-                    "Gain (€)": gain
-                }
-                save_data()
-                st.session_state["show_edit_form"] = False
-                st.session_state["edit_index"] = None
-                st.session_state["edit_row"] = {}
-                st.success("✅ Trade modifié")
-                st.rerun()
+            st.session_state["data"].iloc[st.session_state["edit_index"]] = {
+                "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
+                "Session": session,
+                "Setup": SETUP_FIXED,
+                "Cassure OPR": "",   # plus dans l'UI
+                "Cassure note": "",  # plus dans l'UI
+                "Actif": actif,
+                "Résultat": resultat,
+                "Motif": motif_value,
+                "Mise (€)": mise,
+                "Risk (%)": 1.00,
+                "Reward (%)": reward,
+                "Gain (€)": gain
+            }
+            save_data()
+            st.session_state["show_edit_form"] = False
+            st.session_state["edit_index"] = None
+            st.session_state["edit_row"] = {}
+            st.success("✅ Trade modifié")
+            st.rerun()
 
 # ------------------------------------------------------------
 # 📈 Statistiques
@@ -423,67 +397,3 @@ else:
         1: "Janvier", 2: "Février", 3: "Mars", 4: "Avril", 5: "Mai", 6: "Juin",
         7: "Juillet", 8: "Août", 9: "Septembre", 10: "Octobre", 11: "Novembre", 12: "Décembre"
     }
-
-    if not months_with_trades:
-        st.info(f"Aucun trade pour {selected_year}.")
-    else:
-        for month in months_with_trades:
-            month_data = df_year[df_year["Month"] == month].copy()
-            month_data["Gain (€)"] = pd.to_numeric(month_data["Gain (€)"], errors="coerce").fillna(0)
-
-            tp = (month_data["Résultat"] == "TP").sum()
-            sl = (month_data["Résultat"] == "SL").sum()
-            be = (month_data["Résultat"] == "Breakeven").sum()
-            nt = (month_data["Résultat"] == "No Trade").sum()
-
-            executed_trades = tp + sl + be
-            gain = month_data["Gain (€)"].sum()
-            winrate_month = (tp / (tp + sl) * 100) if (tp + sl) > 0 else 0.0
-
-            with st.expander(f"📅 {month_names.get(month, str(month))} {selected_year}"):
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("🧾 Trades", int(executed_trades))
-                c2.metric("⛔ No Trades", int(nt))
-                c3.metric("🏆 Winrate", f"{winrate_month:.2f}%")
-                c4.metric("💰 Gain", f"{gain:.2f} €")
-
-# ------------------------------------------------------------
-# 💾 Export & Import
-# ------------------------------------------------------------
-st.markdown("---")
-st.subheader("💾 Exporter / Importer manuellement")
-
-csv = pd.concat([
-    st.session_state["data"].copy(),
-    pd.DataFrame([{
-        "Date": "", "Session": "", "Setup": "",
-        "Cassure OPR": "", "Cassure note": "",
-        "Actif": "__CAPITAL__", "Résultat": "", "Motif": "",
-        "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
-    }])
-], ignore_index=True)
-
-dt = pd.to_datetime(csv["Date"], errors="coerce", format="%Y-%m-%d")
-csv["Date"] = dt.dt.strftime("%Y-%m-%d").fillna("")
-csv_bytes = csv.to_csv(index=False).encode("utf-8")
-
-st.download_button(
-    label="📤 Exporter tout (CSV)",
-    data=csv_bytes,
-    file_name="journal_trading.csv",
-    mime="text/csv"
-)
-
-uploaded_file = st.file_uploader("📥 Importer un fichier CSV", type=["csv"])
-if uploaded_file and st.button("✅ Accepter l'import"):
-    try:
-        full_df = pd.read_csv(uploaded_file, dtype=str).fillna("")
-        cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
-        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
-        st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
-        st.session_state["data"] = normalize_trades_to_iso(trade_rows)
-        save_data()
-        st.success("✅ Données et capital importés.")
-        st.rerun()
-    except Exception as e:
-        st.error(f"❌ Erreur d'importation : {e}")
