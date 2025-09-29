@@ -20,8 +20,6 @@ st.markdown("""
 # Constantes & normalisation
 # ------------------------------------------------------------
 SETUP_FIXED = "PULLBACK dans GOLDEN ZONE avec TENDANCE H1/M30/M5 alignées"
-MIN_CASSURE = time(9, 0)
-MAX_CASSURE = time(21, 0)
 
 EXPECTED_COLS = [
     "Date", "Session", "Setup",
@@ -32,7 +30,6 @@ EXPECTED_COLS = [
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 ASSETS = ["Gold"]
 MOTIF_OPTIONS = ["", "Strategie ✅", "Faux Breakout ❌", "Tranche HORRAIRE Dépassée ⛔️", "ANNONCE Economique 🚫"]
-CASSURE_MENU = ["", "RSI 🟢", "RSI 🔴", "Pas de Cassure"]
 
 def _parse_hhmm(s: str):
     try:
