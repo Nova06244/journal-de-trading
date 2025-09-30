@@ -241,7 +241,11 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 # 📊 Liste des trades (affichage US)
 # ------------------------------------------------------------
 st.subheader("📊 Liste des trades")
-df = st.session_state["data"]
+df = st.session_state["data"].copy()
+
+# Cacher les colonnes entièrement vides (ex: Cassure note)
+non_empty_mask = df.apply(lambda s: s.astype(str).str.strip().ne("").any())
+display_cols = [c for c in df.columns if non_empty_mask.get(c, True)]
 
 NUM_COLS = {"Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"}
 
@@ -249,10 +253,10 @@ for i in df.index:
     result = df.loc[i, "Résultat"]
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
 
-    n_cols = len(df.columns)
-    cols = st.columns([1]*n_cols + [1.2])
+    n_cols = len(display_cols)
+    cols = st.columns([1]*n_cols + [1.2])  # +1 pour les boutons
 
-    for j, col_name in enumerate(df.columns):
+    for j, col_name in enumerate(display_cols):
         value = df.loc[i, col_name]
         value = "" if pd.isna(value) else value
 
