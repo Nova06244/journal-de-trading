@@ -19,7 +19,7 @@ st.markdown("""
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
-SETUP_FIXED = "PULLBACK dans GOLDEN ZONE avec TENDANCE H1/M30/M5 alignées"
+SETUP_FIXED = "Cassure OPR en/contre Tendance = FIBONACCI + PULLBACK dans GOLDEN ZONE"
 
 # ⚠️ "Cassure OPR" = le menu demandé (—— / en TENDANCE / à contre TENDANCE)
 #     "Heure cassure" = l'heure contrainte par session (nouvelle colonne)
