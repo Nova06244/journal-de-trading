@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, time, timedelta
 import os
 
 SAVE_FILE = "journal_trading.csv"
@@ -21,14 +21,36 @@ st.markdown("""
 # ------------------------------------------------------------
 SETUP_FIXED = "PULLBACK dans GOLDEN ZONE avec TENDANCE H1/M30/M5 alignées"
 
+# ⚠️ "Cassure OPR" = le menu demandé (—— / en TENDANCE / à contre TENDANCE)
+#     "Heure cassure" = l'heure contrainte par session (nouvelle colonne)
 EXPECTED_COLS = [
     "Date", "Session", "Setup",
-    "Cassure OPR", "Cassure note",
+    "Cassure OPR", "Heure cassure", "Cassure note",
     "Actif", "Résultat", "Observation",
     "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
 ]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 ASSETS = ["Gold"]
+
+CASSURE_OPTIONS = ["——", "Cassure en TENDANCE", "Cassure à contre TENDANCE"]
+
+SESSION_TIME_WINDOWS = {
+    "OPR 9h":    (time(9, 30),  time(11, 0)),
+    "OPR 15h30": (time(16, 0),  time(17, 0)),
+    "OPR 18h30": (time(19, 0),  time(21, 0)),
+}
+
+def generate_time_slots(start_t: time, end_t: time, step_minutes: int = 5) -> list[str]:
+    """Génère des créneaux HH:MM entre start_t et end_t inclus, pas de 5 min."""
+    today = datetime.today().date()
+    start_dt = datetime.combine(today, start_t)
+    end_dt = datetime.combine(today, end_t)
+    slots = []
+    cur = start_dt
+    while cur <= end_dt:
+        slots.append(cur.strftime("%H:%M"))
+        cur += timedelta(minutes=step_minutes)
+    return slots
 
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     df = df_in.copy()
@@ -69,7 +91,7 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
     # Texte propre
-    for c in ["Setup", "Observation", "Cassure OPR", "Cassure note"]:
+    for c in ["Setup", "Observation", "Cassure OPR", "Heure cassure", "Cassure note"]:
         df[c] = df[c].astype(str).fillna("").str.strip()
 
     return df.reset_index(drop=True)
@@ -86,7 +108,7 @@ def save_data():
     df_out["Date"] = dt.dt.strftime("%Y-%m-%d").fillna("")
     capital_row = pd.DataFrame([{
         "Date": "", "Session": "", "Setup": "",
-        "Cassure OPR": "", "Cassure note": "",
+        "Cassure OPR": "", "Heure cassure": "", "Cassure note": "",
         "Actif": "__CAPITAL__", "Résultat": "", "Observation": "",
         "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
@@ -94,7 +116,7 @@ def save_data():
     export_df.to_csv(SAVE_FILE, index=False, encoding="utf-8")
 
 # ------------------------------------------------------------
-# Chargement initial (⚠️ la ligne ci-dessous est bien valide)
+# Chargement initial
 # ------------------------------------------------------------
 if "data" not in st.session_state:
     if os.path.exists(SAVE_FILE):
@@ -118,6 +140,13 @@ if "edit_index" not in st.session_state:
 if "edit_row" not in st.session_state:
     st.session_state["edit_row"] = {}
 
+# Helper: options d'heure selon session
+def get_time_options_for_session(session_name: str) -> list[str]:
+    start_end = SESSION_TIME_WINDOWS.get(session_name)
+    if not start_end:
+        return []
+    return generate_time_slots(*start_end, step_minutes=5)
+
 # ------------------------------------------------------------
 # 📋 Entrée d'un trade
 # ------------------------------------------------------------
@@ -131,7 +160,19 @@ with st.form("add_trade_form"):
         actif = st.selectbox("Actif", ASSETS, index=0)
         session = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"])
 
-        # --- Type de Setup ---
+        # --- Cassure (menu + heure dépendant de la session) ---
+        c_col1, c_col2 = st.columns(2)
+        with c_col1:
+            cassure_choice = st.selectbox("Cassure", CASSURE_OPTIONS, index=0)
+        with c_col2:
+            time_opts = get_time_options_for_session(session)
+            heure_cassure = st.selectbox(
+                "Heure de cassure",
+                options=time_opts if time_opts else [""],
+                index=0
+            )
+
+        # --- Type de Setup (badge fixe) ---
         st.subheader("📌 Type de Setup")
         st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
@@ -156,8 +197,9 @@ with st.form("add_trade_form"):
             "Date": date_iso,
             "Session": session,
             "Setup": SETUP_FIXED,
-            "Cassure OPR": "",     # non utilisé
-            "Cassure note": "",    # non utilisé
+            "Cassure OPR": cassure_choice,      # <= menu cassure
+            "Heure cassure": heure_cassure,     # <= heure contrainte par session
+            "Cassure note": "",                 # libre si besoin plus tard
             "Actif": actif,
             "Résultat": resultat,
             "Observation": observation,
@@ -256,6 +298,8 @@ if st.session_state.get("show_edit_form", False):
     _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
     _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
     _observation = str(row.get("Observation", "") or "")
+    _cassure_choice = row.get("Cassure OPR", "——") or "——"
+    _heure_cassure = row.get("Heure cassure", "")
 
     with st.form("edit_trade_form"):
         col1, col2 = st.columns(2)
@@ -270,6 +314,17 @@ if st.session_state.get("show_edit_form", False):
                 "Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"],
                 index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
             )
+
+            # --- Cassure (menu + heure dépendant de la session) ---
+            c_col1, c_col2 = st.columns(2)
+            with c_col1:
+                cassure_choice = st.selectbox("Cassure", CASSURE_OPTIONS,
+                                              index=CASSURE_OPTIONS.index(_cassure_choice) if _cassure_choice in CASSURE_OPTIONS else 0)
+            with c_col2:
+                time_opts = get_time_options_for_session(session)
+                # Pré-sélection si la valeur existe encore dans la nouvelle liste
+                idx = time_opts.index(_heure_cassure) if _heure_cassure in time_opts else 0 if time_opts else 0
+                heure_cassure = st.selectbox("Heure de cassure", options=time_opts if time_opts else [""], index=idx)
 
             # --- Type de Setup ---
             st.subheader("📌 Type de Setup")
@@ -308,8 +363,9 @@ if st.session_state.get("show_edit_form", False):
                 "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
                 "Session": session,
                 "Setup": SETUP_FIXED,
-                "Cassure OPR": "",
-                "Cassure note": "",
+                "Cassure OPR": cassure_choice,
+                "Heure cassure": heure_cassure,
+                "Cassure note": row.get("Cassure note", ""),
                 "Actif": actif,
                 "Résultat": resultat,
                 "Observation": observation,
@@ -420,7 +476,7 @@ csv = pd.concat([
     st.session_state["data"].copy(),
     pd.DataFrame([{
         "Date": "", "Session": "", "Setup": "",
-        "Cassure OPR": "", "Cassure note": "",
+        "Cassure OPR": "", "Heure cassure": "", "Cassure note": "",
         "Actif": "__CAPITAL__", "Résultat": "", "Observation": "",
         "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
     }])
