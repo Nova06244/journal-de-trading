@@ -22,9 +22,7 @@ EXPECTED_COLS = [
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 
 # 👉 Un seul actif, en majuscules
-ASSETS = ["NALDAX"]
-
-CASSURE_OPTIONS = ["——", "Cassure en TENDANCE", "Cassure à contre TENDANCE"]
+ASSETS = ["NASDAQ"]
 
 SESSION_TIME_WINDOWS = {
     "OPR 9h":    (time(9, 30),  time(11, 0)),
