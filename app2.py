@@ -11,7 +11,6 @@ st.title("📘 Journal de Trading")
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
-# Gardé pour compat mais plus affiché dans l'UI
 SETUP_FIXED = "Cassure OPR en/contre Tendance = FIBONACCI + PULLBACK dans GOLDEN ZONE"
 
 EXPECTED_COLS = [
@@ -22,20 +21,17 @@ EXPECTED_COLS = [
 ]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
 
-# 👉 Un seul actif : Nasdaq
-ASSETS = ["Nasdaq"]
+# 👉 Un seul actif, en majuscules
+ASSETS = ["NALDAX"]
 
-# Gardé uniquement pour compatibilité avec l'ancien CSV
 CASSURE_OPTIONS = ["——", "Cassure en TENDANCE", "Cassure à contre TENDANCE"]
 
-# 👉 Sessions limitées à 9h et 15h30
 SESSION_TIME_WINDOWS = {
     "OPR 9h":    (time(9, 30),  time(11, 0)),
     "OPR 15h30": (time(16, 0),  time(17, 0)),
 }
 
 def generate_time_slots(start_t: time, end_t: time, step_minutes: int = 5) -> list[str]:
-    """Génère des créneaux HH:MM entre start_t et end_t inclus, pas de 5 min."""
     today = datetime.today().date()
     start_dt = datetime.combine(today, start_t)
     end_dt = datetime.combine(today, end_t)
@@ -49,28 +45,23 @@ def generate_time_slots(start_t: time, end_t: time, step_minutes: int = 5) -> li
 def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     df = df_in.copy()
 
-    # --- Migration Motif -> Observation (compat anciens CSV) ---
     if "Observation" not in df.columns:
         df["Observation"] = ""
     if "Motif" in df.columns:
         mask_fill = df["Observation"].astype(str).str.strip().eq("") & df["Motif"].notna()
         df.loc[mask_fill, "Observation"] = df.loc[mask_fill, "Motif"].astype(str)
 
-    # Colonnes manquantes
     for c in EXPECTED_COLS:
         if c not in df.columns:
             df[c] = ""
 
-    # Réordonne / limite aux colonnes attendues
     df = df[EXPECTED_COLS]
 
-    # Normalisations
     df["Résultat"] = df["Résultat"].replace({"Pas de trade": "No Trade"}).astype(str).str.strip()
     df["Actif"] = df["Actif"].replace({
         "XAUUSD": "GOLD", "BTCUSD": "BTC", "XAU-USD": "GOLD", "BTC-USD": "BTC"
     }).astype(str).str.strip()
 
-    # Dates → ISO
     dt_iso = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
     mask_fr = dt_iso.isna() & df["Date"].astype(str).str.contains(r"/")
     dt_fr = pd.to_datetime(df.loc[mask_fr, "Date"], format="%d/%m/%Y", errors="coerce")
@@ -80,11 +71,9 @@ def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
     dt_iso.loc[mask_fr2] = dt_fr2
     df["Date"] = dt_iso.dt.strftime("%Y-%m-%d").fillna("")
 
-    # Numériques
     for c in ["Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
-    # Texte propre
     for c in ["Setup", "Observation", "Cassure OPR", "Heure cassure", "Cassure note"]:
         df[c] = df[c].astype(str).fillna("").str.strip()
 
@@ -139,8 +128,7 @@ if "edit_row" not in st.session_state:
 # ------------------------------------------------------------
 st.subheader("📋 Entrée d'un trade")
 
-# --- Session réactive (en dehors du form) ---
-session_choice = st.selectbox("Session", ["OPR 9h", "OPR 15h30"], key="session_add_top")
+# 👉 Plus de session en dehors du formulaire
 
 with st.form("add_trade_form"):
     col1, col2 = st.columns(2)
@@ -148,10 +136,12 @@ with st.form("add_trade_form"):
     with col1:
         date_obj = st.date_input("Date", value=datetime.now())
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")
+
+        # Actif
         actif = st.selectbox("Actif", ASSETS, index=0)
 
-        # On montre la session choisie au-dessus
-        st.markdown(f"**Session sélectionnée :** {session_choice}")
+        # 👉 Session juste après Actif (dans le form)
+        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30"])
 
     with col2:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=3.00)
@@ -171,14 +161,14 @@ with st.form("add_trade_form"):
 
         new_row = {
             "Date": date_iso,
-            "Session": session_choice,
-            "Setup": "",          # plus de type de setup saisi
-            "Cassure OPR": "",    # plus de menu cassure
-            "Heure cassure": "",  # plus d'heure de cassure
+            "Session": session,
+            "Setup": "",
+            "Cassure OPR": "",
+            "Heure cassure": "",
             "Cassure note": "",
             "Actif": actif,
             "Résultat": resultat,
-            "Observation": "",    # plus de champ observation
+            "Observation": "",
             "Mise (€)": mise,
             "Risk (%)": 1.00,
             "Reward (%)": reward,
@@ -216,10 +206,8 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"].copy()
 
-# Cacher les colonnes entièrement vides
 non_empty_mask = df.apply(lambda s: s.astype(str).str.strip().ne("").any())
 
-# 👉 On masque aussi explicitement Setup / Cassure / Observation dans l'affichage
 HIDDEN_COLS = ["Setup", "Cassure OPR", "Heure cassure", "Cassure note", "Observation"]
 display_cols = [c for c in df.columns if non_empty_mask.get(c, True) and c not in HIDDEN_COLS]
 
@@ -230,7 +218,7 @@ for i in df.index:
     color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
 
     n_cols = len(display_cols)
-    cols = st.columns([1]*n_cols + [1.2])  # +1 pour les boutons
+    cols = st.columns([1]*n_cols + [1.2])
 
     for j, col_name in enumerate(display_cols):
         value = df.loc[i, col_name]
@@ -325,7 +313,6 @@ if st.session_state.get("show_edit_form", False):
             else:
                 gain = 0.0
 
-            # 👉 On ne modifie plus Setup / Cassure / Observation, on conserve les anciennes valeurs
             st.session_state["data"].iloc[st.session_state["edit_index"]] = {
                 "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
                 "Session": session,
