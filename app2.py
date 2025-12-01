@@ -8,21 +8,12 @@ SAVE_FILE = "journal_trading.csv"
 st.set_page_config(page_title="Journal de Trading", layout="wide")
 st.title("📘 Journal de Trading")
 
-# --- Styles (badge blanc pour le setup) ---
-st.markdown("""
-<style>
-.setup-pill { color:#fff; background:#111; border:1px solid #444;
-              border-radius:6px; padding:8px 10px; display:inline-block; font-weight:600; }
-</style>
-""", unsafe_allow_html=True)
-
 # ------------------------------------------------------------
 # Constantes & normalisation
 # ------------------------------------------------------------
+# Gardé pour compat mais plus affiché dans l'UI
 SETUP_FIXED = "Cassure OPR en/contre Tendance = FIBONACCI + PULLBACK dans GOLDEN ZONE"
 
-# ⚠️ "Cassure OPR" = le menu demandé (—— / en TENDANCE / à contre TENDANCE)
-#     "Heure cassure" = l'heure contrainte par session (nouvelle colonne)
 EXPECTED_COLS = [
     "Date", "Session", "Setup",
     "Cassure OPR", "Heure cassure", "Cassure note",
@@ -30,14 +21,17 @@ EXPECTED_COLS = [
     "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
 ]
 VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
-ASSETS = ["Gold"]
 
+# 👉 Un seul actif : Nasdaq
+ASSETS = ["Nasdaq"]
+
+# Gardé uniquement pour compatibilité avec l'ancien CSV
 CASSURE_OPTIONS = ["——", "Cassure en TENDANCE", "Cassure à contre TENDANCE"]
 
+# 👉 Sessions limitées à 9h et 15h30
 SESSION_TIME_WINDOWS = {
     "OPR 9h":    (time(9, 30),  time(11, 0)),
     "OPR 15h30": (time(16, 0),  time(17, 0)),
-    "OPR 18h30": (time(19, 0),  time(21, 0)),
 }
 
 def generate_time_slots(start_t: time, end_t: time, step_minutes: int = 5) -> list[str]:
@@ -140,23 +134,13 @@ if "edit_index" not in st.session_state:
 if "edit_row" not in st.session_state:
     st.session_state["edit_row"] = {}
 
-# Helper: options d'heure selon session
-def get_time_options_for_session(session_name: str) -> list[str]:
-    start_end = SESSION_TIME_WINDOWS.get(session_name)
-    if not start_end:
-        return []
-    return generate_time_slots(*start_end, step_minutes=5)
-
 # ------------------------------------------------------------
 # 📋 Entrée d'un trade
 # ------------------------------------------------------------
 st.subheader("📋 Entrée d'un trade")
 
 # --- Session réactive (en dehors du form) ---
-session_choice = st.selectbox("Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"], key="session_add_top")
-
-# Créneaux dynamiques liés à la session sélectionnée
-time_opts_live = (lambda s: generate_time_slots(*SESSION_TIME_WINDOWS[s], step_minutes=5))(session_choice)
+session_choice = st.selectbox("Session", ["OPR 9h", "OPR 15h30"], key="session_add_top")
 
 with st.form("add_trade_form"):
     col1, col2 = st.columns(2)
@@ -166,23 +150,11 @@ with st.form("add_trade_form"):
         date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")
         actif = st.selectbox("Actif", ASSETS, index=0)
 
-        # On montre la session choisie au-dessus, inutile de refaire un select ici
+        # On montre la session choisie au-dessus
         st.markdown(f"**Session sélectionnée :** {session_choice}")
-
-        # --- Cassure (menu + heure dépendant de la session réactive) ---
-        c_col1, c_col2 = st.columns(2)
-        with c_col1:
-            cassure_choice = st.selectbox("Cassure", CASSURE_OPTIONS, index=0, key="cassure_add")
-        with c_col2:
-            heure_cassure = st.selectbox("Heure de cassure", options=time_opts_live, index=0, key="heure_add")
-
-        # --- Type de Setup (badge fixe) ---
-        st.subheader("📌 Type de Setup")
-        st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
 
     with col2:
         reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=3.00)
-        observation = st.text_area("Observation", value="", placeholder="Note libre sur le trade…")
         resultat = st.selectbox("Résultat", VALID_RESULTS, key="result_add")
         mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", key="mise_add")
 
@@ -199,14 +171,14 @@ with st.form("add_trade_form"):
 
         new_row = {
             "Date": date_iso,
-            "Session": session_choice,            # <= on utilise la session externe
-            "Setup": SETUP_FIXED,
-            "Cassure OPR": cassure_choice,
-            "Heure cassure": heure_cassure,       # <= créneau 5 min selon session
+            "Session": session_choice,
+            "Setup": "",          # plus de type de setup saisi
+            "Cassure OPR": "",    # plus de menu cassure
+            "Heure cassure": "",  # plus d'heure de cassure
             "Cassure note": "",
             "Actif": actif,
             "Résultat": resultat,
-            "Observation": observation,
+            "Observation": "",    # plus de champ observation
             "Mise (€)": mise,
             "Risk (%)": 1.00,
             "Reward (%)": reward,
@@ -218,6 +190,7 @@ with st.form("add_trade_form"):
         )
         save_data()
         st.success("✅ Trade ajouté")
+
 # ------------------------------------------------------------
 # 💰 Mise de départ
 # ------------------------------------------------------------
@@ -243,9 +216,12 @@ st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €"
 st.subheader("📊 Liste des trades")
 df = st.session_state["data"].copy()
 
-# Cacher les colonnes entièrement vides (ex: Cassure note)
+# Cacher les colonnes entièrement vides
 non_empty_mask = df.apply(lambda s: s.astype(str).str.strip().ne("").any())
-display_cols = [c for c in df.columns if non_empty_mask.get(c, True)]
+
+# 👉 On masque aussi explicitement Setup / Cassure / Observation dans l'affichage
+HIDDEN_COLS = ["Setup", "Cassure OPR", "Heure cassure", "Cassure note", "Observation"]
+display_cols = [c for c in df.columns if non_empty_mask.get(c, True) and c not in HIDDEN_COLS]
 
 NUM_COLS = {"Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"}
 
@@ -318,26 +294,9 @@ if st.session_state.get("show_edit_form", False):
                                  index=_edit_assets.index(_actif) if _actif in _edit_assets else 0)
 
             session = st.selectbox(
-                "Session", ["OPR 9h", "OPR 15h30", "OPR 18h30"],
-                index=["OPR 9h", "OPR 15h30", "OPR 18h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30", "OPR 18h30"] else 0
+                "Session", ["OPR 9h", "OPR 15h30"],
+                index=["OPR 9h", "OPR 15h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30"] else 0
             )
-
-            # --- Cassure (menu + heure dépendant de la session) ---
-            c_col1, c_col2 = st.columns(2)
-            with c_col1:
-                cassure_choice = st.selectbox("Cassure", CASSURE_OPTIONS,
-                                              index=CASSURE_OPTIONS.index(_cassure_choice) if _cassure_choice in CASSURE_OPTIONS else 0)
-            with c_col2:
-                time_opts = get_time_options_for_session(session)
-                # Pré-sélection si la valeur existe encore dans la nouvelle liste
-                idx = time_opts.index(_heure_cassure) if _heure_cassure in time_opts else 0 if time_opts else 0
-                heure_cassure = st.selectbox("Heure de cassure", options=time_opts if time_opts else [""], index=idx)
-
-            # --- Type de Setup ---
-            st.subheader("📌 Type de Setup")
-            st.markdown(f"<div class='setup-pill'>{SETUP_FIXED}</div>", unsafe_allow_html=True)
-
-            observation = st.text_area("Observation", value=_observation, placeholder="Note libre sur le trade…")
 
             reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
             resultat = st.selectbox("Résultat", VALID_RESULTS,
@@ -366,16 +325,17 @@ if st.session_state.get("show_edit_form", False):
             else:
                 gain = 0.0
 
+            # 👉 On ne modifie plus Setup / Cassure / Observation, on conserve les anciennes valeurs
             st.session_state["data"].iloc[st.session_state["edit_index"]] = {
                 "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
                 "Session": session,
-                "Setup": SETUP_FIXED,
-                "Cassure OPR": cassure_choice,
-                "Heure cassure": heure_cassure,
+                "Setup": row.get("Setup", ""),
+                "Cassure OPR": _cassure_choice,
+                "Heure cassure": _heure_cassure,
                 "Cassure note": row.get("Cassure note", ""),
                 "Actif": actif,
                 "Résultat": resultat,
-                "Observation": observation,
+                "Observation": _observation,
                 "Mise (€)": mise,
                 "Risk (%)": 1.00,
                 "Reward (%)": reward,
