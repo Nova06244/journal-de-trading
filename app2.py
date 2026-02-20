@@ -5,11 +5,11 @@ from datetime import date, datetime
 import plotly.express as px
 import plotly.graph_objects as go
 
-# ─────────────────────────────────────────
+# —————————————–
 
 # CONFIG
 
-# ─────────────────────────────────────────
+# —————————————–
 
 st.set_page_config(
 page_title=“Daily Cycle Journal - EUR/USD”,
@@ -22,18 +22,18 @@ CSV_FILE = “trades.csv”
 COLUMNS = [“id”,“date”,“heure”,“biais”,“session”,“direction”,
 “entree”,“sl”,“tp”,“rr”,“pl”,“outcome”,“rules”,“raison”,“lecon”]
 
-# ─────────────────────────────────────────
+# —————————————–
 
 # CSS
 
-# ─────────────────────────────────────────
+# —————————————–
 
 st.markdown(”””
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
 
-/* ── GLOBAL DARK BACKGROUND ── */
+/* -- GLOBAL DARK BACKGROUND -- */
 html, body,
 [data-testid="stAppViewContainer"],
 [data-testid="stAppViewBlockContainer"],
@@ -46,18 +46,18 @@ html, body,
     font-family: 'DM Mono', monospace !important;
 }
 
-/* ── SIDEBAR ── */
+/* -- SIDEBAR -- */
 [data-testid="stSidebar"] {
     background-color: #0d1117 !important;
 }
 
-/* ── HEADERS ── */
+/* -- HEADERS -- */
 h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
     font-family: 'Syne', sans-serif !important;
     color: #ffffff !important;
 }
 
-/* ── TABS ── */
+/* -- TABS -- */
 [data-testid="stTabs"] [role="tablist"] {
     background-color: #0d1117 !important;
     border-bottom: 1px solid #1e2830 !important;
@@ -79,7 +79,7 @@ h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
     background-color: transparent !important;
 }
 
-/* ── INPUTS ── */
+/* -- INPUTS -- */
 .stTextInput > div > div > input,
 .stNumberInput > div > div > input,
 .stTextArea > div > div > textarea,
@@ -94,7 +94,7 @@ h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
     font-size: 14px !important;
 }
 
-/* ── SELECTBOX ── */
+/* -- SELECTBOX -- */
 [data-testid="stSelectbox"] > div > div {
     background-color: #131920 !important;
     color: #d0e0f0 !important;
@@ -105,7 +105,7 @@ h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
     color: #d0e0f0 !important;
 }
 
-/* ── RADIO ── */
+/* -- RADIO -- */
 [data-testid="stRadio"] {
     background-color: #131920 !important;
     border: 1px solid #2a3848 !important;
@@ -121,13 +121,13 @@ h1, h2, h3, h4, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
     font-size: 14px !important;
 }
 
-/* ── LABELS / MARKDOWN TEXT ── */
+/* -- LABELS / MARKDOWN TEXT -- */
 label, .stMarkdown p, p, span {
     color: #d0e0f0 !important;
     font-size: 14px !important;
 }
 
-/* ── FORM ── */
+/* -- FORM -- */
 [data-testid="stForm"] {
     background-color: #0d1117 !important;
     border: 1px solid #1e2830 !important;
@@ -135,7 +135,7 @@ label, .stMarkdown p, p, span {
     padding: 20px !important;
 }
 
-/* ── BUTTONS ── */
+/* -- BUTTONS -- */
 .stButton > button {
     background-color: #00d4ff !important;
     color: #000000 !important;
@@ -151,7 +151,7 @@ label, .stMarkdown p, p, span {
     background-color: #00eaff !important;
 }
 
-/* ── DOWNLOAD BUTTON ── */
+/* -- DOWNLOAD BUTTON -- */
 [data-testid="stDownloadButton"] button {
     background-color: #1a2535 !important;
     color: #00d4ff !important;
@@ -160,10 +160,10 @@ label, .stMarkdown p, p, span {
     font-family: 'DM Mono', monospace !important;
 }
 
-/* ── DIVIDER ── */
+/* -- DIVIDER -- */
 hr { border-color: #1e2830 !important; }
 
-/* ── ALERTS / SUCCESS ── */
+/* -- ALERTS / SUCCESS -- */
 [data-testid="stAlert"] {
     background-color: #0d2010 !important;
     border: 1px solid #00e5a0 !important;
@@ -171,16 +171,16 @@ hr { border-color: #1e2830 !important; }
     border-radius: 6px !important;
 }
 
-/* ── PLOTLY CHARTS background fix ── */
+/* -- PLOTLY CHARTS background fix -- */
 .js-plotly-plot .plotly, .plot-container {
     background: transparent !important;
 }
 
-/* ── HIDE STREAMLIT BRANDING ── */
+/* -- HIDE STREAMLIT BRANDING -- */
 #MainMenu, footer, header { visibility: hidden !important; }
 [data-testid="stToolbar"] { display: none !important; }
 
-/* ── METRIC CARDS ── */
+/* -- METRIC CARDS -- */
 .metric-card {
     background: #0d1117;
     border: 1px solid #1e2830;
@@ -207,7 +207,7 @@ hr { border-color: #1e2830 !important; }
     margin-top: 5px;
 }
 
-/* ── TRADE CARDS ── */
+/* -- TRADE CARDS -- */
 .trade-card {
     background: #0d1117;
     border: 1px solid #1e2830;
@@ -216,7 +216,7 @@ hr { border-color: #1e2830 !important; }
     margin-bottom: 12px;
 }
 
-/* ── BADGES ── */
+/* -- BADGES -- */
 .badge {
     display: inline-block;
     padding: 3px 10px;
@@ -226,7 +226,7 @@ hr { border-color: #1e2830 !important; }
     margin-right: 5px;
 }
 
-/* ── INFO BOX ── */
+/* -- INFO BOX -- */
 .info-box {
     background: rgba(0,212,255,0.07);
     border: 1px solid rgba(0,212,255,0.25);
@@ -238,7 +238,7 @@ hr { border-color: #1e2830 !important; }
     line-height: 1.8;
 }
 
-/* ── INSIGHT BOX ── */
+/* -- INSIGHT BOX -- */
 .insight-box {
     background: #111820;
     border-left: 3px solid #00d4ff;
@@ -273,11 +273,11 @@ header { display: none; }
 
 “””, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────
+# —————————————–
 
 # DATA
 
-# ─────────────────────────────────────────
+# —————————————–
 
 def load_trades():
 if os.path.exists(CSV_FILE):
@@ -302,11 +302,11 @@ return round(reward / risk, 2)
 except:
 return None
 
-# ─────────────────────────────────────────
+# —————————————–
 
 # HEADER
 
-# ─────────────────────────────────────────
+# —————————————–
 
 df = load_trades()
 n = len(df)
@@ -323,7 +323,7 @@ st.markdown(”””
         Daily<span style='color:#00d4ff'>Cycle</span> Journal
     </span><br>
     <span style='font-size: 11px; color: #4a6070; letter-spacing: 2px; text-transform: uppercase;'>
-        EUR/USD · IC Markets · Christophe Meoni
+        EUR/USD . IC Markets . Christophe Meoni
     </span>
 </div>
 """, unsafe_allow_html=True)
@@ -342,12 +342,12 @@ wr_color = “green” if wr and wr >= 50 else “red” if wr else “accent”
 st.markdown(f”””<div class='metric-card'>
 <div class='metric-label'>Win Rate</div>
 <div class='metric-value {wr_color}'>{wr}%</div>
-<div class='metric-sub'>{wins}W · {losses}L · {bes}BE</div>
+<div class='metric-sub'>{wins}W . {losses}L . {bes}BE</div>
 </div>”””, unsafe_allow_html=True)
 
 with col3:
 pl_color = “green” if total_pl > 0 else “red” if total_pl < 0 else “accent”
-pl_str = f”+{total_pl:.2f}€” if total_pl >= 0 else f”{total_pl:.2f}€”
+pl_str = f”+{total_pl:.2f}EUR” if total_pl >= 0 else f”{total_pl:.2f}EUR”
 st.markdown(f”””<div class='metric-card'>
 <div class='metric-label'>P&L Net</div>
 <div class='metric-value {pl_color}'>{pl_str}</div>
@@ -365,19 +365,19 @@ st.markdown(f”””<div class='metric-card'>
 
 st.markdown(”—”)
 
-# ─────────────────────────────────────────
+# —————————————–
 
 # TABS
 
-# ─────────────────────────────────────────
+# —————————————–
 
-tab1, tab2, tab3 = st.tabs([“➕ Nouveau Trade”, “📋 Journal”, “📊 Statistiques”])
+tab1, tab2, tab3 = st.tabs([”+ Nouveau Trade”, “ Journal”, “ Statistiques”])
 
-# ─────────────────────────────────────────
+# —————————————–
 
 # TAB 1 - SAISIE
 
-# ─────────────────────────────────────────
+# —————————————–
 
 with tab1:
 # Check if editing
@@ -390,68 +390,68 @@ edit_data = rows.iloc[0]
 
 ```
 if edit_id:
-    st.markdown("### ✏️ Modifier le trade")
+    st.markdown("###  Modifier le trade")
 else:
     st.markdown("### Saisir un trade EUR/USD")
 
 st.markdown("""<div class='info-box'>
-    📋 <strong style='color:#fff'>Rappel Daily Cycle :</strong>
-    Trace la box <strong style='color:#fff'>7h00 → 13h00</strong> ·
-    Identifie le <strong style='color:#fff'>CHOCH M15</strong> à l'intérieur ·
-    Détermine le biais · Entre en position
-    <strong style='color:#fff'>après 13h00</strong> dans la continuité New York
+     <strong style='color:#fff'>Rappel Daily Cycle :</strong>
+    Trace la box <strong style='color:#fff'>7h00 -> 13h00</strong> .
+    Identifie le <strong style='color:#fff'>CHOCH M15</strong> a l'interieur .
+    Determine le biais . Entre en position
+    <strong style='color:#fff'>apres 13h00</strong> dans la continuite New York
 </div>""", unsafe_allow_html=True)
 
 with st.form("trade_form", clear_on_submit=not bool(edit_id)):
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        f_date = st.date_input("📅 Date",
+        f_date = st.date_input(" Date",
             value=pd.to_datetime(edit_data["date"]).date() if edit_data is not None else date.today())
 
     with col2:
-        f_heure = st.text_input("🕐 Heure d'entrée (HH:MM)",
+        f_heure = st.text_input(" Heure d'entree (HH:MM)",
             value=str(edit_data["heure"]) if edit_data is not None else "",
             placeholder="13:15")
 
     with col3:
-        st.markdown("**⚖️ Ratio RR**")
-        st.markdown("<div class='muted' style='font-size:12px'>Calculé automatiquement</div>", unsafe_allow_html=True)
+        st.markdown("** Ratio RR**")
+        st.markdown("<div class='muted' style='font-size:12px'>Calcule automatiquement</div>", unsafe_allow_html=True)
 
-    st.markdown("**📐 Biais Daily Cycle - CHOCH M15 dans la box 7h'13h**")
+    st.markdown("** Biais Daily Cycle - CHOCH M15 dans la box 7h'13h**")
     f_biais = st.radio("Biais",
         options=["bullish", "bearish", "neutral"],
-        format_func=lambda x: "▲ Haussier" if x == "bullish" else "▼ Baissier" if x == "bearish" else "◆ Indécis",
+        format_func=lambda x: " Haussier" if x == "bullish" else " Baissier" if x == "bearish" else " Indecis",
         index=["bullish","bearish","neutral"].index(edit_data["biais"]) if edit_data is not None and edit_data["biais"] in ["bullish","bearish","neutral"] else 0,
         horizontal=True, label_visibility="collapsed")
 
-    st.markdown("**⏰ Moment d'entrée**")
+    st.markdown("** Moment d'entree**")
     f_session = st.radio("Session",
-        options=["New York (13h'17h)", "Fin session (17h+)", "Pré-NY (avant 13h)"],
-        index=["New York (13h'17h)","Fin session (17h+)","Pré-NY (avant 13h)"].index(edit_data["session"]) if edit_data is not None and edit_data["session"] in ["New York (13h'17h)","Fin session (17h+)","Pré-NY (avant 13h)"] else 0,
+        options=["New York (13h'17h)", "Fin session (17h+)", "Pre-NY (avant 13h)"],
+        index=["New York (13h'17h)","Fin session (17h+)","Pre-NY (avant 13h)"].index(edit_data["session"]) if edit_data is not None and edit_data["session"] in ["New York (13h'17h)","Fin session (17h+)","Pre-NY (avant 13h)"] else 0,
         horizontal=True, label_visibility="collapsed")
 
     col1, col2 = st.columns(2)
     with col1:
-        f_direction = st.selectbox("📊 Direction",
+        f_direction = st.selectbox(" Direction",
             ["Long", "Short"],
             index=["Long","Short"].index(edit_data["direction"]) if edit_data is not None else 0)
     with col2:
-        f_entree = st.number_input("💹 Prix d'entrée",
+        f_entree = st.number_input(" Prix d'entree",
             value=float(edit_data["entree"]) if edit_data is not None and edit_data["entree"] else 0.0,
             format="%.5f", step=0.00001)
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        f_sl = st.number_input("🔴 Stop Loss",
+        f_sl = st.number_input(" Stop Loss",
             value=float(edit_data["sl"]) if edit_data is not None and edit_data["sl"] else 0.0,
             format="%.5f", step=0.00001)
     with col2:
-        f_tp = st.number_input("🟢 Take Profit",
+        f_tp = st.number_input(" Take Profit",
             value=float(edit_data["tp"]) if edit_data is not None and edit_data["tp"] else 0.0,
             format="%.5f", step=0.00001)
     with col3:
-        f_pl = st.number_input("💰 Résultat (€)",
+        f_pl = st.number_input(" Resultat (EUR)",
             value=float(edit_data["pl"]) if edit_data is not None and edit_data["pl"] else 0.0,
             format="%.2f", step=0.01)
 
@@ -459,35 +459,35 @@ with st.form("trade_form", clear_on_submit=not bool(edit_id)):
     rr_val = calc_rr(f_entree, f_sl, f_tp)
     if rr_val:
         rr_color = "green" if rr_val >= 2 else "yellow" if rr_val >= 1 else "red"
-        rr_icon = "✅" if rr_val >= 2 else "⚠️" if rr_val >= 1 else "❌"
-        st.markdown(f"<div class='{rr_color}'>⚖️ Ratio RR : <strong>1 : {rr_val}</strong> {rr_icon}</div>", unsafe_allow_html=True)
+        rr_icon = "" if rr_val >= 2 else "" if rr_val >= 1 else ""
+        st.markdown(f"<div class='{rr_color}'> Ratio RR : <strong>1 : {rr_val}</strong> {rr_icon}</div>", unsafe_allow_html=True)
 
-    st.markdown("**🏆 Outcome**")
+    st.markdown("** Outcome**")
     f_outcome = st.radio("Outcome",
         ["Win", "Loss", "BE"],
-        format_func=lambda x: "✅ Win" if x == "Win" else "❌ Loss" if x == "Loss" else "⚡ Break Even",
+        format_func=lambda x: " Win" if x == "Win" else " Loss" if x == "Loss" else " Break Even",
         index=["Win","Loss","BE"].index(edit_data["outcome"]) if edit_data is not None and edit_data["outcome"] in ["Win","Loss","BE"] else 0,
         horizontal=True, label_visibility="collapsed")
 
-    st.markdown("**📏 Règles Daily Cycle respectées ? (biais défini + entrée après 13h)**")
-    auto_no = f_session == "Pré-NY (avant 13h)"
-    f_rules = st.radio("Règles",
+    st.markdown("** Regles Daily Cycle respectees ? (biais defini + entree apres 13h)**")
+    auto_no = f_session == "Pre-NY (avant 13h)"
+    f_rules = st.radio("Regles",
         ["yes", "no"],
-        format_func=lambda x: "✓ Dans le plan" if x == "yes" else "✗ Hors plan",
+        format_func=lambda x: " Dans le plan" if x == "yes" else " Hors plan",
         index=1 if auto_no else (["yes","no"].index(edit_data["rules"]) if edit_data is not None and edit_data["rules"] in ["yes","no"] else 0),
         horizontal=True, label_visibility="collapsed")
 
-    f_raison = st.text_area("📌 Setup - Pourquoi tu es entré ? (structure, niveau, déclencheur)",
+    f_raison = st.text_area(" Setup - Pourquoi tu es entre ? (structure, niveau, declencheur)",
         value=str(edit_data["raison"]) if edit_data is not None and pd.notna(edit_data["raison"]) else "",
-        placeholder="Ex : CHOCH M15 haussier formé à 10h30 dans la box. Low cassé à 13h10. Entrée sur retest IFVG à 1.0845. SL sous le CHOCH.",
+        placeholder="Ex : CHOCH M15 haussier forme a 10h30 dans la box. Low casse a 13h10. Entree sur retest IFVG a 1.0845. SL sous le CHOCH.",
         height=80)
 
-    f_lecon = st.text_area("💡 Leçon du jour - Ce qui s'est passé, ce que tu retiens",
+    f_lecon = st.text_area(" Leon du jour - Ce qui s'est passe, ce que tu retiens",
         value=str(edit_data["lecon"]) if edit_data is not None and pd.notna(edit_data["lecon"]) else "",
-        placeholder="Ex : Trade valide, j'ai coupé à +8€ par peur alors que le TP était à +22€. Leçon : faire confiance au setup.",
+        placeholder="Ex : Trade valide, j'ai coupe a +8EUR par peur alors que le TP etait a +22EUR. Leon : faire confiance au setup.",
         height=80)
 
-    submitted = st.form_submit_button("💾 Enregistrer le trade" if not edit_id else "✅ Mettre à jour")
+    submitted = st.form_submit_button(" Enregistrer le trade" if not edit_id else " Mettre a jour")
 
     if submitted:
         df = load_trades()
@@ -514,31 +514,31 @@ with st.form("trade_form", clear_on_submit=not bool(edit_id)):
             st.session_state.pop("edit_id", None)
         df = pd.concat([df, pd.DataFrame([new_trade])], ignore_index=True)
         save_trades(df)
-        st.success("✅ Trade enregistré avec succès !")
+        st.success(" Trade enregistre avec succes !")
         st.rerun()
 
 if edit_id:
-    if st.button("❌ Annuler la modification"):
+    if st.button(" Annuler la modification"):
         st.session_state.pop("edit_id", None)
         st.rerun()
 ```
 
-# ─────────────────────────────────────────
+# —————————————–
 
 # TAB 2 - JOURNAL
 
-# ─────────────────────────────────────────
+# —————————————–
 
 with tab2:
-st.markdown(”### 📋 Historique des trades”)
+st.markdown(”###  Historique des trades”)
 
 ```
 df = load_trades()
 
 if df.empty:
     st.markdown("""<div style='text-align:center; padding: 60px 20px; color: #4a6070;'>
-        <div style='font-size:36px; margin-bottom:12px;'>📋</div>
-        Aucun trade enregistré.<br>Commence par saisir ton premier trade.
+        <div style='font-size:36px; margin-bottom:12px;'></div>
+        Aucun trade enregistre.<br>Commence par saisir ton premier trade.
     </div>""", unsafe_allow_html=True)
 else:
     df_sorted = df.sort_values("date", ascending=False)
@@ -546,15 +546,15 @@ else:
     for _, t in df_sorted.iterrows():
         pl = float(t["pl"]) if t["pl"] != "" else 0
         pl_color = "#00e5a0" if pl > 0 else "#ff4060" if pl < 0 else "#4a6070"
-        pl_str = f"+{pl:.2f}€" if pl >= 0 else f"{pl:.2f}€"
+        pl_str = f"+{pl:.2f}EUR" if pl >= 0 else f"{pl:.2f}EUR"
 
-        biais_map = {"bullish": ("▲ Haussier", "#00e5a0"), "bearish": ("▼ Baissier", "#ff4060"), "neutral": ("◆ Indécis", "#ffd060")}
+        biais_map = {"bullish": (" Haussier", "#00e5a0"), "bearish": (" Baissier", "#ff4060"), "neutral": (" Indecis", "#ffd060")}
         biais_label, biais_color = biais_map.get(t["biais"], ("-", "#4a6070"))
 
-        outcome_map = {"Win": ("✅ Win", "#00e5a0"), "Loss": ("❌ Loss", "#ff4060"), "BE": ("⚡ BE", "#a060ff")}
+        outcome_map = {"Win": (" Win", "#00e5a0"), "Loss": (" Loss", "#ff4060"), "BE": (" BE", "#a060ff")}
         out_label, out_color = outcome_map.get(t["outcome"], ("-", "#4a6070"))
 
-        rules_label = "✓ Plan" if t["rules"] == "yes" else "✗ Hors plan"
+        rules_label = " Plan" if t["rules"] == "yes" else " Hors plan"
         rules_color = "#00e5a0" if t["rules"] == "yes" else "#ff4060"
 
         dir_color = "#00e5a0" if t["direction"] == "Long" else "#ff4060"
@@ -581,50 +581,50 @@ else:
                         {f"<span class='badge' style='background:#00d4ff20; color:#00d4ff;'>{rr_str}</span>" if rr_str else ""}
                     </div>
                     <div style='font-size:11px; color:#4a6070;'>
-                        {f"Entrée: {t['entree']}" if t['entree'] else ""}
-                        {f" · SL: {t['sl']}" if t['sl'] else ""}
-                        {f" · TP: {t['tp']}" if t['tp'] else ""}
+                        {f"Entree: {t['entree']}" if t['entree'] else ""}
+                        {f" . SL: {t['sl']}" if t['sl'] else ""}
+                        {f" . TP: {t['tp']}" if t['tp'] else ""}
                     </div>
-                    {f"<div style='font-size:11px; color:#4a6070; margin-top:6px; border-top:1px solid #1e2830; padding-top:6px;'>📌 {t['raison']}</div>" if pd.notna(t['raison']) and t['raison'] else ""}
-                    {f"<div style='font-size:11px; color:#00d4ff; margin-top:4px;'>💡 {t['lecon']}</div>" if pd.notna(t['lecon']) and t['lecon'] else ""}
+                    {f"<div style='font-size:11px; color:#4a6070; margin-top:6px; border-top:1px solid #1e2830; padding-top:6px;'> {t['raison']}</div>" if pd.notna(t['raison']) and t['raison'] else ""}
+                    {f"<div style='font-size:11px; color:#00d4ff; margin-top:4px;'> {t['lecon']}</div>" if pd.notna(t['lecon']) and t['lecon'] else ""}
                 </div>
                 """, unsafe_allow_html=True)
 
             with col_actions:
-                if st.button("✏️", key=f"edit_{t['id']}", help="Modifier"):
+                if st.button("", key=f"edit_{t['id']}", help="Modifier"):
                     st.session_state["edit_id"] = t["id"]
                     st.rerun()
-                if st.button("🗑️", key=f"del_{t['id']}", help="Supprimer"):
+                if st.button("", key=f"del_{t['id']}", help="Supprimer"):
                     st.session_state[f"confirm_del_{t['id']}"] = True
                     st.rerun()
 
                 if st.session_state.get(f"confirm_del_{t['id']}", False):
                     st.warning("Confirmer ?")
-                    if st.button("✅ Oui", key=f"yes_{t['id']}"):
+                    if st.button(" Oui", key=f"yes_{t['id']}"):
                         df = df[df["id"] != t["id"]]
                         save_trades(df)
                         st.session_state.pop(f"confirm_del_{t['id']}", None)
                         st.rerun()
-                    if st.button("❌ Non", key=f"no_{t['id']}"):
+                    if st.button(" Non", key=f"no_{t['id']}"):
                         st.session_state.pop(f"confirm_del_{t['id']}", None)
                         st.rerun()
 ```
 
-# ─────────────────────────────────────────
+# —————————————–
 
 # TAB 3 - STATS
 
-# ─────────────────────────────────────────
+# —————————————–
 
 with tab3:
-st.markdown(”### 📊 Statistiques”)
+st.markdown(”###  Statistiques”)
 
 ```
 df = load_trades()
 
 if df.empty:
     st.markdown("""<div style='text-align:center; padding: 60px 20px; color: #4a6070;'>
-        <div style='font-size:36px; margin-bottom:12px;'>📊</div>
+        <div style='font-size:36px; margin-bottom:12px;'></div>
         Enregistre des trades pour voir tes statistiques.
     </div>""", unsafe_allow_html=True)
 else:
@@ -645,14 +645,14 @@ else:
     # Insight
     insight = ""
     if wr < 35:
-        insight = f"⚠️ Win rate {wr}% - priorité à la qualité des setups, pas à la quantité."
+        insight = f" Win rate {wr}% - priorite a la qualite des setups, pas a la quantite."
     elif wr >= 50:
-        insight = f"🔥 Excellent win rate {wr}% ! Continue sur cette lancée."
+        insight = f" Excellent win rate {wr}% ! Continue sur cette lancee."
     else:
-        insight = f"📊 Win rate {wr}% - vérifie que ton RR moyen compense les pertes."
+        insight = f" Win rate {wr}% - verifie que ton RR moyen compense les pertes."
 
     if rules_ok < n:
-        insight += f" | Plan respecté {round(rules_ok/n*100)}% du temps - Dans le plan : {'+' if pl_rules>=0 else ''}{pl_rules:.2f}€ · Hors plan : {'+' if pl_no_rules>=0 else ''}{pl_no_rules:.2f}€"
+        insight += f" | Plan respecte {round(rules_ok/n*100)}% du temps - Dans le plan : {'+' if pl_rules>=0 else ''}{pl_rules:.2f}EUR . Hors plan : {'+' if pl_no_rules>=0 else ''}{pl_no_rules:.2f}EUR"
 
     st.markdown(f"<div class='insight-box'>{insight}</div>", unsafe_allow_html=True)
 
@@ -667,11 +667,11 @@ else:
         marker=dict(size=6, color=["#00e5a0" if v >= 0 else "#ff4060" for v in df_sorted["cumpl"]]),
         fill="tozeroy",
         fillcolor="rgba(0,229,160,0.06)" if total_pl >= 0 else "rgba(255,64,96,0.06)",
-        name="P&L cumulé"
+        name="P&L cumule"
     ))
     fig_eq.add_hline(y=0, line_dash="dash", line_color="#253040")
     fig_eq.update_layout(
-        title="Courbe de capital - P&L cumulé",
+        title="Courbe de capital - P&L cumule",
         plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
         font=dict(color="#c8d8e8", family="DM Mono"),
         xaxis=dict(gridcolor="#1e2830", showgrid=True),
@@ -701,12 +701,12 @@ else:
     with col2:
         # Biais chart
         biais_data = df.groupby("biais")["pl"].sum().reset_index()
-        biais_data["label"] = biais_data["biais"].map({"bullish": "▲ Haussier", "bearish": "▼ Baissier", "neutral": "◆ Indécis"})
+        biais_data["label"] = biais_data["biais"].map({"bullish": " Haussier", "bearish": " Baissier", "neutral": " Indecis"})
         biais_data["color"] = biais_data["pl"].apply(lambda x: "#00e5a0" if x >= 0 else "#ff4060")
         fig_b = go.Figure(go.Bar(
             x=biais_data["label"], y=biais_data["pl"],
             marker_color=biais_data["color"],
-            text=biais_data["pl"].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}€"),
+            text=biais_data["pl"].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}EUR"),
             textposition="outside"
         ))
         fig_b.update_layout(
@@ -726,7 +726,7 @@ else:
             x=["Dans le plan", "Hors plan"],
             y=[pl_rules, pl_no_rules],
             marker_color=["#00e5a0" if pl_rules >= 0 else "#ff4060", "#00e5a0" if pl_no_rules >= 0 else "#ff4060"],
-            text=[f"{'+' if pl_rules>=0 else ''}{pl_rules:.2f}€", f"{'+' if pl_no_rules>=0 else ''}{pl_no_rules:.2f}€"],
+            text=[f"{'+' if pl_rules>=0 else ''}{pl_rules:.2f}EUR", f"{'+' if pl_no_rules>=0 else ''}{pl_no_rules:.2f}EUR"],
             textposition="outside"
         ))
         fig_r.update_layout(
@@ -745,7 +745,7 @@ else:
         fig_s = go.Figure(go.Bar(
             x=sess_data["session"], y=sess_data["pl"],
             marker_color=sess_data["color"],
-            text=sess_data["pl"].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}€"),
+            text=sess_data["pl"].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}EUR"),
             textposition="outside"
         ))
         fig_s.update_layout(
@@ -761,7 +761,7 @@ else:
     st.markdown("---")
     csv_export = df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        label="⬇️ Exporter en CSV",
+        label=" Exporter en CSV",
         data=csv_export,
         file_name="journal_daily_cycle.csv",
         mime="text/csv"
