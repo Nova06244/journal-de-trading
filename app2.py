@@ -12,8 +12,8 @@ import plotly.graph_objects as go
 # ─────────────────────────────────────────
 
 st.set_page_config(
-page_title=“Daily Cycle Journal — EUR/USD”,
-page_icon=“📈”,
+page_title=“Daily Cycle Journal - EUR/USD”,
+page_icon=“chart”,
 layout=“wide”,
 initial_sidebar_state=“collapsed”
 )
@@ -273,7 +273,7 @@ tab1, tab2, tab3 = st.tabs([“➕ Nouveau Trade”, “📋 Journal”, “📊
 
 # ─────────────────────────────────────────
 
-# TAB 1 — SAISIE
+# TAB 1 - SAISIE
 
 # ─────────────────────────────────────────
 
@@ -316,7 +316,7 @@ with st.form("trade_form", clear_on_submit=not bool(edit_id)):
         st.markdown("**⚖️ Ratio RR**")
         st.markdown("<div class='muted' style='font-size:12px'>Calculé automatiquement</div>", unsafe_allow_html=True)
 
-    st.markdown("**📐 Biais Daily Cycle — CHOCH M15 dans la box 7h–13h**")
+    st.markdown("**📐 Biais Daily Cycle - CHOCH M15 dans la box 7h'13h**")
     f_biais = st.radio("Biais",
         options=["bullish", "bearish", "neutral"],
         format_func=lambda x: "▲ Haussier" if x == "bullish" else "▼ Baissier" if x == "bearish" else "◆ Indécis",
@@ -325,8 +325,8 @@ with st.form("trade_form", clear_on_submit=not bool(edit_id)):
 
     st.markdown("**⏰ Moment d'entrée**")
     f_session = st.radio("Session",
-        options=["New York (13h–17h)", "Fin session (17h+)", "Pré-NY (avant 13h)"],
-        index=["New York (13h–17h)","Fin session (17h+)","Pré-NY (avant 13h)"].index(edit_data["session"]) if edit_data is not None and edit_data["session"] in ["New York (13h–17h)","Fin session (17h+)","Pré-NY (avant 13h)"] else 0,
+        options=["New York (13h'17h)", "Fin session (17h+)", "Pré-NY (avant 13h)"],
+        index=["New York (13h'17h)","Fin session (17h+)","Pré-NY (avant 13h)"].index(edit_data["session"]) if edit_data is not None and edit_data["session"] in ["New York (13h'17h)","Fin session (17h+)","Pré-NY (avant 13h)"] else 0,
         horizontal=True, label_visibility="collapsed")
 
     col1, col2 = st.columns(2)
@@ -375,12 +375,12 @@ with st.form("trade_form", clear_on_submit=not bool(edit_id)):
         index=1 if auto_no else (["yes","no"].index(edit_data["rules"]) if edit_data is not None and edit_data["rules"] in ["yes","no"] else 0),
         horizontal=True, label_visibility="collapsed")
 
-    f_raison = st.text_area("📌 Setup — Pourquoi tu es entré ? (structure, niveau, déclencheur)",
+    f_raison = st.text_area("📌 Setup - Pourquoi tu es entré ? (structure, niveau, déclencheur)",
         value=str(edit_data["raison"]) if edit_data is not None and pd.notna(edit_data["raison"]) else "",
         placeholder="Ex : CHOCH M15 haussier formé à 10h30 dans la box. Low cassé à 13h10. Entrée sur retest IFVG à 1.0845. SL sous le CHOCH.",
         height=80)
 
-    f_lecon = st.text_area("💡 Leçon du jour — Ce qui s'est passé, ce que tu retiens",
+    f_lecon = st.text_area("💡 Leçon du jour - Ce qui s'est passé, ce que tu retiens",
         value=str(edit_data["lecon"]) if edit_data is not None and pd.notna(edit_data["lecon"]) else "",
         placeholder="Ex : Trade valide, j'ai coupé à +8€ par peur alors que le TP était à +22€. Leçon : faire confiance au setup.",
         height=80)
@@ -400,7 +400,7 @@ with st.form("trade_form", clear_on_submit=not bool(edit_id)):
             "entree": f_entree if f_entree else "",
             "sl": f_sl if f_sl else "",
             "tp": f_tp if f_tp else "",
-            "rr": rr_val if rr_val else "—",
+            "rr": rr_val if rr_val else "-",
             "pl": f_pl,
             "outcome": f_outcome,
             "rules": f_rules,
@@ -423,7 +423,7 @@ if edit_id:
 
 # ─────────────────────────────────────────
 
-# TAB 2 — JOURNAL
+# TAB 2 - JOURNAL
 
 # ─────────────────────────────────────────
 
@@ -447,16 +447,16 @@ else:
         pl_str = f"+{pl:.2f}€" if pl >= 0 else f"{pl:.2f}€"
 
         biais_map = {"bullish": ("▲ Haussier", "#00e5a0"), "bearish": ("▼ Baissier", "#ff4060"), "neutral": ("◆ Indécis", "#ffd060")}
-        biais_label, biais_color = biais_map.get(t["biais"], ("—", "#4a6070"))
+        biais_label, biais_color = biais_map.get(t["biais"], ("-", "#4a6070"))
 
         outcome_map = {"Win": ("✅ Win", "#00e5a0"), "Loss": ("❌ Loss", "#ff4060"), "BE": ("⚡ BE", "#a060ff")}
-        out_label, out_color = outcome_map.get(t["outcome"], ("—", "#4a6070"))
+        out_label, out_color = outcome_map.get(t["outcome"], ("-", "#4a6070"))
 
         rules_label = "✓ Plan" if t["rules"] == "yes" else "✗ Hors plan"
         rules_color = "#00e5a0" if t["rules"] == "yes" else "#ff4060"
 
         dir_color = "#00e5a0" if t["direction"] == "Long" else "#ff4060"
-        rr_str = f"RR 1:{t['rr']}" if t["rr"] and t["rr"] != "—" else ""
+        rr_str = f"RR 1:{t['rr']}" if t["rr"] and t["rr"] != "-" else ""
 
         with st.container():
             col_main, col_pl, col_actions = st.columns([5, 2, 1])
@@ -510,7 +510,7 @@ else:
 
 # ─────────────────────────────────────────
 
-# TAB 3 — STATS
+# TAB 3 - STATS
 
 # ─────────────────────────────────────────
 
@@ -543,14 +543,14 @@ else:
     # Insight
     insight = ""
     if wr < 35:
-        insight = f"⚠️ Win rate {wr}% — priorité à la qualité des setups, pas à la quantité."
+        insight = f"⚠️ Win rate {wr}% - priorité à la qualité des setups, pas à la quantité."
     elif wr >= 50:
         insight = f"🔥 Excellent win rate {wr}% ! Continue sur cette lancée."
     else:
-        insight = f"📊 Win rate {wr}% — vérifie que ton RR moyen compense les pertes."
+        insight = f"📊 Win rate {wr}% - vérifie que ton RR moyen compense les pertes."
 
     if rules_ok < n:
-        insight += f" | Plan respecté {round(rules_ok/n*100)}% du temps — Dans le plan : {'+' if pl_rules>=0 else ''}{pl_rules:.2f}€ · Hors plan : {'+' if pl_no_rules>=0 else ''}{pl_no_rules:.2f}€"
+        insight += f" | Plan respecté {round(rules_ok/n*100)}% du temps - Dans le plan : {'+' if pl_rules>=0 else ''}{pl_rules:.2f}€ · Hors plan : {'+' if pl_no_rules>=0 else ''}{pl_no_rules:.2f}€"
 
     st.markdown(f"<div class='insight-box'>{insight}</div>", unsafe_allow_html=True)
 
@@ -569,7 +569,7 @@ else:
     ))
     fig_eq.add_hline(y=0, line_dash="dash", line_color="#253040")
     fig_eq.update_layout(
-        title="Courbe de capital — P&L cumulé",
+        title="Courbe de capital - P&L cumulé",
         plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
         font=dict(color="#c8d8e8", family="DM Mono"),
         xaxis=dict(gridcolor="#1e2830", showgrid=True),
