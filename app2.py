@@ -1,459 +1,667 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, time, timedelta
 import os
+from datetime import date, datetime
+import plotly.express as px
+import plotly.graph_objects as go
 
-SAVE_FILE = "journal_trading.csv"
+# ─────────────────────────────────────────
 
-st.set_page_config(page_title="Journal de Trading", layout="wide")
-st.title("📘 Journal de Trading")
+# CONFIG
 
-# ------------------------------------------------------------
-# Constantes & normalisation
-# ------------------------------------------------------------
-SETUP_FIXED = "Cassure OPR en/contre Tendance = FIBONACCI + PULLBACK dans GOLDEN ZONE"
+# ─────────────────────────────────────────
 
-EXPECTED_COLS = [
-    "Date", "Session", "Setup",
-    "Cassure OPR", "Heure cassure", "Cassure note",
-    "Actif", "Résultat", "Observation",
-    "Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"
-]
-VALID_RESULTS = ["TP", "SL", "Breakeven", "No Trade"]
+st.set_page_config(
+page_title=“Daily Cycle Journal — EUR/USD”,
+page_icon=“📈”,
+layout=“wide”,
+initial_sidebar_state=“collapsed”
+)
 
-# 👉 Un seul actif, en majuscules
-ASSETS = ["NASDAQ"]
+CSV_FILE = “trades.csv”
+COLUMNS = [“id”,“date”,“heure”,“biais”,“session”,“direction”,
+“entree”,“sl”,“tp”,“rr”,“pl”,“outcome”,“rules”,“raison”,“lecon”]
 
-SESSION_TIME_WINDOWS = {
-    "OPR 9h":    (time(9, 30),  time(11, 0)),
-    "OPR 15h30": (time(16, 0),  time(17, 0)),
+# ─────────────────────────────────────────
+
+# CSS
+
+# ─────────────────────────────────────────
+
+st.markdown(”””
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'DM Mono', monospace;
+    background-color: #080c10;
+    color: #c8d8e8;
 }
 
-def generate_time_slots(start_t: time, end_t: time, step_minutes: int = 5) -> list[str]:
-    today = datetime.today().date()
-    start_dt = datetime.combine(today, start_t)
-    end_dt = datetime.combine(today, end_t)
-    slots = []
-    cur = start_dt
-    while cur <= end_dt:
-        slots.append(cur.strftime("%H:%M"))
-        cur += timedelta(minutes=step_minutes)
-    return slots
+.main { background-color: #080c10; }
 
-def normalize_trades_to_iso(df_in: pd.DataFrame) -> pd.DataFrame:
-    df = df_in.copy()
+h1, h2, h3 {
+    font-family: 'Syne', sans-serif !important;
+    color: #ffffff !important;
+}
 
-    if "Observation" not in df.columns:
-        df["Observation"] = ""
-    if "Motif" in df.columns:
-        mask_fill = df["Observation"].astype(str).str.strip().eq("") & df["Motif"].notna()
-        df.loc[mask_fill, "Observation"] = df.loc[mask_fill, "Motif"].astype(str)
+.stButton > button {
+    background-color: #00d4ff;
+    color: #000000;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    width: 100%;
+}
 
-    for c in EXPECTED_COLS:
-        if c not in df.columns:
-            df[c] = ""
+.stButton > button:hover {
+    background-color: #00eaff;
+    color: #000;
+}
 
-    df = df[EXPECTED_COLS]
+.stTextInput > div > div > input,
+.stNumberInput > div > div > input,
+.stSelectbox > div > div,
+.stTextArea > div > div > textarea,
+.stTimeInput > div > div > input {
+    background-color: #131920 !important;
+    color: #c8d8e8 !important;
+    border: 1px solid #253040 !important;
+    border-radius: 6px !important;
+    font-family: 'DM Mono', monospace !important;
+}
 
-    df["Résultat"] = df["Résultat"].replace({"Pas de trade": "No Trade"}).astype(str).str.strip()
-    df["Actif"] = df["Actif"].replace({
-        "XAUUSD": "GOLD", "BTCUSD": "BTC", "XAU-USD": "GOLD", "BTC-USD": "BTC"
-    }).astype(str).str.strip()
+.stDateInput > div > div > input {
+    background-color: #131920 !important;
+    color: #c8d8e8 !important;
+    border: 1px solid #253040 !important;
+}
 
-    dt_iso = pd.to_datetime(df["Date"], format="%Y-%m-%d", errors="coerce")
-    mask_fr = dt_iso.isna() & df["Date"].astype(str).str.contains(r"/")
-    dt_fr = pd.to_datetime(df.loc[mask_fr, "Date"], format="%d/%m/%Y", errors="coerce")
-    dt_iso.loc[mask_fr] = dt_fr
-    mask_fr2 = dt_iso.isna() & df["Date"].astype(str).str.contains(r"-")
-    dt_fr2 = pd.to_datetime(df.loc[mask_fr2, "Date"], format="%d-%m-%Y", errors="coerce")
-    dt_iso.loc[mask_fr2] = dt_fr2
-    df["Date"] = dt_iso.dt.strftime("%Y-%m-%d").fillna("")
+.metric-card {
+    background: #0d1117;
+    border: 1px solid #1e2830;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 10px;
+}
 
-    for c in ["Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+.metric-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.1;
+}
 
-    for c in ["Setup", "Observation", "Cassure OPR", "Heure cassure", "Cassure note"]:
-        df[c] = df[c].astype(str).fillna("").str.strip()
+.metric-label {
+    font-size: 10px;
+    color: #4a6070;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+}
 
-    return df.reset_index(drop=True)
+.metric-sub {
+    font-size: 11px;
+    color: #4a6070;
+    margin-top: 4px;
+}
 
-def us_fmt(date_iso: str) -> str:
-    if not date_iso:
-        return ""
-    dt = pd.to_datetime(date_iso, format="%Y-%m-%d", errors="coerce")
-    return dt.strftime("%m/%d/%Y") if pd.notna(dt) else ""
+.trade-card {
+    background: #0d1117;
+    border: 1px solid #1e2830;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+}
 
-def save_data():
-    df_out = st.session_state["data"].copy()
-    dt = pd.to_datetime(df_out["Date"], errors="coerce", format="%Y-%m-%d")
-    df_out["Date"] = dt.dt.strftime("%Y-%m-%d").fillna("")
-    capital_row = pd.DataFrame([{
-        "Date": "", "Session": "", "Setup": "",
-        "Cassure OPR": "", "Heure cassure": "", "Cassure note": "",
-        "Actif": "__CAPITAL__", "Résultat": "", "Observation": "",
-        "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
-    }])
-    export_df = pd.concat([df_out, capital_row], ignore_index=True)
-    export_df.to_csv(SAVE_FILE, index=False, encoding="utf-8")
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-right: 4px;
+}
 
-# ------------------------------------------------------------
-# Chargement initial
-# ------------------------------------------------------------
-if "data" not in st.session_state:
-    if os.path.exists(SAVE_FILE):
-        try:
-            raw = pd.read_csv(SAVE_FILE, dtype=str).fillna("")
-            cap_rows = raw[raw["Actif"] == "__CAPITAL__"]
-            trade_rows = raw[raw["Actif"] != "__CAPITAL__"]
-            st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
-            st.session_state["data"] = normalize_trades_to_iso(trade_rows)
-        except Exception:
-            st.session_state["data"] = pd.DataFrame(columns=EXPECTED_COLS)
-            st.session_state["capital"] = 0.0
+.info-box {
+    background: rgba(0,212,255,0.06);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #00d4ff;
+    margin-bottom: 16px;
+    line-height: 1.7;
+}
+
+.insight-box {
+    background: #131920;
+    border-left: 3px solid #00d4ff;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    margin-bottom: 16px;
+}
+
+.green { color: #00e5a0; }
+.red { color: #ff4060; }
+.accent { color: #00d4ff; }
+.muted { color: #4a6070; }
+.yellow { color: #ffd060; }
+
+div[data-testid="stHorizontalBlock"] {
+    gap: 10px;
+}
+
+.stRadio > div {
+    background: #131920;
+    border: 1px solid #253040;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+footer { display: none; }
+#MainMenu { display: none; }
+header { display: none; }
+</style>
+
+“””, unsafe_allow_html=True)
+
+# ─────────────────────────────────────────
+
+# DATA
+
+# ─────────────────────────────────────────
+
+def load_trades():
+if os.path.exists(CSV_FILE):
+df = pd.read_csv(CSV_FILE)
+for col in COLUMNS:
+if col not in df.columns:
+df[col] = “”
+return df
+return pd.DataFrame(columns=COLUMNS)
+
+def save_trades(df):
+df.to_csv(CSV_FILE, index=False)
+
+def calc_rr(entree, sl, tp):
+try:
+e, s, t = float(entree), float(sl), float(tp)
+risk = abs(e - s)
+reward = abs(t - e)
+if risk == 0:
+return None
+return round(reward / risk, 2)
+except:
+return None
+
+# ─────────────────────────────────────────
+
+# HEADER
+
+# ─────────────────────────────────────────
+
+df = load_trades()
+n = len(df)
+wins = len(df[df[“outcome”] == “Win”]) if n else 0
+losses = len(df[df[“outcome”] == “Loss”]) if n else 0
+bes = len(df[df[“outcome”] == “BE”]) if n else 0
+wr = round(wins / n * 100) if n else None
+total_pl = df[“pl”].astype(float).sum() if n else 0
+
+st.markdown(”””
+
+<div style='padding: 20px 0 10px 0;'>
+    <span style='font-family: Syne, sans-serif; font-size: 28px; font-weight: 800; color: #fff;'>
+        Daily<span style='color:#00d4ff'>Cycle</span> Journal
+    </span><br>
+    <span style='font-size: 11px; color: #4a6070; letter-spacing: 2px; text-transform: uppercase;'>
+        EUR/USD · IC Markets · Christophe Meoni
+    </span>
+</div>
+""", unsafe_allow_html=True)
+
+# Header KPIs
+
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+st.markdown(f”””<div class='metric-card'>
+<div class='metric-label'>Trades totaux</div>
+<div class='metric-value accent'>{n}</div>
+</div>”””, unsafe_allow_html=True)
+
+with col2:
+wr_color = “green” if wr and wr >= 50 else “red” if wr else “accent”
+st.markdown(f”””<div class='metric-card'>
+<div class='metric-label'>Win Rate</div>
+<div class='metric-value {wr_color}'>{wr}%</div>
+<div class='metric-sub'>{wins}W · {losses}L · {bes}BE</div>
+</div>”””, unsafe_allow_html=True)
+
+with col3:
+pl_color = “green” if total_pl > 0 else “red” if total_pl < 0 else “accent”
+pl_str = f”+{total_pl:.2f}€” if total_pl >= 0 else f”{total_pl:.2f}€”
+st.markdown(f”””<div class='metric-card'>
+<div class='metric-label'>P&L Net</div>
+<div class='metric-value {pl_color}'>{pl_str}</div>
+</div>”””, unsafe_allow_html=True)
+
+with col4:
+rules_ok = len(df[df[“rules”] == “yes”]) if n else 0
+rules_pct = round(rules_ok / n * 100) if n else 0
+r_color = “green” if rules_pct >= 70 else “yellow” if rules_pct >= 50 else “red”
+st.markdown(f”””<div class='metric-card'>
+<div class='metric-label'>Dans le plan</div>
+<div class='metric-value {r_color}'>{rules_pct}%</div>
+<div class='metric-sub'>{rules_ok} / {n} trades</div>
+</div>”””, unsafe_allow_html=True)
+
+st.markdown(”—”)
+
+# ─────────────────────────────────────────
+
+# TABS
+
+# ─────────────────────────────────────────
+
+tab1, tab2, tab3 = st.tabs([“➕ Nouveau Trade”, “📋 Journal”, “📊 Statistiques”])
+
+# ─────────────────────────────────────────
+
+# TAB 1 — SAISIE
+
+# ─────────────────────────────────────────
+
+with tab1:
+# Check if editing
+edit_id = st.session_state.get(“edit_id”, None)
+edit_data = None
+if edit_id:
+rows = df[df[“id”] == edit_id]
+if not rows.empty:
+edit_data = rows.iloc[0]
+
+```
+if edit_id:
+    st.markdown("### ✏️ Modifier le trade")
+else:
+    st.markdown("### Saisir un trade EUR/USD")
+
+st.markdown("""<div class='info-box'>
+    📋 <strong style='color:#fff'>Rappel Daily Cycle :</strong>
+    Trace la box <strong style='color:#fff'>7h00 → 13h00</strong> ·
+    Identifie le <strong style='color:#fff'>CHOCH M15</strong> à l'intérieur ·
+    Détermine le biais · Entre en position
+    <strong style='color:#fff'>après 13h00</strong> dans la continuité New York
+</div>""", unsafe_allow_html=True)
+
+with st.form("trade_form", clear_on_submit=not bool(edit_id)):
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        f_date = st.date_input("📅 Date",
+            value=pd.to_datetime(edit_data["date"]).date() if edit_data is not None else date.today())
+
+    with col2:
+        f_heure = st.text_input("🕐 Heure d'entrée (HH:MM)",
+            value=str(edit_data["heure"]) if edit_data is not None else "",
+            placeholder="13:15")
+
+    with col3:
+        st.markdown("**⚖️ Ratio RR**")
+        st.markdown("<div class='muted' style='font-size:12px'>Calculé automatiquement</div>", unsafe_allow_html=True)
+
+    st.markdown("**📐 Biais Daily Cycle — CHOCH M15 dans la box 7h–13h**")
+    f_biais = st.radio("Biais",
+        options=["bullish", "bearish", "neutral"],
+        format_func=lambda x: "▲ Haussier" if x == "bullish" else "▼ Baissier" if x == "bearish" else "◆ Indécis",
+        index=["bullish","bearish","neutral"].index(edit_data["biais"]) if edit_data is not None and edit_data["biais"] in ["bullish","bearish","neutral"] else 0,
+        horizontal=True, label_visibility="collapsed")
+
+    st.markdown("**⏰ Moment d'entrée**")
+    f_session = st.radio("Session",
+        options=["New York (13h–17h)", "Fin session (17h+)", "Pré-NY (avant 13h)"],
+        index=["New York (13h–17h)","Fin session (17h+)","Pré-NY (avant 13h)"].index(edit_data["session"]) if edit_data is not None and edit_data["session"] in ["New York (13h–17h)","Fin session (17h+)","Pré-NY (avant 13h)"] else 0,
+        horizontal=True, label_visibility="collapsed")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        f_direction = st.selectbox("📊 Direction",
+            ["Long", "Short"],
+            index=["Long","Short"].index(edit_data["direction"]) if edit_data is not None else 0)
+    with col2:
+        f_entree = st.number_input("💹 Prix d'entrée",
+            value=float(edit_data["entree"]) if edit_data is not None and edit_data["entree"] else 0.0,
+            format="%.5f", step=0.00001)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        f_sl = st.number_input("🔴 Stop Loss",
+            value=float(edit_data["sl"]) if edit_data is not None and edit_data["sl"] else 0.0,
+            format="%.5f", step=0.00001)
+    with col2:
+        f_tp = st.number_input("🟢 Take Profit",
+            value=float(edit_data["tp"]) if edit_data is not None and edit_data["tp"] else 0.0,
+            format="%.5f", step=0.00001)
+    with col3:
+        f_pl = st.number_input("💰 Résultat (€)",
+            value=float(edit_data["pl"]) if edit_data is not None and edit_data["pl"] else 0.0,
+            format="%.2f", step=0.01)
+
+    # RR display
+    rr_val = calc_rr(f_entree, f_sl, f_tp)
+    if rr_val:
+        rr_color = "green" if rr_val >= 2 else "yellow" if rr_val >= 1 else "red"
+        rr_icon = "✅" if rr_val >= 2 else "⚠️" if rr_val >= 1 else "❌"
+        st.markdown(f"<div class='{rr_color}'>⚖️ Ratio RR : <strong>1 : {rr_val}</strong> {rr_icon}</div>", unsafe_allow_html=True)
+
+    st.markdown("**🏆 Outcome**")
+    f_outcome = st.radio("Outcome",
+        ["Win", "Loss", "BE"],
+        format_func=lambda x: "✅ Win" if x == "Win" else "❌ Loss" if x == "Loss" else "⚡ Break Even",
+        index=["Win","Loss","BE"].index(edit_data["outcome"]) if edit_data is not None and edit_data["outcome"] in ["Win","Loss","BE"] else 0,
+        horizontal=True, label_visibility="collapsed")
+
+    st.markdown("**📏 Règles Daily Cycle respectées ? (biais défini + entrée après 13h)**")
+    auto_no = f_session == "Pré-NY (avant 13h)"
+    f_rules = st.radio("Règles",
+        ["yes", "no"],
+        format_func=lambda x: "✓ Dans le plan" if x == "yes" else "✗ Hors plan",
+        index=1 if auto_no else (["yes","no"].index(edit_data["rules"]) if edit_data is not None and edit_data["rules"] in ["yes","no"] else 0),
+        horizontal=True, label_visibility="collapsed")
+
+    f_raison = st.text_area("📌 Setup — Pourquoi tu es entré ? (structure, niveau, déclencheur)",
+        value=str(edit_data["raison"]) if edit_data is not None and pd.notna(edit_data["raison"]) else "",
+        placeholder="Ex : CHOCH M15 haussier formé à 10h30 dans la box. Low cassé à 13h10. Entrée sur retest IFVG à 1.0845. SL sous le CHOCH.",
+        height=80)
+
+    f_lecon = st.text_area("💡 Leçon du jour — Ce qui s'est passé, ce que tu retiens",
+        value=str(edit_data["lecon"]) if edit_data is not None and pd.notna(edit_data["lecon"]) else "",
+        placeholder="Ex : Trade valide, j'ai coupé à +8€ par peur alors que le TP était à +22€. Leçon : faire confiance au setup.",
+        height=80)
+
+    submitted = st.form_submit_button("💾 Enregistrer le trade" if not edit_id else "✅ Mettre à jour")
+
+    if submitted:
+        df = load_trades()
+        new_id = edit_id if edit_id else int(datetime.now().timestamp() * 1000)
+        new_trade = {
+            "id": new_id,
+            "date": str(f_date),
+            "heure": f_heure,
+            "biais": f_biais,
+            "session": f_session,
+            "direction": f_direction,
+            "entree": f_entree if f_entree else "",
+            "sl": f_sl if f_sl else "",
+            "tp": f_tp if f_tp else "",
+            "rr": rr_val if rr_val else "—",
+            "pl": f_pl,
+            "outcome": f_outcome,
+            "rules": f_rules,
+            "raison": f_raison,
+            "lecon": f_lecon,
+        }
+        if edit_id:
+            df = df[df["id"] != edit_id]
+            st.session_state.pop("edit_id", None)
+        df = pd.concat([df, pd.DataFrame([new_trade])], ignore_index=True)
+        save_trades(df)
+        st.success("✅ Trade enregistré avec succès !")
+        st.rerun()
+
+if edit_id:
+    if st.button("❌ Annuler la modification"):
+        st.session_state.pop("edit_id", None)
+        st.rerun()
+```
+
+# ─────────────────────────────────────────
+
+# TAB 2 — JOURNAL
+
+# ─────────────────────────────────────────
+
+with tab2:
+st.markdown(”### 📋 Historique des trades”)
+
+```
+df = load_trades()
+
+if df.empty:
+    st.markdown("""<div style='text-align:center; padding: 60px 20px; color: #4a6070;'>
+        <div style='font-size:36px; margin-bottom:12px;'>📋</div>
+        Aucun trade enregistré.<br>Commence par saisir ton premier trade.
+    </div>""", unsafe_allow_html=True)
+else:
+    df_sorted = df.sort_values("date", ascending=False)
+
+    for _, t in df_sorted.iterrows():
+        pl = float(t["pl"]) if t["pl"] != "" else 0
+        pl_color = "#00e5a0" if pl > 0 else "#ff4060" if pl < 0 else "#4a6070"
+        pl_str = f"+{pl:.2f}€" if pl >= 0 else f"{pl:.2f}€"
+
+        biais_map = {"bullish": ("▲ Haussier", "#00e5a0"), "bearish": ("▼ Baissier", "#ff4060"), "neutral": ("◆ Indécis", "#ffd060")}
+        biais_label, biais_color = biais_map.get(t["biais"], ("—", "#4a6070"))
+
+        outcome_map = {"Win": ("✅ Win", "#00e5a0"), "Loss": ("❌ Loss", "#ff4060"), "BE": ("⚡ BE", "#a060ff")}
+        out_label, out_color = outcome_map.get(t["outcome"], ("—", "#4a6070"))
+
+        rules_label = "✓ Plan" if t["rules"] == "yes" else "✗ Hors plan"
+        rules_color = "#00e5a0" if t["rules"] == "yes" else "#ff4060"
+
+        dir_color = "#00e5a0" if t["direction"] == "Long" else "#ff4060"
+        rr_str = f"RR 1:{t['rr']}" if t["rr"] and t["rr"] != "—" else ""
+
+        with st.container():
+            col_main, col_pl, col_actions = st.columns([5, 2, 1])
+
+            with col_main:
+                st.markdown(f"""
+                <div class='trade-card'>
+                    <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
+                        <div>
+                            <span style='color:#00d4ff; font-weight:500;'>{t["date"]}</span>
+                            <span style='color:#4a6070; margin-left:8px;'>{t["heure"] or ""}</span>
+                            <span style='color:{dir_color}; margin-left:10px; font-weight:500;'>{t["direction"]}</span>
+                        </div>
+                        <div style='font-family:Syne,sans-serif; font-size:18px; font-weight:700; color:{pl_color};'>{pl_str}</div>
+                    </div>
+                    <div style='margin-bottom:6px;'>
+                        <span class='badge' style='background:{biais_color}20; color:{biais_color};'>{biais_label}</span>
+                        <span class='badge' style='background:{out_color}20; color:{out_color};'>{out_label}</span>
+                        <span class='badge' style='background:{rules_color}20; color:{rules_color};'>{rules_label}</span>
+                        {f"<span class='badge' style='background:#00d4ff20; color:#00d4ff;'>{rr_str}</span>" if rr_str else ""}
+                    </div>
+                    <div style='font-size:11px; color:#4a6070;'>
+                        {f"Entrée: {t['entree']}" if t['entree'] else ""}
+                        {f" · SL: {t['sl']}" if t['sl'] else ""}
+                        {f" · TP: {t['tp']}" if t['tp'] else ""}
+                    </div>
+                    {f"<div style='font-size:11px; color:#4a6070; margin-top:6px; border-top:1px solid #1e2830; padding-top:6px;'>📌 {t['raison']}</div>" if pd.notna(t['raison']) and t['raison'] else ""}
+                    {f"<div style='font-size:11px; color:#00d4ff; margin-top:4px;'>💡 {t['lecon']}</div>" if pd.notna(t['lecon']) and t['lecon'] else ""}
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col_actions:
+                if st.button("✏️", key=f"edit_{t['id']}", help="Modifier"):
+                    st.session_state["edit_id"] = t["id"]
+                    st.rerun()
+                if st.button("🗑️", key=f"del_{t['id']}", help="Supprimer"):
+                    st.session_state[f"confirm_del_{t['id']}"] = True
+                    st.rerun()
+
+                if st.session_state.get(f"confirm_del_{t['id']}", False):
+                    st.warning("Confirmer ?")
+                    if st.button("✅ Oui", key=f"yes_{t['id']}"):
+                        df = df[df["id"] != t["id"]]
+                        save_trades(df)
+                        st.session_state.pop(f"confirm_del_{t['id']}", None)
+                        st.rerun()
+                    if st.button("❌ Non", key=f"no_{t['id']}"):
+                        st.session_state.pop(f"confirm_del_{t['id']}", None)
+                        st.rerun()
+```
+
+# ─────────────────────────────────────────
+
+# TAB 3 — STATS
+
+# ─────────────────────────────────────────
+
+with tab3:
+st.markdown(”### 📊 Statistiques”)
+
+```
+df = load_trades()
+
+if df.empty:
+    st.markdown("""<div style='text-align:center; padding: 60px 20px; color: #4a6070;'>
+        <div style='font-size:36px; margin-bottom:12px;'>📊</div>
+        Enregistre des trades pour voir tes statistiques.
+    </div>""", unsafe_allow_html=True)
+else:
+    df["pl"] = pd.to_numeric(df["pl"], errors="coerce").fillna(0)
+    df["date"] = pd.to_datetime(df["date"])
+    df_sorted = df.sort_values("date")
+
+    n = len(df)
+    wins = len(df[df["outcome"] == "Win"])
+    losses = len(df[df["outcome"] == "Loss"])
+    bes = len(df[df["outcome"] == "BE"])
+    wr = round(wins / n * 100) if n else 0
+    total_pl = df["pl"].sum()
+    pl_rules = df[df["rules"] == "yes"]["pl"].sum()
+    pl_no_rules = df[df["rules"] == "no"]["pl"].sum()
+    rules_ok = len(df[df["rules"] == "yes"])
+
+    # Insight
+    insight = ""
+    if wr < 35:
+        insight = f"⚠️ Win rate {wr}% — priorité à la qualité des setups, pas à la quantité."
+    elif wr >= 50:
+        insight = f"🔥 Excellent win rate {wr}% ! Continue sur cette lancée."
     else:
-        st.session_state["data"] = pd.DataFrame(columns=EXPECTED_COLS)
-        st.session_state["capital"] = 0.0
+        insight = f"📊 Win rate {wr}% — vérifie que ton RR moyen compense les pertes."
 
-if "show_edit_form" not in st.session_state:
-    st.session_state["show_edit_form"] = False
-if "edit_index" not in st.session_state:
-    st.session_state["edit_index"] = None
-if "edit_row" not in st.session_state:
-    st.session_state["edit_row"] = {}
+    if rules_ok < n:
+        insight += f" | Plan respecté {round(rules_ok/n*100)}% du temps — Dans le plan : {'+' if pl_rules>=0 else ''}{pl_rules:.2f}€ · Hors plan : {'+' if pl_no_rules>=0 else ''}{pl_no_rules:.2f}€"
 
-# ------------------------------------------------------------
-# 📋 Entrée d'un trade
-# ------------------------------------------------------------
-st.subheader("📋 Entrée d'un trade")
+    st.markdown(f"<div class='insight-box'>{insight}</div>", unsafe_allow_html=True)
 
-# 👉 Plus de session en dehors du formulaire
+    # Equity curve
+    df_sorted["cumpl"] = df_sorted["pl"].cumsum()
+    fig_eq = go.Figure()
+    fig_eq.add_trace(go.Scatter(
+        x=df_sorted["date"],
+        y=df_sorted["cumpl"],
+        mode="lines+markers",
+        line=dict(color="#00e5a0" if total_pl >= 0 else "#ff4060", width=2),
+        marker=dict(size=6, color=["#00e5a0" if v >= 0 else "#ff4060" for v in df_sorted["cumpl"]]),
+        fill="tozeroy",
+        fillcolor="rgba(0,229,160,0.06)" if total_pl >= 0 else "rgba(255,64,96,0.06)",
+        name="P&L cumulé"
+    ))
+    fig_eq.add_hline(y=0, line_dash="dash", line_color="#253040")
+    fig_eq.update_layout(
+        title="Courbe de capital — P&L cumulé",
+        plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+        font=dict(color="#c8d8e8", family="DM Mono"),
+        xaxis=dict(gridcolor="#1e2830", showgrid=True),
+        yaxis=dict(gridcolor="#1e2830", showgrid=True),
+        showlegend=False, height=280, margin=dict(l=10,r=10,t=40,b=10)
+    )
+    st.plotly_chart(fig_eq, use_container_width=True)
 
-with st.form("add_trade_form"):
     col1, col2 = st.columns(2)
 
     with col1:
-        date_obj = st.date_input("Date", value=datetime.now())
-        date_iso = pd.to_datetime(date_obj).strftime("%Y-%m-%d")
-
-        # Actif
-        actif = st.selectbox("Actif", ASSETS, index=0)
-
-        # 👉 Session juste après Actif (dans le form)
-        session = st.selectbox("Session", ["OPR 9h", "OPR 15h30"])
+        # Win/Loss donut
+        fig_wl = go.Figure(go.Pie(
+            labels=["Win", "Loss", "BE"],
+            values=[wins, losses, bes],
+            hole=0.65,
+            marker=dict(colors=["#00e5a0", "#ff4060", "#a060ff"], line=dict(width=0)),
+        ))
+        fig_wl.update_layout(
+            title="Win / Loss / BE",
+            plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+            font=dict(color="#c8d8e8", family="DM Mono"),
+            showlegend=True, height=260, margin=dict(l=10,r=10,t=40,b=10)
+        )
+        st.plotly_chart(fig_wl, use_container_width=True)
 
     with col2:
-        reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=3.00)
-        resultat = st.selectbox("Résultat", VALID_RESULTS, key="result_add")
-        mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", key="mise_add")
-
-    submitted = st.form_submit_button("Ajouter le trade")
-    if submitted:
-        if resultat == "TP":
-            gain = mise * reward
-        elif resultat == "SL":
-            gain = -mise
-        elif resultat == "Breakeven":
-            gain = mise
-        else:
-            gain = 0.0
-
-        new_row = {
-            "Date": date_iso,
-            "Session": session,
-            "Setup": "",
-            "Cassure OPR": "",
-            "Heure cassure": "",
-            "Cassure note": "",
-            "Actif": actif,
-            "Résultat": resultat,
-            "Observation": "",
-            "Mise (€)": mise,
-            "Risk (%)": 1.00,
-            "Reward (%)": reward,
-            "Gain (€)": gain
-        }
-        st.session_state["data"] = pd.concat(
-            [st.session_state["data"], pd.DataFrame([new_row])],
-            ignore_index=True
+        # Biais chart
+        biais_data = df.groupby("biais")["pl"].sum().reset_index()
+        biais_data["label"] = biais_data["biais"].map({"bullish": "▲ Haussier", "bearish": "▼ Baissier", "neutral": "◆ Indécis"})
+        biais_data["color"] = biais_data["pl"].apply(lambda x: "#00e5a0" if x >= 0 else "#ff4060")
+        fig_b = go.Figure(go.Bar(
+            x=biais_data["label"], y=biais_data["pl"],
+            marker_color=biais_data["color"],
+            text=biais_data["pl"].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}€"),
+            textposition="outside"
+        ))
+        fig_b.update_layout(
+            title="P&L par biais",
+            plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+            font=dict(color="#c8d8e8", family="DM Mono"),
+            xaxis=dict(gridcolor="#1e2830"), yaxis=dict(gridcolor="#1e2830"),
+            showlegend=False, height=260, margin=dict(l=10,r=10,t=40,b=10)
         )
-        save_data()
-        st.success("✅ Trade ajouté")
+        st.plotly_chart(fig_b, use_container_width=True)
 
-# ------------------------------------------------------------
-# 💰 Mise de départ
-# ------------------------------------------------------------
-st.subheader("💰 Mise de départ ou ajout de capital")
-col_cap1, col_cap2 = st.columns([2, 1])
-with col_cap1:
-    new_cap = st.number_input("Ajouter au capital (€)", min_value=0.0, step=100.0, format="%.2f")
-with col_cap2:
-    if st.button("Ajouter la mise"):
-        st.session_state["capital"] += new_cap
-        save_data()
-        st.success(f"✅ Nouveau capital : {st.session_state['capital']:.2f} €")
-    if st.button("♻️ Réinitialiser la mise de départ"):
-        st.session_state["capital"] = 0.0
-        save_data()
-        st.success("🔁 Mise de départ réinitialisée à 0 €")
+    col3, col4 = st.columns(2)
 
-st.info(f"💼 Mise de départ actuelle : {st.session_state['capital']:.2f} €")
+    with col3:
+        # Rules chart
+        fig_r = go.Figure(go.Bar(
+            x=["Dans le plan", "Hors plan"],
+            y=[pl_rules, pl_no_rules],
+            marker_color=["#00e5a0" if pl_rules >= 0 else "#ff4060", "#00e5a0" if pl_no_rules >= 0 else "#ff4060"],
+            text=[f"{'+' if pl_rules>=0 else ''}{pl_rules:.2f}€", f"{'+' if pl_no_rules>=0 else ''}{pl_no_rules:.2f}€"],
+            textposition="outside"
+        ))
+        fig_r.update_layout(
+            title="P&L : Dans le plan vs Hors plan",
+            plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+            font=dict(color="#c8d8e8", family="DM Mono"),
+            xaxis=dict(gridcolor="#1e2830"), yaxis=dict(gridcolor="#1e2830"),
+            showlegend=False, height=260, margin=dict(l=10,r=10,t=40,b=10)
+        )
+        st.plotly_chart(fig_r, use_container_width=True)
 
-# ------------------------------------------------------------
-# 📊 Liste des trades (affichage US)
-# ------------------------------------------------------------
-st.subheader("📊 Liste des trades")
-df = st.session_state["data"].copy()
+    with col4:
+        # Session chart
+        sess_data = df.groupby("session")["pl"].sum().reset_index()
+        sess_data["color"] = sess_data["pl"].apply(lambda x: "#00e5a0" if x >= 0 else "#ff4060")
+        fig_s = go.Figure(go.Bar(
+            x=sess_data["session"], y=sess_data["pl"],
+            marker_color=sess_data["color"],
+            text=sess_data["pl"].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}€"),
+            textposition="outside"
+        ))
+        fig_s.update_layout(
+            title="P&L par session",
+            plot_bgcolor="#0d1117", paper_bgcolor="#0d1117",
+            font=dict(color="#c8d8e8", family="DM Mono"),
+            xaxis=dict(gridcolor="#1e2830"), yaxis=dict(gridcolor="#1e2830"),
+            showlegend=False, height=260, margin=dict(l=10,r=10,t=40,b=10)
+        )
+        st.plotly_chart(fig_s, use_container_width=True)
 
-non_empty_mask = df.apply(lambda s: s.astype(str).str.strip().ne("").any())
-
-HIDDEN_COLS = ["Setup", "Cassure OPR", "Heure cassure", "Cassure note", "Observation"]
-display_cols = [c for c in df.columns if non_empty_mask.get(c, True) and c not in HIDDEN_COLS]
-
-NUM_COLS = {"Mise (€)", "Risk (%)", "Reward (%)", "Gain (€)"}
-
-for i in df.index:
-    result = df.loc[i, "Résultat"]
-    color = "green" if result == "TP" else "red" if result == "SL" else "blue" if result == "Breakeven" else "white"
-
-    n_cols = len(display_cols)
-    cols = st.columns([1]*n_cols + [1.2])
-
-    for j, col_name in enumerate(display_cols):
-        value = df.loc[i, col_name]
-        value = "" if pd.isna(value) else value
-
-        if col_name in NUM_COLS:
-            num_val = pd.to_numeric(value, errors="coerce")
-            if pd.notna(num_val):
-                value = f"{num_val:.2f}"
-
-        if col_name == "Date" and value:
-            value = us_fmt(value)
-
-        cols[j].markdown(f"<span style='color:{color}'>{value}</span>", unsafe_allow_html=True)
-
-    with cols[-1]:
-        c1, c2 = st.columns(2)
-        with c1:
-            st.button("✏️", key=f"edit_{i}", use_container_width=True)
-        with c2:
-            st.button("🗑️", key=f"delete_{i}", use_container_width=True)
-
-        if st.session_state.get(f"edit_{i}", False):
-            st.session_state["edit_index"] = i
-            st.session_state["edit_row"] = df.loc[i].to_dict()
-            st.session_state["show_edit_form"] = True
-            st.rerun()
-        if st.session_state.get(f"delete_{i}", False):
-            st.session_state["data"] = df.drop(i).reset_index(drop=True)
-            save_data()
-            st.rerun()
-
-# ------------------------------------------------------------
-# ✏️ Formulaire d'édition
-# ------------------------------------------------------------
-if st.session_state.get("show_edit_form", False):
-    st.subheader("✏️ Modifier le trade")
-    row = st.session_state.get("edit_row", {})
-
-    _date_iso = row.get("Date", "")
-    _date_val = pd.to_datetime(_date_iso, errors="coerce")
-    if pd.isna(_date_val):
-        _date_val = datetime.now()
-
-    _actif = str(row.get("Actif", ""))
-    _session = str(row.get("Session", "OPR 9h"))
-    _reward = float(pd.to_numeric(row.get("Reward (%)", 3.0), errors="coerce") or 3.0)
-    _resultat = str(row.get("Résultat", VALID_RESULTS[0]))
-    _mise = float(pd.to_numeric(row.get("Mise (€)", 0), errors="coerce") or 0.0)
-    _observation = str(row.get("Observation", "") or "")
-    _cassure_choice = row.get("Cassure OPR", "——") or "——"
-    _heure_cassure = row.get("Heure cassure", "")
-
-    with st.form("edit_trade_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            date_obj = st.date_input("Date", value=_date_val)
-
-            _edit_assets = ASSETS if (_actif in ASSETS or _actif == "") else [*ASSETS, _actif]
-            actif = st.selectbox("Actif", _edit_assets,
-                                 index=_edit_assets.index(_actif) if _actif in _edit_assets else 0)
-
-            session = st.selectbox(
-                "Session", ["OPR 9h", "OPR 15h30"],
-                index=["OPR 9h", "OPR 15h30"].index(_session) if _session in ["OPR 9h", "OPR 15h30"] else 0
-            )
-
-            reward = st.number_input("Reward (%)", min_value=0.0, step=0.1, format="%.2f", value=float(_reward))
-            resultat = st.selectbox("Résultat", VALID_RESULTS,
-                                    index=VALID_RESULTS.index(_resultat) if _resultat in VALID_RESULTS else 0)
-            mise = st.number_input("Mise (€)", min_value=0.0, step=10.0, format="%.2f", value=_mise)
-
-        c_save, c_cancel = st.columns([1, 1])
-        with c_save:
-            submitted_edit = st.form_submit_button("💾 Sauvegarder")
-        with c_cancel:
-            cancel_edit = st.form_submit_button("❌ Annuler")
-
-        if cancel_edit:
-            st.session_state["show_edit_form"] = False
-            st.session_state["edit_index"] = None
-            st.session_state["edit_row"] = {}
-            st.rerun()
-
-        if submitted_edit:
-            if resultat == "TP":
-                gain = mise * reward
-            elif resultat == "SL":
-                gain = -mise
-            elif resultat == "Breakeven":
-                gain = mise
-            else:
-                gain = 0.0
-
-            st.session_state["data"].iloc[st.session_state["edit_index"]] = {
-                "Date": pd.to_datetime(date_obj).strftime("%Y-%m-%d"),
-                "Session": session,
-                "Setup": row.get("Setup", ""),
-                "Cassure OPR": _cassure_choice,
-                "Heure cassure": _heure_cassure,
-                "Cassure note": row.get("Cassure note", ""),
-                "Actif": actif,
-                "Résultat": resultat,
-                "Observation": _observation,
-                "Mise (€)": mise,
-                "Risk (%)": 1.00,
-                "Reward (%)": reward,
-                "Gain (€)": gain
-            }
-            save_data()
-            st.session_state["show_edit_form"] = False
-            st.session_state["edit_index"] = None
-            st.session_state["edit_row"] = {}
-            st.success("✅ Trade modifié")
-            st.rerun()
-
-# ------------------------------------------------------------
-# 📈 Statistiques
-# ------------------------------------------------------------
-st.subheader("📈 Statistiques")
-df_stats = st.session_state["data"].copy()
-df_stats["Risk (%)"] = pd.to_numeric(df_stats["Risk (%)"], errors="coerce").fillna(0)
-df_stats["Reward (%)"] = pd.to_numeric(df_stats["Reward (%)"], errors="coerce").fillna(0)
-df_stats["Gain (€)"] = pd.to_numeric(df_stats["Gain (€)"], errors="coerce").fillna(0)
-
-total_tp = (df_stats["Résultat"] == "TP").sum()
-total_sl = (df_stats["Résultat"] == "SL").sum()
-total_be = (df_stats["Résultat"] == "Breakeven").sum()
-total_nt = (df_stats["Résultat"] == "No Trade").sum()
-total_gain = df_stats["Gain (€)"].sum()
-total_risk = df_stats[df_stats["Résultat"] == "SL"]["Risk (%)"].sum()
-total_reward = df_stats[df_stats["Résultat"] == "TP"]["Reward (%)"].sum()
-winrate = (total_tp / (total_tp + total_sl)) * 100 if (total_tp + total_sl) > 0 else 0
-capital_total = st.session_state["capital"] + total_gain
-
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("✅ Total TP", total_tp)
-col2.metric("❌ Total SL", total_sl)
-col3.metric("🟦 Breakeven", total_be)
-col4.metric("⛔️ No Trades", total_nt)
-
-col5, col6, col7, col8 = st.columns(4)
-col5.metric("📈 Total Reward", f"{total_reward:.2f}")
-col6.metric("📉 Total Risk", f"{total_risk:.2f}")
-col7.metric("🏆 Winrate", f"{winrate:.2f}%")
-col8.metric("💰 Gain total (€)", f"{total_gain:.2f}")
-
-st.success(f"💼 Capital total (Capital + Gains) : {capital_total:.2f} €")
-
-# ------------------------------------------------------------
-# 📆 Bilan annuel
-# ------------------------------------------------------------
-st.subheader("📆 Bilan annuel")
-
-df_an = st.session_state["data"].copy()
-df_an["Date"] = pd.to_datetime(df_an["Date"], format="%Y-%m-%d", errors="coerce")
-df_valid = df_an.dropna(subset=["Date"]).copy()
-df_valid = df_valid[df_valid["Résultat"].isin(VALID_RESULTS)]
-
-if df_valid.empty:
-    st.info("Aucune date valide trouvée pour établir un bilan annuel.")
-else:
-    df_valid["Year"] = df_valid["Date"].dt.year
-    df_valid["Month"] = df_valid["Date"].dt.month
-
-    available_years = sorted(df_valid["Year"].unique(), reverse=True)
-    selected_year = st.selectbox("📤 Choisir une année", available_years, index=0)
-
-    df_year = df_valid[df_valid["Year"] == selected_year].copy()
-    months_with_trades = (
-        df_year.groupby("Month").size().loc[lambda s: s > 0].sort_index().index.tolist()
+    # Export CSV
+    st.markdown("---")
+    csv_export = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="⬇️ Exporter en CSV",
+        data=csv_export,
+        file_name="journal_daily_cycle.csv",
+        mime="text/csv"
     )
-
-    month_names = {
-        1: "Janvier", 2: "Février", 3: "Mars", 4: "Avril", 5: "Mai", 6: "Juin",
-        7: "Juillet", 8: "Août", 9: "Septembre", 10: "Octobre", 11: "Novembre", 12: "Décembre"
-    }
-
-    if not months_with_trades:
-        st.info(f"Aucun trade pour {selected_year}.")
-    else:
-        for month in months_with_trades:
-            month_data = df_year[df_year["Month"] == month].copy()
-            month_data["Gain (€)"] = pd.to_numeric(month_data["Gain (€)"], errors="coerce").fillna(0)
-
-            tp = (month_data["Résultat"] == "TP").sum()
-            sl = (month_data["Résultat"] == "SL").sum()
-            be = (month_data["Résultat"] == "Breakeven").sum()
-            nt = (month_data["Résultat"] == "No Trade").sum()
-
-            executed_trades = tp + sl + be
-            gain = month_data["Gain (€)"].sum()
-            winrate_month = (tp / (tp + sl) * 100) if (tp + sl) > 0 else 0.0
-
-            with st.expander(f"📅 {month_names.get(month, str(month))} {selected_year}"):
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("🧾 Trades", int(executed_trades))
-                c2.metric("⛔ No Trades", int(nt))
-                c3.metric("🏆 Winrate", f"{winrate_month:.2f}%")
-                c4.metric("💰 Gain", f"{gain:.2f} €")
-
-# ------------------------------------------------------------
-# 💾 Export & Import
-# ------------------------------------------------------------
-st.markdown("---")
-st.subheader("💾 Exporter / Importer manuellement")
-
-csv = pd.concat([
-    st.session_state["data"].copy(),
-    pd.DataFrame([{
-        "Date": "", "Session": "", "Setup": "",
-        "Cassure OPR": "", "Heure cassure": "", "Cassure note": "",
-        "Actif": "__CAPITAL__", "Résultat": "", "Observation": "",
-        "Mise (€)": "", "Risk (%)": "", "Reward (%)": "", "Gain (€)": st.session_state["capital"]
-    }])
-], ignore_index=True)
-
-dt = pd.to_datetime(csv["Date"], errors="coerce", format="%Y-%m-%d")
-csv["Date"] = dt.dt.strftime("%Y-%m-%d").fillna("")
-csv_bytes = csv.to_csv(index=False).encode("utf-8")
-
-st.download_button(
-    label="📤 Exporter tout (CSV)",
-    data=csv_bytes,
-    file_name="journal_trading.csv",
-    mime="text/csv"
-)
-
-uploaded_file = st.file_uploader("📥 Importer un fichier CSV", type=["csv"])
-if uploaded_file and st.button("✅ Accepter l'import"):
-    try:
-        full_df = pd.read_csv(uploaded_file, dtype=str).fillna("")
-        cap_rows = full_df[full_df["Actif"] == "__CAPITAL__"]
-        trade_rows = full_df[full_df["Actif"] != "__CAPITAL__"]
-        st.session_state["capital"] = float(cap_rows["Gain (€)"].iloc[0]) if not cap_rows.empty else 0.0
-        st.session_state["data"] = normalize_trades_to_iso(trade_rows)
-        save_data()
-        st.success("📥 Import effectué !")
-    except Exception as e:
-        st.error(f"Erreur d'import: {e}")
+```
