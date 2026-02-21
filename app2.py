@@ -420,7 +420,7 @@ Rappel Daily Cycle : Trace la box <strong style='color:#fff'>7h00 -&gt; 13h00</s
         )
 
         st.markdown("**Moment d'entree**")
-        sessions = ["New York (13h-17h)", "Fin session (17h+)", "Pre-NY (avant 13h)"]
+        sessions = ["Pre-NY (avant 13h)", "New York (13h-17h)", "Fin session (17h+)"]
         f_session = st.radio(
             "Session",
             options=sessions,
