@@ -3,6 +3,19 @@ import pandas as pd
 import os
 from datetime import date, datetime
 import plotly.graph_objects as go
+# COLOR CONSTANTS
+C_GREEN = "00e5a0"
+C_RED = "ff4060"
+C_BLUE = "00d4ff"
+C_PURPLE = "a060ff"
+C_YELLOW = "ffd060"
+C_BG = "0d1520"
+C_BORDER = "1e3040"
+C_TEXT = "c0d8f0"
+C_MUTED = "6080a0"
+C_WHITE = "ffffff"
+C_TEAL = "4a7090"
+def hx(c): return f"#{c}"
 st.set_page_config(
 page_title="Daily Cycle Journal - EUR/USD",
 page_icon="chart",
@@ -162,12 +175,12 @@ except:
 return None
 def chart_layout(title, height=300):
 return dict(
-title=dict(text=title, font=dict(color="#ffffff", size=16, family="Syne")),
-plot_bgcolor="#0d1520",
-paper_bgcolor="#0d1520",
-font=dict(color="#c0d8f0", size=13),
-xaxis=dict(gridcolor="#1e3040", tickfont=dict(color="#c0d8f0", size=13), linecolor="#
-yaxis=dict(gridcolor="#1e3040", tickfont=dict(color="#c0d8f0", size=13), linecolor="#
+title=dict(text=title, font=dict(color=hx(C_WHITE), size=16, family="Syne")),
+plot_bgcolor=hx(C_BG),
+paper_bgcolor=hx(C_BG),
+font=dict(color=hx(C_TEXT), size=13),
+xaxis=dict(gridcolor=hx(C_BORDER), tickfont=dict(color=hx(C_TEXT), size=13), linecolo
+yaxis=dict(gridcolor=hx(C_BORDER), tickfont=dict(color=hx(C_TEXT), size=13), linecolo
 showlegend=False,
 height=height,
 margin=dict(l=20, r=20, t=55, b=40)
@@ -192,18 +205,18 @@ EUR/USD . IC MARKETS . CHRISTOPHE MEONI
 """, unsafe_allow_html=True)
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-st.markdown(f"<div class='metric-card'><div class='metric-label'>Trades totaux</div><div
 with c2:
-wr_c = "#00e5a0" if wr and wr >= 50 else "#ff4060" if wr else "#00d4ff"
-st.markdown(f"<div class='metric-card'><div class='metric-label'>Win Rate</div><div class
 with c3:
-pl_c = "#00e5a0" if total_pl > 0 else "#ff4060" if total_pl < 0 else "#00d4ff"
+with c4:
+st.markdown(f"<div class='metric-card'><div class='metric-label'>Trades totaux</div><div
+wr_c = hx(C_GREEN) if wr and wr >= 50 else hx(C_RED) if wr else hx(C_BLUE)
+st.markdown(f"<div class='metric-card'><div class='metric-label'>Win Rate</div><div class
+pl_c = hx(C_GREEN) if total_pl > 0 else hx(C_RED) if total_pl < 0 else hx(C_BLUE)
 pl_str = f"+{total_pl:.2f}EUR" if total_pl >= 0 else f"{total_pl:.2f}EUR"
-st.markdown(f"<div class='metric-card'><div class='metric-label'>P&L Net</div><div with c4:
-class=
+st.markdown(f"<div class='metric-card'><div class='metric-label'>P&L Net</div><div class=
 rules_ok = len(df[df["rules"] == "yes"]) if n else 0
 rp = round(rules_ok / n * 100) if n else 0
-r_c = "#00e5a0" if rp >= 70 else "#ffd060" if rp >= 50 else "#ff4060"
+r_c = hx(C_GREEN) if rp >= 70 else hx(C_YELLOW) if rp >= 50 else hx(C_RED)
 st.markdown(f"<div class='metric-card'><div class='metric-label'>Dans le plan</div><div c
 st.markdown("---")
 tab1, tab2, tab3 = st.tabs([" Nouveau Trade", " Journal", " Statistiques"])
@@ -265,7 +278,7 @@ value=float(edit_data["pl"]) if edit_data is not None and edit_data["pl"] els
 format="%.2f", step=0.01)
 rr_val = calc_rr(f_entree, f_sl, f_tp)
 if rr_val:
-rr_col = "#00e5a0" if rr_val >= 2 else "#ffd060" if rr_val >= 1 else "#ff4060"
+rr_col = hx(C_GREEN) if rr_val >= 2 else hx(C_YELLOW) if rr_val >= 1 else hx(C_RE
 rr_txt = "OK" if rr_val >= 2 else "moyen" if rr_val >= 1 else "faible"
 st.markdown(f"<div style='font-size:17px;font-weight:700;color:{rr_col};padding:8
 st.markdown("**Outcome**")
@@ -325,15 +338,15 @@ else:
 df_sorted = df.sort_values("date", ascending=False)
 for _, t in df_sorted.iterrows():
 pl = float(t["pl"]) if t["pl"] != "" else 0
-pl_c = "#00e5a0" if pl > 0 else "#ff4060" if pl < 0 else "#6080a0"
+pl_c = hx(C_GREEN) if pl > 0 else hx(C_RED) if pl < 0 else hx(C_MUTED)
 pl_str = f"+{pl:.2f}EUR" if pl >= 0 else f"{pl:.2f}EUR"
-biais_map = {"bullish":("Haussier","#00e5a0"),"bearish":("Baissier","#ff4060"),"n
-biais_label, biais_c = biais_map.get(t["biais"], ("-","#6080a0"))
-outcome_map = {"Win":("Win","#00e5a0"),"Loss":("Loss","#ff4060"),"BE":("BE","#a06
-out_label, out_c = outcome_map.get(t["outcome"], ("-","#6080a0"))
+biais_map = {"bullish":("Haussier",hx(C_GREEN)),"bearish":("Baissier",hx(C_RED)),
+biais_label, biais_c = biais_map.get(t["biais"], ("-",hx(C_MUTED)))
+outcome_map = {"Win":("Win",hx(C_GREEN)),"Loss":("Loss",hx(C_RED)),"BE":("BE",hx(
+out_label, out_c = outcome_map.get(t["outcome"], ("-",hx(C_MUTED)))
 rules_label = "Dans le plan" if t["rules"] == "yes" else "Hors plan"
-rules_c = "#00e5a0" if t["rules"] == "yes" else "#ff4060"
-dir_c = "#00e5a0" if t["direction"] == "Long" else "#ff4060"
+rules_c = hx(C_GREEN) if t["rules"] == "yes" else hx(C_RED)
+dir_c = hx(C_GREEN) if t["direction"] == "Long" else hx(C_RED)
 rr_str = f"RR 1:{t['rr']}" if t["rr"] and t["rr"] != "-" else ""
 col_card, col_btns = st.columns([8, 1])
 with col_card:
@@ -411,17 +424,17 @@ if rules_ok < n:
 insight += f" | Plan: {round(rules_ok/n*100)}% - Dans le plan: {'+' if pl_rules>=
 st.markdown(f"<div class='insight-box'>{insight}</div>", unsafe_allow_html=True)
 df_sorted["cumpl"] = df_sorted["pl"].cumsum()
-line_col = "#00e5a0" if total_pl >= 0 else "#ff4060"
+line_col = hx(C_GREEN) if total_pl >= 0 else hx(C_RED)
 fill_col = "rgba(0,229,160,0.12)" if total_pl >= 0 else "rgba(255,64,96,0.12)"
 fig_eq = go.Figure()
 fig_eq.add_trace(go.Scatter(
 x=df_sorted["date"], y=df_sorted["cumpl"],
 mode="lines+markers",
 line=dict(color=line_col, width=3),
-marker=dict(size=9, color=line_col, line=dict(color="#ffffff", width=1.5)),
+marker=dict(size=9, color=line_col, line=dict(color=hx(C_WHITE), width=1.5)),
 fill="tozeroy", fillcolor=fill_col
 ))
-fig_eq.add_hline(y=0, line_dash="dash", line_color="#4a7090", line_width=1.5)
+fig_eq.add_hline(y=0, line_dash="dash", line_color=hx(C_TEAL), line_width=1.5)
 layout = chart_layout("Courbe de capital - P&L cumule (EUR)", height=340)
 layout["yaxis"]["ticksuffix"] = " EUR"
 fig_eq.update_layout(**layout)
@@ -432,26 +445,26 @@ fig_wl = go.Figure(go.Pie(
 labels=["Win", "Loss", "Break Even"],
 values=[max(wins,0), max(losses,0), max(bes,0)],
 hole=0.55,
-marker=dict(colors=["#00e5a0","#ff4060","#a060ff"], line=dict(color="#0d1520"
-textfont=dict(color="#ffffff", size=15),
+marker=dict(colors=[hx(C_GREEN),hx(C_RED),hx(C_PURPLE)], line=dict(color=hx(C
+textfont=dict(color=hx(C_WHITE), size=15),
 textinfo="label+percent"
 ))
 l = chart_layout("Win / Loss / Break Even", height=320)
 l["showlegend"] = True
-l["legend"] = dict(font=dict(color="#c0d8f0", size=13))
+l["legend"] = dict(font=dict(color=hx(C_TEXT), size=13))
 del l["xaxis"]; del l["yaxis"]
 fig_wl.update_layout(**l)
 st.plotly_chart(fig_wl, use_container_width=True)
+else h
 with col2:
 biais_data = df.groupby("biais")["pl"].sum().reset_index()
 biais_data["label"] = biais_data["biais"].map({"bullish":"Haussier","bearish":"Ba
-biais_data["color"] = biais_data["pl"].apply(lambda x: "#00e5a0" if x>=0 else "#f
-fig_b = go.Figure(go.Bar(
+biais_data["color"] = biais_data["pl"].apply(lambda x: hx(C_GREEN) if x>=0 fig_b = go.Figure(go.Bar(
 x=biais_data["label"], y=biais_data["pl"],
 marker_color=biais_data["color"],
-marker_line=dict(color="#ffffff", width=1),
+marker_line=dict(color=hx(C_WHITE), width=1),
 text=biais_data["pl"].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}EUR"),
-textposition="outside", textfont=dict(color="#ffffff", size=14)
+textposition="outside", textfont=dict(color=hx(C_WHITE), size=14)
 ))
 fig_b.update_layout(**chart_layout("P&L par biais", height=320))
 st.plotly_chart(fig_b, use_container_width=True)
@@ -460,10 +473,10 @@ with col3:
 fig_r = go.Figure(go.Bar(
 x=["Dans le plan", "Hors plan"],
 y=[pl_rules, pl_no_rules],
-marker_color=["#00e5a0" if pl_rules>=0 else "#ff4060", "#00e5a0" if pl_no_rul
-marker_line=dict(color="#ffffff", width=1),
+marker_color=[hx(C_GREEN) if pl_rules>=0 else hx(C_RED), hx(C_GREEN) if pl_no
+marker_line=dict(color=hx(C_WHITE), width=1),
 text=[f"{'+' if pl_rules>=0 else ''}{pl_rules:.2f}EUR", f"{'+' if pl_no_rules
-textposition="outside", textfont=dict(color="#ffffff", size=14)
+textposition="outside", textfont=dict(color=hx(C_WHITE), size=14)
 ))
 fig_r.update_layout(**chart_layout("Dans le plan vs Hors plan", height=320))
 st.plotly_chart(fig_r, use_container_width=True)
@@ -472,13 +485,13 @@ sess_data = df.groupby("session")["pl"].sum().reset_index()
 sess_data["label"] = sess_data["session"].apply(
 lambda x: "NY 13h-17h" if "13h" in x else "Fin 17h+" if "17h" in x else "Avan
 )
-sess_data["color"] = sess_data["pl"].apply(lambda x: "#00e5a0" if x>=0 else "#ff4
+sess_data["color"] = sess_data["pl"].apply(lambda x: hx(C_GREEN) if x>=0 else hx(
 fig_s = go.Figure(go.Bar(
 x=sess_data["label"], y=sess_data["pl"],
 marker_color=sess_data["color"],
-marker_line=dict(color="#ffffff", width=1),
+marker_line=dict(color=hx(C_WHITE), width=1),
 text=sess_data["pl"].apply(lambda x: f"{'+' if x>=0 else ''}{x:.2f}EUR"),
-textposition="outside", textfont=dict(color="#ffffff", size=14)
+textposition="outside", textfont=dict(color=hx(C_WHITE), size=14)
 ))
 fig_s.update_layout(**chart_layout("P&L par session", height=320))
 st.plotly_chart(fig_s, use_container_width=True)
