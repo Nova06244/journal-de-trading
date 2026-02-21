@@ -1,90 +1,90 @@
 <!DOCTYPE html>
-
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="DC Journal">
-<meta name="theme-color" content="#0a0e14">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="DC Journal" />
+<meta name="theme-color" content="#0a0e14" />
 <title>Daily Cycle Journal</title>
-<link rel="apple-touch-icon" href="icon.png">
-<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png" />
+<link rel="manifest" href="manifest.json" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
 
 :root {
-–bg: #0a0e14;
-–surface: #0d1520;
-–surface2: #111a24;
-–border: #1a2840;
-–border2: #243550;
-–text: #d8eaff;
-–muted: #4a6880;
-–accent: #00d4ff;
-–green: #00e5a0;
-–red: #ff4060;
-–yellow: #ffd060;
-–purple: #a060ff;
-–white: #ffffff;
+  --bg: #0a0e14;
+  --surface: #0d1520;
+  --surface2: #111a24;
+  --border: #1a2840;
+  --border2: #243550;
+  --text: #d8eaff;
+  --muted: #4a6880;
+  --accent: #00d4ff;
+  --green: #00e5a0;
+  --red: #ff4060;
+  --yellow: #ffd060;
+  --purple: #a060ff;
+  --white: #ffffff;
 }
 
-- { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 body {
-background: var(–bg);
-color: var(–text);
-font-family: ‘DM Mono’, monospace;
-font-size: 14px;
-min-height: 100vh;
-padding-bottom: env(safe-area-inset-bottom);
-overflow-x: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+  overflow-x: hidden;
 }
 
 /* HEADER */
 .header {
-background: linear-gradient(180deg, #0d1520 0%, #0a0e14 100%);
-border-bottom: 1px solid var(–border);
-padding: 16px 20px 12px;
-position: sticky; top: 0; z-index: 100;
+  background: linear-gradient(180deg, #0d1520 0%, #0a0e14 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px 12px;
+  position: sticky; top: 0; z-index: 100;
 }
 .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
-.logo { font-family: ‘Syne’, sans-serif; font-size: 22px; font-weight: 800; color: var(–white); }
-.logo span { color: var(–accent); }
-.logo-sub { font-size: 9px; color: var(–muted); letter-spacing: 2.5px; text-transform: uppercase; margin-top: 2px; }
+.logo { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--white); }
+.logo span { color: var(--accent); }
+.logo-sub { font-size: 9px; color: var(--muted); letter-spacing: 2.5px; text-transform: uppercase; margin-top: 2px; }
 .kpis { display: flex; gap: 16px; flex-wrap: wrap; }
 .kpi { text-align: right; }
-.kpi-val { font-family: ‘Syne’, sans-serif; font-size: 18px; font-weight: 700; line-height: 1; }
-.kpi-label { font-size: 9px; color: var(–muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
+.kpi-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; line-height: 1; }
+.kpi-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
 
 /* NAV */
 .nav {
-display: flex;
-background: var(–surface);
-border-bottom: 1px solid var(–border);
-overflow-x: auto;
-scrollbar-width: none;
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 .nav::-webkit-scrollbar { display: none; }
 .nav-btn {
-flex: 1; min-width: 90px;
-padding: 13px 8px;
-background: none; border: none;
-border-bottom: 2px solid transparent;
-color: var(–muted);
-font-family: ‘DM Mono’, monospace;
-font-size: 11px;
-letter-spacing: 1px;
-text-transform: uppercase;
-cursor: pointer;
-transition: all 0.2s;
-white-space: nowrap;
+  flex: 1; min-width: 90px;
+  padding: 13px 8px;
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 .nav-btn.active {
-color: var(–accent);
-border-bottom-color: var(–accent);
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 
 /* CONTENT */
@@ -92,58 +92,58 @@ border-bottom-color: var(–accent);
 
 /* SECTIONS */
 .section-title {
-font-family: ‘Syne’, sans-serif;
-font-size: 17px; font-weight: 700;
-color: var(–white);
-margin-bottom: 16px;
-display: flex; align-items: center; gap: 10px;
+  font-family: 'Syne', sans-serif;
+  font-size: 17px; font-weight: 700;
+  color: var(--white);
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
 }
 .section-title::before {
-content: ‘’;
-display: block;
-width: 4px; height: 20px;
-background: var(–accent);
-border-radius: 2px;
+  content: '';
+  display: block;
+  width: 4px; height: 20px;
+  background: var(--accent);
+  border-radius: 2px;
 }
 
 /* INFO BOX */
 .info-box {
-background: rgba(0, 212, 255, 0.07);
-border: 1px solid rgba(0, 212, 255, 0.2);
-border-radius: 10px;
-padding: 12px 16px;
-font-size: 12px;
-color: var(–accent);
-margin-bottom: 18px;
-line-height: 1.8;
+  background: rgba(0, 212, 255, 0.07);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 18px;
+  line-height: 1.8;
 }
-.info-box strong { color: var(–white); }
+.info-box strong { color: var(--white); }
 
 /* FORM */
 .form-group { margin-bottom: 14px; }
 .form-label {
-display: block;
-font-size: 10px;
-color: var(–muted);
-text-transform: uppercase;
-letter-spacing: 1.5px;
-margin-bottom: 6px;
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
 }
 .form-input {
-width: 100%;
-background: var(–surface2);
-border: 1px solid var(–border2);
-border-radius: 8px;
-color: var(–text);
-font-family: ‘DM Mono’, monospace;
-font-size: 15px;
-padding: 11px 14px;
-outline: none;
-transition: border-color 0.2s;
--webkit-appearance: none;
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
 }
-.form-input:focus { border-color: var(–accent); }
-.form-input::placeholder { color: var(–muted); }
+.form-input:focus { border-color: var(--accent); }
+.form-input::placeholder { color: var(--muted); }
 
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
@@ -151,35 +151,35 @@ transition: border-color 0.2s;
 /* BUTTON GROUP */
 .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
 .toggle-btn {
-flex: 1; min-width: 80px;
-padding: 10px 8px;
-border-radius: 8px;
-border: 1px solid var(–border2);
-background: var(–surface2);
-color: var(–muted);
-font-family: ‘DM Mono’, monospace;
-font-size: 12px;
-cursor: pointer;
-text-align: center;
-transition: all 0.15s;
-letter-spacing: 0.3px;
+  flex: 1; min-width: 80px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  letter-spacing: 0.3px;
 }
-.toggle-btn.active-green { border-color: var(–green); background: rgba(0,229,160,0.1); color: var(–green); }
-.toggle-btn.active-red { border-color: var(–red); background: rgba(255,64,96,0.1); color: var(–red); }
-.toggle-btn.active-yellow { border-color: var(–yellow); background: rgba(255,208,96,0.1); color: var(–yellow); }
-.toggle-btn.active-accent { border-color: var(–accent); background: rgba(0,212,255,0.1); color: var(–accent); }
-.toggle-btn.active-purple { border-color: var(–purple); background: rgba(160,96,255,0.1); color: var(–purple); }
+.toggle-btn.active-green { border-color: var(--green); background: rgba(0,229,160,0.1); color: var(--green); }
+.toggle-btn.active-red { border-color: var(--red); background: rgba(255,64,96,0.1); color: var(--red); }
+.toggle-btn.active-yellow { border-color: var(--yellow); background: rgba(255,208,96,0.1); color: var(--yellow); }
+.toggle-btn.active-accent { border-color: var(--accent); background: rgba(0,212,255,0.1); color: var(--accent); }
+.toggle-btn.active-purple { border-color: var(--purple); background: rgba(160,96,255,0.1); color: var(--purple); }
 
 /* RR DISPLAY */
 .rr-display {
-background: var(–surface2);
-border: 1px solid var(–border2);
-border-radius: 8px;
-padding: 11px 14px;
-font-size: 15px;
-color: var(–muted);
-min-height: 44px;
-display: flex; align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 15px;
+  color: var(--muted);
+  min-height: 44px;
+  display: flex; align-items: center;
 }
 
 /* TEXTAREA */
@@ -187,182 +187,182 @@ textarea.form-input { min-height: 70px; resize: vertical; }
 
 /* SUBMIT BUTTON */
 .submit-btn {
-width: 100%;
-padding: 15px;
-background: var(–accent);
-color: #000;
-border: none;
-border-radius: 10px;
-font-family: ‘Syne’, sans-serif;
-font-size: 15px;
-font-weight: 800;
-cursor: pointer;
-margin-top: 10px;
-letter-spacing: 0.5px;
-transition: background 0.2s;
+  width: 100%;
+  padding: 15px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 10px;
+  letter-spacing: 0.5px;
+  transition: background 0.2s;
 }
 .submit-btn:active { background: #33ddff; }
 
 .cancel-btn {
-width: 100%;
-padding: 12px;
-background: transparent;
-color: var(–muted);
-border: 1px solid var(–border2);
-border-radius: 10px;
-font-family: ‘DM Mono’, monospace;
-font-size: 13px;
-cursor: pointer;
-margin-top: 8px;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
 }
 
 /* SUCCESS */
 .success-msg {
-background: rgba(0,229,160,0.1);
-border: 1px solid var(–green);
-border-radius: 8px;
-padding: 12px;
-color: var(–green);
-text-align: center;
-margin-top: 12px;
-font-size: 13px;
+  background: rgba(0,229,160,0.1);
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--green);
+  text-align: center;
+  margin-top: 12px;
+  font-size: 13px;
 }
 
 /* TRADE CARD */
 .trade-card {
-background: var(–surface);
-border: 1px solid var(–border);
-border-radius: 12px;
-padding: 14px 16px;
-margin-bottom: 12px;
-position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  position: relative;
 }
 .trade-card-top {
-display: flex;
-justify-content: space-between;
-align-items: flex-start;
-margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
 }
-.trade-date { color: var(–accent); font-weight: 500; font-size: 14px; }
-.trade-time { color: var(–muted); font-size: 12px; margin-left: 8px; }
+.trade-date { color: var(--accent); font-weight: 500; font-size: 14px; }
+.trade-time { color: var(--muted); font-size: 12px; margin-left: 8px; }
 .trade-dir { font-weight: 700; font-size: 14px; margin-left: 10px; }
 .trade-pl {
-font-family: ‘Syne’, sans-serif;
-font-size: 19px;
-font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
 }
 .badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
 .badge {
-padding: 3px 9px;
-border-radius: 5px;
-font-size: 11px;
-font-weight: 600;
-border: 1px solid;
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid;
 }
-.trade-prices { font-size: 12px; color: var(–muted); margin-bottom: 6px; }
-.trade-setup { font-size: 12px; color: #7090a0; border-top: 1px solid var(–border); padding-top: 8px; margin-top: 6px; }
-.trade-lecon { font-size: 12px; color: var(–accent); margin-top: 5px; }
+.trade-prices { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.trade-setup { font-size: 12px; color: #7090a0; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 6px; }
+.trade-lecon { font-size: 12px; color: var(--accent); margin-top: 5px; }
 .trade-actions { display: flex; gap: 8px; margin-top: 10px; }
 .btn-edit, .btn-del {
-padding: 6px 14px;
-border-radius: 6px;
-font-family: ‘DM Mono’, monospace;
-font-size: 12px;
-font-weight: 600;
-cursor: pointer;
-border: 1px solid;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
 }
-.btn-edit { color: var(–accent); border-color: rgba(0,212,255,0.4); background: rgba(0,212,255,0.08); }
-.btn-del { color: var(–red); border-color: rgba(255,64,96,0.4); background: rgba(255,64,96,0.08); }
+.btn-edit { color: var(--accent); border-color: rgba(0,212,255,0.4); background: rgba(0,212,255,0.08); }
+.btn-del { color: var(--red); border-color: rgba(255,64,96,0.4); background: rgba(255,64,96,0.08); }
 
 /* CONFIRM DELETE */
 .confirm-overlay {
-position: fixed; inset: 0;
-background: rgba(0,0,0,0.75);
-display: flex; align-items: center; justify-content: center;
-z-index: 999; padding: 20px;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 999; padding: 20px;
 }
 .confirm-box {
-background: var(–surface);
-border: 1px solid var(–border2);
-border-radius: 14px;
-padding: 28px 24px;
-max-width: 320px; width: 100%;
-text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 28px 24px;
+  max-width: 320px; width: 100%;
+  text-align: center;
 }
-.confirm-box h3 { font-family: ‘Syne’, sans-serif; color: var(–white); margin-bottom: 8px; }
-.confirm-box p { color: var(–muted); font-size: 13px; margin-bottom: 22px; }
+.confirm-box h3 { font-family: 'Syne', sans-serif; color: var(--white); margin-bottom: 8px; }
+.confirm-box p { color: var(--muted); font-size: 13px; margin-bottom: 22px; }
 .confirm-btns { display: flex; gap: 10px; }
 .confirm-yes {
-flex: 1; padding: 12px;
-background: var(–red); color: var(–white);
-border: none; border-radius: 8px;
-font-family: ‘Syne’, sans-serif; font-weight: 700; font-size: 14px; cursor: pointer;
+  flex: 1; padding: 12px;
+  background: var(--red); color: var(--white);
+  border: none; border-radius: 8px;
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer;
 }
 .confirm-no {
-flex: 1; padding: 12px;
-background: var(–surface2); color: var(–text);
-border: 1px solid var(–border2); border-radius: 8px;
-font-family: ‘DM Mono’, monospace; font-size: 13px; cursor: pointer;
+  flex: 1; padding: 12px;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border2); border-radius: 8px;
+  font-family: 'DM Mono', monospace; font-size: 13px; cursor: pointer;
 }
 
 /* KPI CARDS */
 .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
 .kpi-card {
-background: var(–surface);
-border: 1px solid var(–border);
-border-top: 2px solid;
-border-radius: 10px;
-padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid;
+  border-radius: 10px;
+  padding: 14px;
 }
-.kpi-card-label { font-size: 10px; color: var(–muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
-.kpi-card-val { font-family: ‘Syne’, sans-serif; font-size: 26px; font-weight: 800; line-height: 1; }
-.kpi-card-sub { font-size: 11px; color: var(–muted); margin-top: 5px; }
+.kpi-card-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+.kpi-card-val { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; line-height: 1; }
+.kpi-card-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
 
 /* INSIGHT */
 .insight {
-background: var(–surface);
-border-left: 3px solid var(–accent);
-border-radius: 8px;
-padding: 12px 16px;
-font-size: 13px;
-line-height: 1.7;
-margin-bottom: 18px;
-color: var(–text);
+  background: var(--surface);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 18px;
+  color: var(--text);
 }
 
 /* CHART */
 .chart-card {
-background: var(–surface);
-border: 1px solid var(–border);
-border-radius: 10px;
-padding: 16px;
-margin-bottom: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
 }
 .chart-title {
-font-size: 11px;
-color: var(–muted);
-text-transform: uppercase;
-letter-spacing: 1.5px;
-margin-bottom: 14px;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 14px;
 }
 
 /* LOADING */
 .loading {
-display: flex; align-items: center; justify-content: center;
-padding: 60px; color: var(–accent); flex-direction: column; gap: 12px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 60px; color: var(--accent); flex-direction: column; gap: 12px;
 }
 .spinner {
-width: 32px; height: 32px;
-border: 3px solid var(–border2);
-border-top-color: var(–accent);
-border-radius: 50%;
-animation: spin 0.8s linear infinite;
+  width: 32px; height: 32px;
+  border: 3px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* EMPTY */
-.empty { text-align: center; padding: 60px 20px; color: var(–muted); font-size: 14px; }
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
 .empty-icon { font-size: 40px; margin-bottom: 12px; }
 
 /* TABS */
@@ -371,77 +371,78 @@ animation: spin 0.8s linear infinite;
 
 /* SYNC STATUS */
 .sync-badge {
-font-size: 10px;
-padding: 2px 8px;
-border-radius: 10px;
-margin-top: 4px;
-display: inline-block;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 4px;
+  display: inline-block;
 }
-.sync-ok { background: rgba(0,229,160,0.1); color: var(–green); border: 1px solid rgba(0,229,160,0.3); }
-.sync-err { background: rgba(255,64,96,0.1); color: var(–red); border: 1px solid rgba(255,64,96,0.3); }
-.sync-loading { background: rgba(0,212,255,0.1); color: var(–accent); border: 1px solid rgba(0,212,255,0.3); }
+.sync-ok { background: rgba(0,229,160,0.1); color: var(--green); border: 1px solid rgba(0,229,160,0.3); }
+.sync-err { background: rgba(255,64,96,0.1); color: var(--red); border: 1px solid rgba(255,64,96,0.3); }
+.sync-loading { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.3); }
 
 /* CONFIG SCREEN */
 .config-screen {
-position: fixed; inset: 0;
-background: var(–bg);
-display: flex; align-items: center; justify-content: center;
-z-index: 9999; padding: 24px;
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 24px;
 }
 .config-box {
-background: var(–surface);
-border: 1px solid var(–border2);
-border-radius: 16px;
-padding: 32px 24px;
-max-width: 400px; width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 32px 24px;
+  max-width: 400px; width: 100%;
 }
-.config-box h2 { font-family: ‘Syne’, sans-serif; color: var(–white); margin-bottom: 8px; font-size: 20px; }
-.config-box p { color: var(–muted); font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
-.config-steps { background: var(–surface2); border-radius: 8px; padding: 14px; margin-bottom: 20px; }
-.config-steps p { margin-bottom: 6px; font-size: 12px; color: var(–text); }
-.config-steps a { color: var(–accent); text-decoration: none; }
+.config-box h2 { font-family: 'Syne', sans-serif; color: var(--white); margin-bottom: 8px; font-size: 20px; }
+.config-box p { color: var(--muted); font-size: 13px; margin-bottom: 20px; line-height: 1.6; }
+.config-steps { background: var(--surface2); border-radius: 8px; padding: 14px; margin-bottom: 20px; }
+.config-steps p { margin-bottom: 6px; font-size: 12px; color: var(--text); }
+.config-steps a { color: var(--accent); text-decoration: none; }
 .config-btn {
-width: 100%; padding: 14px;
-background: var(–accent); color: #000;
-border: none; border-radius: 8px;
-font-family: ‘Syne’, sans-serif; font-weight: 800; font-size: 15px; cursor: pointer;
+  width: 100%; padding: 14px;
+  background: var(--accent); color: #000;
+  border: none; border-radius: 8px;
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; cursor: pointer;
 }
 
 select.form-input option { background: #111a24; color: #d8eaff; }
 </style>
-
 </head>
+
 <body>
 
 <!-- CONFIG SCREEN (shown if no Supabase config) -->
-
 <div class="config-screen" id="configScreen" style="display:none;">
   <div class="config-box">
     <h2>Daily<span style="color:var(--accent)">Cycle</span> Journal</h2>
     <p>Configuration initiale requise. Connecte ton compte Supabase gratuit pour synchroniser les données entre iPad et iPhone.</p>
     <div class="config-steps">
-      <p><strong style="color:var(--white)">1.</strong> Va sur <a href="https://supabase.com" target="_blank">supabase.com</a> et crée un compte gratuit</p>
+      <p><strong style="color:var(--white)">1.</strong> Va sur <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> et crée un compte gratuit</p>
       <p><strong style="color:var(--white)">2.</strong> Crée un nouveau projet</p>
       <p><strong style="color:var(--white)">3.</strong> Dans <em>SQL Editor</em>, colle et exécute le script SQL ci-dessous</p>
       <p><strong style="color:var(--white)">4.</strong> Dans <em>Settings &gt; API</em>, copie l'URL et la clé <em>anon/public</em></p>
     </div>
     <div class="form-group">
       <label class="form-label">Supabase URL</label>
-      <input class="form-input" id="cfgUrl" placeholder="https://xxxx.supabase.co">
+      <input class="form-input" id="cfgUrl" placeholder="https://xxxx.supabase.co" />
     </div>
     <div class="form-group">
       <label class="form-label">Clé API (anon/public)</label>
-      <input class="form-input" id="cfgKey" placeholder="eyJhbGci...">
+      <input class="form-input" id="cfgKey" placeholder="eyJhbGci..." />
     </div>
     <button class="config-btn" onclick="saveConfig()">CONNECTER ET LANCER</button>
     <p style="font-size:11px;color:var(--muted);margin-top:14px;text-align:center;">
-      SQL à exécuter : <strong style="color:var(--accent)">CREATE TABLE trades (id bigint primary key, date text, heure text, biais text, session text, direction text, entree text, sl text, tp text, rr text, pl numeric, outcome text, rules text, raison text, lecon text, created_at timestamptz default now());</strong>
+      SQL à exécuter :
+      <strong style="color:var(--accent)">
+        CREATE TABLE trades (id bigint primary key, date text, heure text, biais text, session text, direction text, entree text, sl text, tp text, rr text, pl numeric, outcome text, rules text, raison text, lecon text, created_at timestamptz default now());
+      </strong>
     </p>
   </div>
 </div>
 
 <!-- HEADER -->
-
 <div class="header">
   <div class="header-top">
     <div>
@@ -460,7 +461,7 @@ select.form-input option { background: #111a24; color: #d8eaff; }
       </div>
       <div class="kpi">
         <div class="kpi-val" id="hdrPL" style="color:var(--accent)">—</div>
-        <div class="kpi-label">P&L</div>
+        <div class="kpi-label">P&amp;L</div>
       </div>
     </div>
   </div>
@@ -472,132 +473,128 @@ select.form-input option { background: #111a24; color: #d8eaff; }
 </div>
 
 <!-- TAB: SAISIE -->
-
 <div class="tab active" id="tab-saisie">
-<div class="content">
-  <div class="section-title" id="formTitle">Nouveau trade EUR/USD</div>
+  <div class="content">
+    <div class="section-title" id="formTitle">Nouveau trade EUR/USD</div>
 
-  <div class="info-box">
-    Rappel : Box <strong>7h00 → 13h00</strong> · CHOCH M15 à l'intérieur · Biais défini · Entrée <strong>après 13h00</strong> dans la continuité New York
-  </div>
+    <div class="info-box">
+      Rappel : Box <strong>7h00 → 13h00</strong> · CHOCH M15 à l'intérieur · Biais défini · Entrée <strong>après 13h00</strong> dans la continuité New York
+    </div>
 
-  <div class="form-row">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" class="form-input" id="fDate" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Heure d'entrée</label>
+        <input type="time" class="form-input" id="fHeure" />
+      </div>
+    </div>
+
     <div class="form-group">
-      <label class="form-label">Date</label>
-      <input type="date" class="form-input" id="fDate">
+      <label class="form-label">Ratio RR (calculé auto)</label>
+      <div class="rr-display" id="rrDisplay">— (renseigne entrée / SL / TP)</div>
     </div>
+
     <div class="form-group">
-      <label class="form-label">Heure d'entrée</label>
-      <input type="time" class="form-input" id="fHeure">
+      <label class="form-label">Biais Daily Cycle — CHOCH M15 dans la box 7h–13h</label>
+      <div class="btn-group">
+        <button class="toggle-btn" data-group="biais" data-val="bullish" onclick="selectToggle(this,'green')">▲ Haussier</button>
+        <button class="toggle-btn" data-group="biais" data-val="bearish" onclick="selectToggle(this,'red')">▼ Baissier</button>
+        <button class="toggle-btn" data-group="biais" data-val="neutral" onclick="selectToggle(this,'yellow')">◆ Indécis</button>
+      </div>
     </div>
-  </div>
 
-  <div class="form-group">
-    <label class="form-label">Ratio RR (calculé auto)</label>
-    <div class="rr-display" id="rrDisplay">— (renseigne entrée / SL / TP)</div>
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Biais Daily Cycle — CHOCH M15 dans la box 7h–13h</label>
-    <div class="btn-group">
-      <button class="toggle-btn" data-group="biais" data-val="bullish" onclick="selectToggle(this,'green')">▲ Haussier</button>
-      <button class="toggle-btn" data-group="biais" data-val="bearish" onclick="selectToggle(this,'red')">▼ Baissier</button>
-      <button class="toggle-btn" data-group="biais" data-val="neutral" onclick="selectToggle(this,'yellow')">◆ Indécis</button>
-    </div>
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Moment d'entrée</label>
-    <div class="btn-group">
-      <button class="toggle-btn" data-group="session" data-val="New York (13h-17h)" onclick="selectToggle(this,'green')">✅ New York</button>
-      <button class="toggle-btn" data-group="session" data-val="Fin session (17h+)" onclick="selectToggle(this,'yellow')">🕔 Fin session</button>
-      <button class="toggle-btn" data-group="session" data-val="Pre-NY (avant 13h)" onclick="selectToggle(this,'red');setRulesNo()">⚠️ Avant 13h</button>
-    </div>
-  </div>
-
-  <div class="form-row">
     <div class="form-group">
-      <label class="form-label">Direction</label>
-      <select class="form-input" id="fDirection">
-        <option value="Long">▲ Long</option>
-        <option value="Short">▼ Short</option>
-      </select>
+      <label class="form-label">Moment d'entrée</label>
+      <div class="btn-group">
+        <button class="toggle-btn" data-group="session" data-val="New York (13h-17h)" onclick="selectToggle(this,'green')">✅ New York</button>
+        <button class="toggle-btn" data-group="session" data-val="Fin session (17h+)" onclick="selectToggle(this,'yellow')">🕔 Fin session</button>
+        <button class="toggle-btn" data-group="session" data-val="Pre-NY (avant 13h)" onclick="selectToggle(this,'red');setRulesNo()">⚠️ Avant 13h</button>
+      </div>
     </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Direction</label>
+        <select class="form-input" id="fDirection">
+          <option value="Long">▲ Long</option>
+          <option value="Short">▼ Short</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prix d'entrée</label>
+        <input type="number" step="0.00001" class="form-input" id="fEntree" placeholder="1.08500" oninput="calcRR()" />
+      </div>
+    </div>
+
+    <div class="form-row3">
+      <div class="form-group">
+        <label class="form-label">Stop Loss</label>
+        <input type="number" step="0.00001" class="form-input" id="fSL" placeholder="1.08300" oninput="calcRR()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Take Profit</label>
+        <input type="number" step="0.00001" class="form-input" id="fTP" placeholder="1.09000" oninput="calcRR()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Résultat (€)</label>
+        <input type="number" step="0.01" class="form-input" id="fPL" placeholder="+12.50" />
+      </div>
+    </div>
+
     <div class="form-group">
-      <label class="form-label">Prix d'entrée</label>
-      <input type="number" step="0.00001" class="form-input" id="fEntree" placeholder="1.08500" oninput="calcRR()">
+      <label class="form-label">Outcome</label>
+      <div class="btn-group">
+        <button class="toggle-btn" data-group="outcome" data-val="Win" onclick="selectToggle(this,'green')">✅ Win</button>
+        <button class="toggle-btn" data-group="outcome" data-val="Loss" onclick="selectToggle(this,'red')">❌ Loss</button>
+        <button class="toggle-btn" data-group="outcome" data-val="BE" onclick="selectToggle(this,'purple')">⚡ Break Even</button>
+      </div>
     </div>
-  </div>
 
-  <div class="form-row3">
     <div class="form-group">
-      <label class="form-label">Stop Loss</label>
-      <input type="number" step="0.00001" class="form-input" id="fSL" placeholder="1.08300" oninput="calcRR()">
+      <label class="form-label">Règles Daily Cycle respectées ?</label>
+      <div class="btn-group">
+        <button class="toggle-btn" id="rulesYes" data-group="rules" data-val="yes" onclick="selectToggle(this,'green')">✓ Dans le plan</button>
+        <button class="toggle-btn" id="rulesNo" data-group="rules" data-val="no" onclick="selectToggle(this,'red')">✗ Hors plan</button>
+      </div>
     </div>
+
     <div class="form-group">
-      <label class="form-label">Take Profit</label>
-      <input type="number" step="0.00001" class="form-input" id="fTP" placeholder="1.09000" oninput="calcRR()">
+      <label class="form-label">Setup — Pourquoi tu es entré ?</label>
+      <textarea class="form-input" id="fRaison" placeholder="Ex : CHOCH M15 haussier formé à 10h30 dans la box. Low cassé à 13h10. Entrée sur retest IFVG..."></textarea>
     </div>
+
     <div class="form-group">
-      <label class="form-label">Résultat (€)</label>
-      <input type="number" step="0.01" class="form-input" id="fPL" placeholder="+12.50">
+      <label class="form-label">Leçon du jour</label>
+      <textarea class="form-input" id="fLecon" placeholder="Ex : Trade valide, j'ai coupé à +8€ par peur alors que le TP était à +22€..."></textarea>
     </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="saveTrade()">ENREGISTRER LE TRADE</button>
+    <button class="cancel-btn" id="cancelBtn" onclick="cancelEdit()" style="display:none">Annuler la modification</button>
+
+    <div id="successMsg" class="success-msg" style="display:none">✓ Trade enregistré avec succès !</div>
   </div>
-
-  <div class="form-group">
-    <label class="form-label">Outcome</label>
-    <div class="btn-group">
-      <button class="toggle-btn" data-group="outcome" data-val="Win" onclick="selectToggle(this,'green')">✅ Win</button>
-      <button class="toggle-btn" data-group="outcome" data-val="Loss" onclick="selectToggle(this,'red')">❌ Loss</button>
-      <button class="toggle-btn" data-group="outcome" data-val="BE" onclick="selectToggle(this,'purple')">⚡ Break Even</button>
-    </div>
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Règles Daily Cycle respectées ?</label>
-    <div class="btn-group">
-      <button class="toggle-btn" id="rulesYes" data-group="rules" data-val="yes" onclick="selectToggle(this,'green')">✓ Dans le plan</button>
-      <button class="toggle-btn" id="rulesNo" data-group="rules" data-val="no" onclick="selectToggle(this,'red')">✗ Hors plan</button>
-    </div>
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Setup — Pourquoi tu es entré ?</label>
-    <textarea class="form-input" id="fRaison" placeholder="Ex : CHOCH M15 haussier formé à 10h30 dans la box. Low cassé à 13h10. Entrée sur retest IFVG..."></textarea>
-  </div>
-
-  <div class="form-group">
-    <label class="form-label">Leçon du jour</label>
-    <textarea class="form-input" id="fLecon" placeholder="Ex : Trade valide, j'ai coupé à +8€ par peur alors que le TP était à +22€..."></textarea>
-  </div>
-
-<button class="submit-btn" id="submitBtn" onclick="saveTrade()">ENREGISTRER LE TRADE</button>
-<button class="cancel-btn" id="cancelBtn" onclick="cancelEdit()" style="display:none">Annuler la modification</button>
-
-  <div id="successMsg" class="success-msg" style="display:none">✓ Trade enregistré avec succès !</div>
-</div>
 </div>
 
 <!-- TAB: JOURNAL -->
-
 <div class="tab" id="tab-journal">
-<div class="content">
-  <div class="section-title">Historique des trades</div>
-  <div id="journalList"></div>
-</div>
+  <div class="content">
+    <div class="section-title">Historique des trades</div>
+    <div id="journalList"></div>
+  </div>
 </div>
 
 <!-- TAB: STATS -->
-
 <div class="tab" id="tab-stats">
-<div class="content">
-  <div class="section-title">Statistiques</div>
-  <div id="statsContent"></div>
-</div>
+  <div class="content">
+    <div class="section-title">Statistiques</div>
+    <div id="statsContent"></div>
+  </div>
 </div>
 
 <!-- CONFIRM DELETE MODAL -->
-
 <div class="confirm-overlay" id="confirmOverlay" style="display:none">
   <div class="confirm-box">
     <h3>Supprimer ce trade ?</h3>
@@ -699,7 +696,13 @@ function selectToggle(btn, color) {
 }
 
 function getToggleVal(group) {
-  const active = document.querySelector(`[data-group="${group}"].active-green, [data-group="${group}"].active-red, [data-group="${group}"].active-yellow, [data-group="${group}"].active-accent, [data-group="${group}"].active-purple`);
+  const active = document.querySelector(
+    `[data-group="${group}"].active-green, ` +
+    `[data-group="${group}"].active-red, ` +
+    `[data-group="${group}"].active-yellow, ` +
+    `[data-group="${group}"].active-accent, ` +
+    `[data-group="${group}"].active-purple`
+  );
   return active ? active.dataset.val : '';
 }
 
@@ -713,7 +716,8 @@ function calcRR() {
   const sl = parseFloat(document.getElementById('fSL').value);
   const tp = parseFloat(document.getElementById('fTP').value);
   const el = document.getElementById('rrDisplay');
-  if (e && sl && tp && Math.abs(e - sl) > 0) {
+
+  if (Number.isFinite(e) && Number.isFinite(sl) && Number.isFinite(tp) && Math.abs(e - sl) > 0) {
     const rr = Math.abs(tp - e) / Math.abs(e - sl);
     const col = rr >= 2 ? '#00e5a0' : rr >= 1 ? '#ffd060' : '#ff4060';
     const icon = rr >= 2 ? '✅' : rr >= 1 ? '⚠️' : '❌';
@@ -751,7 +755,10 @@ function editTrade(id) {
   const t = trades.find(x => x.id == id);
   if (!t) return;
   editId = id;
+
+  // Active le bouton "+ Nouveau" dans la nav (c'est le 1er)
   showTab('saisie', document.querySelector('.nav-btn'));
+
   document.getElementById('fDate').value = t.date || '';
   document.getElementById('fHeure').value = t.heure || '';
   document.getElementById('fEntree').value = t.entree || '';
@@ -804,14 +811,19 @@ async function saveTrade() {
   const rr = calcRR();
   const trade = {
     id: editId || Date.now(),
-    date, heure: document.getElementById('fHeure').value,
-    biais, session, direction: document.getElementById('fDirection').value,
+    date,
+    heure: document.getElementById('fHeure').value,
+    biais,
+    session,
+    direction: document.getElementById('fDirection').value,
     entree: document.getElementById('fEntree').value || null,
     sl: document.getElementById('fSL').value || null,
     tp: document.getElementById('fTP').value || null,
-    rr, pl: parseFloat(document.getElementById('fPL').value) || 0,
+    rr,
+    pl: parseFloat(document.getElementById('fPL').value) || 0,
     outcome: getToggleVal('outcome') || 'BE',
-    rules, raison: document.getElementById('fRaison').value,
+    rules,
+    raison: document.getElementById('fRaison').value,
     lecon: document.getElementById('fLecon').value,
   };
 
@@ -834,6 +846,8 @@ async function saveTrade() {
     console.error(e);
     alert('Erreur lors de la sauvegarde. Vérifie ta connexion.');
   }
+
+  // Remet le texte correct (après resetForm() editId est null)
   document.getElementById('submitBtn').textContent = editId ? 'METTRE À JOUR' : 'ENREGISTRER LE TRADE';
 }
 
@@ -943,7 +957,8 @@ function renderStats() {
 
   const plColor = colPL(pl);
   const wrColor = wr >= 50 ? '#00e5a0' : '#ff4060';
-  const rColor = (rulesOk/n*100) >= 70 ? '#00e5a0' : (rulesOk/n*100) >= 50 ? '#ffd060' : '#ff4060';
+  const rPct = (rulesOk / n) * 100;
+  const rColor = rPct >= 70 ? '#00e5a0' : rPct >= 50 ? '#ffd060' : '#ff4060';
 
   el.innerHTML = `
     <div class="kpi-grid">
@@ -958,13 +973,13 @@ function renderStats() {
         <div class="kpi-card-sub">${wins} gagnants / ${n} trades</div>
       </div>
       <div class="kpi-card" style="border-top-color:${plColor}">
-        <div class="kpi-card-label">P&L Net</div>
+        <div class="kpi-card-label">P&amp;L Net</div>
         <div class="kpi-card-val" style="color:${plColor}">${pl >= 0 ? '+' : ''}${pl.toFixed(2)}€</div>
         <div class="kpi-card-sub">Plan: ${plRules >= 0 ? '+' : ''}${plRules.toFixed(2)}€ · Hors: ${plNoRules >= 0 ? '+' : ''}${plNoRules.toFixed(2)}€</div>
       </div>
       <div class="kpi-card" style="border-top-color:${rColor}">
         <div class="kpi-card-label">Dans le plan</div>
-        <div class="kpi-card-val" style="color:${rColor}">${Math.round(rulesOk/n*100)}%</div>
+        <div class="kpi-card-val" style="color:${rColor}">${Math.round(rPct)}%</div>
         <div class="kpi-card-sub">${rulesOk} / ${n} trades</div>
       </div>
     </div>
@@ -978,65 +993,6 @@ function renderStats() {
       <canvas id="chartOutcome" height="180"></canvas>
     </div>
     <div class="chart-card">
-      <div class="chart-title">P&L par session</div>
+      <div class="chart-title">P&amp;L par session</div>
       <canvas id="chartSession" height="140"></canvas>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Dans le plan vs Hors plan</div>
-      <canvas id="chartRules" height="140"></canvas>
-    </div>`;
-
-  setTimeout(() => {
-    const sorted = [...trades].sort((a,b) => (a.date+a.heure) > (b.date+b.heure) ? 1 : -1);
-    let cum = 0;
-    const equity = sorted.map(t => { cum += parseFloat(t.pl)||0; return parseFloat(cum.toFixed(2)); });
-    const labels = sorted.map(t => t.date.slice(5));
-    const eqColor = pl >= 0 ? '#00e5a0' : '#ff4060';
-
-    destroyChart('chartEquity');
-    charts.equity = new Chart(document.getElementById('chartEquity'), {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{ data: equity, borderColor: eqColor, borderWidth: 2.5, pointBackgroundColor: eqColor, pointRadius: 4, fill: true, backgroundColor: eqColor + '18', tension: 0.3 }]
-      },
-      options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#4a6880', font: { size: 11 } }, grid: { color: '#1a2840' } }, y: { ticks: { color: '#4a6880', font: { size: 11 }, callback: v => v + '€' }, grid: { color: '#1a2840' } } } }
-    });
-
-    destroyChart('chartOutcome');
-    charts.outcome = new Chart(document.getElementById('chartOutcome'), {
-      type: 'doughnut',
-      data: { labels: ['Win', 'Loss', 'Break Even'], datasets: [{ data: [wins, losses, bes], backgroundColor: ['#00e5a0', '#ff4060', '#a060ff'], borderColor: '#0d1520', borderWidth: 3 }] },
-      options: { plugins: { legend: { labels: { color: '#d8eaff', font: { size: 13 } } } }, cutout: '60%' }
-    });
-
-    const sessions = {};
-    trades.forEach(t => {
-      const key = t.session && t.session.includes('13h') ? 'NY 13h-17h' : t.session && t.session.includes('17h') ? 'Fin 17h+' : 'Avant 13h';
-      sessions[key] = (sessions[key] || 0) + (parseFloat(t.pl) || 0);
-    });
-
-    destroyChart('chartSession');
-    charts.session = new Chart(document.getElementById('chartSession'), {
-      type: 'bar',
-      data: { labels: Object.keys(sessions), datasets: [{ data: Object.values(sessions), backgroundColor: Object.values(sessions).map(v => v >= 0 ? '#00e5a0' : '#ff4060'), borderRadius: 6 }] },
-      options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#4a6880' }, grid: { color: '#1a2840' } }, y: { ticks: { color: '#4a6880', callback: v => v + '€' }, grid: { color: '#1a2840' } } } }
-    });
-
-    destroyChart('chartRules');
-    charts.rules = new Chart(document.getElementById('chartRules'), {
-      type: 'bar',
-      data: { labels: ['Dans le plan', 'Hors plan'], datasets: [{ data: [plRules, plNoRules], backgroundColor: [plRules >= 0 ? '#00e5a0' : '#ff4060', plNoRules >= 0 ? '#00e5a0' : '#ff4060'], borderRadius: 6 }] },
-      options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#4a6880' }, grid: { color: '#1a2840' } }, y: { ticks: { color: '#4a6880', callback: v => v + '€' }, grid: { color: '#1a2840' } } } }
-    });
-  }, 50);
-}
-
-function destroyChart(id) {
-  const key = id.replace('chart', '').toLowerCase();
-  if (charts[key]) { charts[key].destroy(); delete charts[key]; }
-}
-</script>
-
-</body>
-</html>
+    </
