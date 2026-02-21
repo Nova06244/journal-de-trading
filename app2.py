@@ -121,6 +121,7 @@ input::placeholder, textarea::placeholder { color: #3a5570 !important; }
 
 label, .stMarkdown p, p, span, div { color: #e0eeff !important; }
 
+/* Bouton principal */
 .stButton > button {
     background-color: #00d4ff !important;
     color: #000000 !important;
@@ -135,9 +136,25 @@ label, .stMarkdown p, p, span, div { color: #e0eeff !important; }
 }
 .stButton > button:hover { background-color: #33ddff !important; }
 
+/* Boutons secondaires (EDIT / DEL / OUI / NON) en gris */
+.stButton > button[kind="secondary"],
+button[kind="secondary"] {
+    background-color: #1b222c !important;
+    color: #e0eeff !important;
+    border: 1px solid #2a3f55 !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+}
+.stButton > button[kind="secondary"]:hover,
+button[kind="secondary"]:hover {
+    background-color: #232c38 !important;
+    border-color: #3a5570 !important;
+}
+
+/* FORM (onglet Nouveau Trade) en gris */
 [data-testid="stForm"] {
-    background-color: #0d1520 !important;
-    border: 1px solid #1e3040 !important;
+    background-color: #1b222c !important;   /* gris */
+    border: 1px solid #2a3f55 !important;
     border-radius: 12px !important;
     padding: 20px !important;
 }
@@ -248,6 +265,34 @@ def chart_layout(title: str, height: int = 300) -> dict:
     )
 
 
+def add_bar_headroom(fig, y_values, pad_ratio: float = 0.22):
+    """Ajoute de l'espace en haut (et/ou en bas) de l'axe Y pour voir les labels en 'outside'."""
+    if y_values is None:
+        return fig
+    y_values = list(y_values)
+    if len(y_values) == 0:
+        return fig
+
+    y_max = max(y_values)
+    y_min = min(y_values)
+
+    # Cas où tout est 0
+    if y_max == 0 and y_min == 0:
+        fig.update_yaxes(range=[-1, 1])
+        return fig
+
+    # Si barres positives seulement
+    if y_min >= 0:
+        fig.update_yaxes(range=[0, y_max * (1 + pad_ratio)])
+        return fig
+
+    # Mix positif/négatif : on élargit des deux côtés
+    top = y_max * (1 + pad_ratio) if y_max > 0 else y_max * (1 - pad_ratio)
+    bottom = y_min * (1 + pad_ratio) if y_min < 0 else y_min * (1 - pad_ratio)
+    fig.update_yaxes(range=[bottom, top])
+    return fig
+
+
 # =========================
 # HEADER
 # =========================
@@ -257,8 +302,6 @@ wins = len(df[df["outcome"] == "Win"]) if n else 0
 losses = len(df[df["outcome"] == "Loss"]) if n else 0
 bes = len(df[df["outcome"] == "BE"]) if n else 0
 wr = round(wins / n * 100) if n else None
-
-# pl peut contenir "", donc sécuriser
 total_pl = pd.to_numeric(df["pl"], errors="coerce").fillna(0).sum() if n else 0
 
 st.markdown(
@@ -349,7 +392,11 @@ Rappel Daily Cycle : Trace la box <strong style='color:#fff'>7h00 -&gt; 13h00</s
         f_biais = st.radio(
             "Biais",
             options=["bullish", "bearish", "neutral"],
-            format_func=lambda x: "Haussier" if x == "bullish" else "Baissier" if x == "bearish" else "Indecis",
+            format_func=lambda x: "Haussier"
+            if x == "bullish"
+            else "Baissier"
+            if x == "bearish"
+            else "Indecis",
             index=["bullish", "bearish", "neutral"].index(edit_data["biais"])
             if edit_data is not None and edit_data.get("biais") in ["bullish", "bearish", "neutral"]
             else 0,
@@ -374,12 +421,16 @@ Rappel Daily Cycle : Trace la box <strong style='color:#fff'>7h00 -&gt; 13h00</s
             f_direction = st.selectbox(
                 "Direction",
                 ["Long", "Short"],
-                index=["Long", "Short"].index(edit_data["direction"]) if edit_data is not None and edit_data.get("direction") in ["Long", "Short"] else 0,
+                index=["Long", "Short"].index(edit_data["direction"])
+                if edit_data is not None and edit_data.get("direction") in ["Long", "Short"]
+                else 0,
             )
         with col2:
             f_entree = st.number_input(
                 "Prix d'entree",
-                value=float(edit_data["entree"]) if edit_data is not None and str(edit_data.get("entree", "")).strip() != "" else 0.0,
+                value=float(edit_data["entree"])
+                if edit_data is not None and str(edit_data.get("entree", "")).strip() != ""
+                else 0.0,
                 format="%.5f",
                 step=0.00001,
             )
@@ -388,21 +439,27 @@ Rappel Daily Cycle : Trace la box <strong style='color:#fff'>7h00 -&gt; 13h00</s
         with col1:
             f_sl = st.number_input(
                 "Stop Loss",
-                value=float(edit_data["sl"]) if edit_data is not None and str(edit_data.get("sl", "")).strip() != "" else 0.0,
+                value=float(edit_data["sl"])
+                if edit_data is not None and str(edit_data.get("sl", "")).strip() != ""
+                else 0.0,
                 format="%.5f",
                 step=0.00001,
             )
         with col2:
             f_tp = st.number_input(
                 "Take Profit",
-                value=float(edit_data["tp"]) if edit_data is not None and str(edit_data.get("tp", "")).strip() != "" else 0.0,
+                value=float(edit_data["tp"])
+                if edit_data is not None and str(edit_data.get("tp", "")).strip() != ""
+                else 0.0,
                 format="%.5f",
                 step=0.00001,
             )
         with col3:
             f_pl = st.number_input(
                 "Resultat (EUR)",
-                value=float(edit_data["pl"]) if edit_data is not None and str(edit_data.get("pl", "")).strip() != "" else 0.0,
+                value=float(edit_data["pl"])
+                if edit_data is not None and str(edit_data.get("pl", "")).strip() != ""
+                else 0.0,
                 format="%.2f",
                 step=0.01,
             )
@@ -436,7 +493,11 @@ Rappel Daily Cycle : Trace la box <strong style='color:#fff'>7h00 -&gt; 13h00</s
             format_func=lambda x: "Dans le plan" if x == "yes" else "Hors plan",
             index=1
             if auto_no
-            else (["yes", "no"].index(edit_data["rules"]) if edit_data is not None and edit_data.get("rules") in ["yes", "no"] else 0),
+            else (
+                ["yes", "no"].index(edit_data["rules"])
+                if edit_data is not None and edit_data.get("rules") in ["yes", "no"]
+                else 0
+            ),
             horizontal=True,
             label_visibility="collapsed",
         )
@@ -488,7 +549,7 @@ Rappel Daily Cycle : Trace la box <strong style='color:#fff'>7h00 -&gt; 13h00</s
             st.rerun()
 
     if edit_id:
-        if st.button("ANNULER LA MODIFICATION"):
+        if st.button("ANNULER LA MODIFICATION", type="secondary"):
             st.session_state.pop("edit_id", None)
             st.rerun()
 
@@ -623,10 +684,10 @@ with tab3:
 
         st.markdown(f"<div class='insight-box'>{insight}</div>", unsafe_allow_html=True)
 
+        # Courbe de capital
         df_sorted["cumpl"] = df_sorted["pl"].cumsum()
         line_col = hx(C_GREEN) if total_pl >= 0 else hx(C_RED)
         fill_col = "rgba(0,229,160,0.12)" if total_pl >= 0 else "rgba(255,64,96,0.12)"
-
         fig_eq = go.Figure()
         fig_eq.add_trace(
             go.Scatter(
@@ -667,7 +728,9 @@ with tab3:
 
         with col2:
             biais_data = df.groupby("biais", dropna=False)["pl"].sum().reset_index()
-            biais_data["label"] = biais_data["biais"].map({"bullish": "Haussier", "bearish": "Baissier", "neutral": "Indecis"}).fillna("-")
+            biais_data["label"] = (
+                biais_data["biais"].map({"bullish": "Haussier", "bearish": "Baissier", "neutral": "Indecis"}).fillna("-")
+            )
             biais_data["color"] = biais_data["pl"].apply(lambda x: hx(C_GREEN) if x >= 0 else hx(C_RED))
 
             fig_b = go.Figure(
@@ -679,9 +742,13 @@ with tab3:
                     text=biais_data["pl"].apply(lambda x: f"{'+' if x >= 0 else ''}{x:.2f}EUR"),
                     textposition="outside",
                     textfont=dict(color=hx(C_WHITE), size=14),
+                    cliponaxis=False,
                 )
             )
-            fig_b.update_layout(**chart_layout("P&L par biais", height=320))
+            lb = chart_layout("P&L par biais", height=320)
+            lb["margin"]["t"] = 70
+            fig_b.update_layout(**lb)
+            add_bar_headroom(fig_b, biais_data["pl"].tolist(), pad_ratio=0.22)
             st.plotly_chart(fig_b, use_container_width=True)
 
         col3, col4 = st.columns(2)
@@ -690,7 +757,10 @@ with tab3:
                 go.Bar(
                     x=["Dans le plan", "Hors plan"],
                     y=[pl_rules, pl_no_rules],
-                    marker_color=[hx(C_GREEN) if pl_rules >= 0 else hx(C_RED), hx(C_GREEN) if pl_no_rules >= 0 else hx(C_RED)],
+                    marker_color=[
+                        hx(C_GREEN) if pl_rules >= 0 else hx(C_RED),
+                        hx(C_GREEN) if pl_no_rules >= 0 else hx(C_RED),
+                    ],
                     marker_line=dict(color=hx(C_WHITE), width=1),
                     text=[
                         f"{'+' if pl_rules >= 0 else ''}{pl_rules:.2f}EUR",
@@ -698,9 +768,13 @@ with tab3:
                     ],
                     textposition="outside",
                     textfont=dict(color=hx(C_WHITE), size=14),
+                    cliponaxis=False,
                 )
             )
-            fig_r.update_layout(**chart_layout("Dans le plan vs Hors plan", height=320))
+            lr = chart_layout("Dans le plan vs Hors plan", height=320)
+            lr["margin"]["t"] = 70
+            fig_r.update_layout(**lr)
+            add_bar_headroom(fig_r, [pl_rules, pl_no_rules], pad_ratio=0.22)
             st.plotly_chart(fig_r, use_container_width=True)
 
         with col4:
@@ -719,9 +793,13 @@ with tab3:
                     text=sess_data["pl"].apply(lambda x: f"{'+' if x >= 0 else ''}{x:.2f}EUR"),
                     textposition="outside",
                     textfont=dict(color=hx(C_WHITE), size=14),
+                    cliponaxis=False,
                 )
             )
-            fig_s.update_layout(**chart_layout("P&L par session", height=320))
+            ls = chart_layout("P&L par session", height=320)
+            ls["margin"]["t"] = 70
+            fig_s.update_layout(**ls)
+            add_bar_headroom(fig_s, sess_data["pl"].tolist(), pad_ratio=0.22)
             st.plotly_chart(fig_s, use_container_width=True)
 
         st.markdown("---")
