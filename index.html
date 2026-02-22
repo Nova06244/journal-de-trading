@@ -138,6 +138,10 @@ select.form-input option{background:#111a24;color:#d8eaff;}
       <label class="form-label">Cle API (anon/public)</label>
       <input class="form-input" id="cfgKey" placeholder="eyJhbGci..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
+    <div class="form-group">
+      <label class="form-label">Capital de depart (EUR)</label>
+      <input class="form-input" id="cfgCapital" placeholder="62.64" type="number" step="0.01" autocomplete="off">
+    </div>
     <button class="config-btn" onclick="saveConfig()">CONNECTER ET LANCER</button>
   </div>
 </div>
@@ -154,6 +158,7 @@ select.form-input option{background:#111a24;color:#d8eaff;}
       <div class="kpi"><div class="kpi-val" id="hdrTrades" style="color:var(--accent)">-</div><div class="kpi-label">Trades</div></div>
       <div class="kpi"><div class="kpi-val" id="hdrWR" style="color:var(--accent)">-</div><div class="kpi-label">Win Rate</div></div>
       <div class="kpi"><div class="kpi-val" id="hdrPL" style="color:var(--accent)">-</div><div class="kpi-label">P&amp;L</div></div>
+      <div class="kpi"><div class="kpi-val" id="hdrCapital" style="color:var(--accent)">-</div><div class="kpi-label">Capital</div></div>
     </div>
   </div>
   <nav class="nav">
@@ -270,16 +275,20 @@ window.addEventListener('load',function(){
 
 function resetConfig(){
   localStorage.removeItem('sb_url');localStorage.removeItem('sb_key');
+  localStorage.removeItem('sb_capital');
   SURL='';SKEY='';
   document.getElementById('cfgUrl').value='';document.getElementById('cfgKey').value='';
+  document.getElementById('cfgCapital').value='';
   document.getElementById('configScreen').style.display='flex';
 }
 
 function saveConfig(){
   var u=document.getElementById('cfgUrl').value.trim();
   var k=document.getElementById('cfgKey').value.trim();
+  var c=document.getElementById('cfgCapital').value.trim();
   if(!u||!k){alert('Remplis les deux champs');return;}
   localStorage.setItem('sb_url',u);localStorage.setItem('sb_key',k);
+  if(c)localStorage.setItem('sb_capital',c);
   SURL=u;SKEY=k;
   document.getElementById('configScreen').style.display='none';
   loadTrades();
@@ -512,11 +521,19 @@ function updateHeader(){
   var wins=trades.filter(function(t){return t.outcome==='Win';}).length;
   var wr=n?Math.round(wins/n*100):0;
   var pl=trades.reduce(function(s,t){return s+(parseFloat(t.pl)||0);},0);
+  var capital=parseFloat(localStorage.getItem('sb_capital')||0);
+  var capitalActuel=capital+pl;
   document.getElementById('hdrTrades').textContent=n;
   document.getElementById('hdrWR').textContent=n?wr+'%':'-';
   document.getElementById('hdrWR').style.color=wr>=50?'#00e5a0':wr>0?'#ff4060':'#00d4ff';
   document.getElementById('hdrPL').textContent=(pl>=0?'+':'')+pl.toFixed(2)+'EUR';
   document.getElementById('hdrPL').style.color=cpl(pl);
+  if(capital>0){
+    document.getElementById('hdrCapital').textContent=capitalActuel.toFixed(2)+'EUR';
+    document.getElementById('hdrCapital').style.color=cpl(capitalActuel-capital);
+  } else {
+    document.getElementById('hdrCapital').textContent='-';
+  }
 }
 
 function renderJournal(){
@@ -641,8 +658,10 @@ function renderStats(){
 
   setTimeout(function(){
     var sorted=[].concat(trades).sort(function(a,b){return (a.date+a.heure)>(b.date+b.heure)?1:-1;});
-    var cum=0;
+    var capital=parseFloat(localStorage.getItem('sb_capital')||0);
+    var cum=capital;
     var equity=sorted.map(function(t){cum+=parseFloat(t.pl)||0;return parseFloat(cum.toFixed(2));});
+    if(capital>0)equity.unshift(capital);
     var labels=sorted.map(function(t){return t.date.slice(5);});
     var ec=pl>=0?'#00e5a0':'#ff4060';
     var gridC='#1a2840';var tickC='#4a6880';
