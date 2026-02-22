@@ -340,21 +340,13 @@ function sbFetch(path,opts){
 }
 
 function refreshApp(btn){
-  btn.innerHTML='...';
-  btn.style.fontSize='11px';
-  var restore=function(){
-    btn.innerHTML='&#8635;';
-    btn.style.fontSize='22px';
-  };
   sbFetch('trades?order=date.desc,heure.desc').then(function(data){
     trades=data||[];
     setSyncStatus('ok','Synchronise');
     updateHeader();
     renderJournal();
-    restore();
   }).catch(function(e){
     setSyncStatus('err','Erreur connexion');
-    restore();
   });
 }
 
