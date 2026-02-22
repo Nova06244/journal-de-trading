@@ -133,6 +133,7 @@ select.form-input option{background:#111a24;color:#d8eaff;}
   <div class="header-top">
     <div>
       <div class="logo">Daily<span>Cycle</span></div>
+      <div onclick="resetConfig()" style="font-size:9px;color:#4a6880;margin-top:3px;cursor:pointer;text-decoration:underline;">Changer de compte</div>
       <div class="logo-sub">EUR/USD - Christophe Meoni</div>
       <div id="syncStatus" class="sync-badge sync-loading">Connexion...</div>
     </div>
@@ -296,6 +297,14 @@ window.addEventListener('load',function(){
   SKEY=localStorage.getItem('sb_key')||'';
   if(!SURL||!SKEY){document.getElementById('configScreen').style.display='flex';return;}
   loadTrades();
+  function resetConfig(){
+  localStorage.removeItem('sb_url');
+  localStorage.removeItem('sb_key');
+  SURL='';SKEY='';
+  document.getElementById('cfgUrl').value='';
+  document.getElementById('cfgKey').value='';
+  document.getElementById('configScreen').style.display='flex';
+}
 });
 
 function saveConfig(){
