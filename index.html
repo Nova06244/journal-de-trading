@@ -343,14 +343,7 @@ function sbFetch(path,opts){
 }
 
 function refreshApp(btn){
-  sbFetch('trades?order=date.desc,heure.desc').then(function(data){
-    trades=data||[];
-    setSyncStatus('ok','Synchronise');
-    updateHeader();
-    renderJournal();
-  }).catch(function(e){
-    setSyncStatus('err','Erreur connexion');
-  });
+  window.location.reload();
 }
 
 function loadTrades(){
