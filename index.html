@@ -297,7 +297,8 @@ window.addEventListener('load',function(){
   SKEY=localStorage.getItem('sb_key')||'';
   if(!SURL||!SKEY){document.getElementById('configScreen').style.display='flex';return;}
   loadTrades();
-  function resetConfig(){
+});
+function resetConfig(){
   localStorage.removeItem('sb_url');
   localStorage.removeItem('sb_key');
   SURL='';SKEY='';
@@ -305,7 +306,6 @@ window.addEventListener('load',function(){
   document.getElementById('cfgKey').value='';
   document.getElementById('configScreen').style.display='flex';
 }
-});
 
 function saveConfig(){
   var u=document.getElementById('cfgUrl').value.trim();
