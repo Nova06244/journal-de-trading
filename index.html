@@ -298,16 +298,15 @@ function saveConfig(){
 }
 
 function saveSetting(key,value){
-  var url=SURL+'/rest/v1/settings';
-  var headers={
-    'apikey':SKEY,
-    'Authorization':'Bearer '+SKEY,
-    'Content-Type':'application/json',
-    'Prefer':'resolution=merge-duplicates,return=representation'
-  };
-  return fetch(url,{method:'POST',headers:headers,body:JSON.stringify({key:key,value:value})}).then(function(r){
-    if(!r.ok)return r.text().then(function(t){throw new Error(t);});
+  var url=SURL+'/rest/v1/settings?key=eq.'+key;
+  var headers={'apikey':SKEY,'Authorization':'Bearer '+SKEY,'Content-Type':'application/json','Prefer':'return=representation'};
+  return fetch(url,{method:'PATCH',headers:headers,body:JSON.stringify({value:value})}).then(function(r){
     return r.json();
+  }).then(function(data){
+    if(!data||data.length===0){
+      var url2=SURL+'/rest/v1/settings';
+      return fetch(url2,{method:'POST',headers:headers,body:JSON.stringify({key:key,value:value})});
+    }
   });
 }
 
