@@ -328,8 +328,6 @@ function saveConfig(){
 function sbFetch(path,opts){
   opts=opts||{};
   var url=SURL+'/rest/v1/'+path;
-  opts.mode='cors';
-  opts.credentials='omit';
   var headers={
     'apikey':SKEY,
     'Authorization':'Bearer '+SKEY,
