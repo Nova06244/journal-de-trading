@@ -288,10 +288,28 @@ function saveConfig(){
   var c=document.getElementById('cfgCapital').value.trim();
   if(!u||!k){alert('Remplis les deux champs');return;}
   localStorage.setItem('sb_url',u);localStorage.setItem('sb_key',k);
-  if(c)localStorage.setItem('sb_capital',c);
   SURL=u;SKEY=k;
   document.getElementById('configScreen').style.display='none';
-  loadTrades();
+  if(c){
+    saveSetting('capital',c).then(function(){loadTrades();});
+  } else {
+    loadTrades();
+  }
+}
+
+function saveSetting(key,value){
+  return sbFetch('settings?key=eq.'+key,{method:'DELETE',prefer:'return=minimal'}).then(function(){
+    return sbFetch('settings',{method:'POST',body:JSON.stringify({key:key,value:value})});
+  }).catch(function(){
+    return sbFetch('settings',{method:'POST',body:JSON.stringify({key:key,value:value})});
+  });
+}
+
+function loadSetting(key){
+  return sbFetch('settings?key=eq.'+key).then(function(data){
+    if(data&&data.length>0)return data[0].value;
+    return null;
+  });
 }
 
 function sbFetch(path,opts){
@@ -332,8 +350,12 @@ function exportCSV(){
 
 function refreshApp(){
   setSyncStatus('loading','Synchronisation...');
-  sbFetch('trades?order=date.desc,heure.desc').then(function(data){
-    trades=data||[];
+  Promise.all([
+    sbFetch('trades?order=date.desc,heure.desc'),
+    loadSetting('capital')
+  ]).then(function(results){
+    trades=results[0]||[];
+    if(results[1]){localStorage.setItem('sb_capital',results[1]);}
     setSyncStatus('ok','Synchronise');
     updateHeader();renderJournal();
   }).catch(function(e){
@@ -343,8 +365,12 @@ function refreshApp(){
 
 function loadTrades(){
   setSyncStatus('loading','Synchronisation...');
-  sbFetch('trades?order=date.desc,heure.desc').then(function(data){
-    trades=data||[];
+  Promise.all([
+    sbFetch('trades?order=date.desc,heure.desc'),
+    loadSetting('capital')
+  ]).then(function(results){
+    trades=results[0]||[];
+    if(results[1]){localStorage.setItem('sb_capital',results[1]);}
     setSyncStatus('ok','Synchronise');
     updateHeader();renderJournal();
   }).catch(function(e){
