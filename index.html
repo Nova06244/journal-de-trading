@@ -15,14 +15,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
-:root {
-  --bg:#0a0e14;--surface:#0d1520;--surface2:#111a24;
-  --border:#1a2840;--border2:#243550;--text:#d8eaff;
-  --muted:#4a6880;--accent:#00d4ff;--green:#00e5a0;
-  --red:#ff4060;--yellow:#ffd060;--purple:#a060ff;--white:#ffffff;
-}
+:root{--bg:#0a0e14;--surface:#0d1520;--surface2:#111a24;--border:#1a2840;--border2:#243550;--text:#d8eaff;--muted:#4a6880;--accent:#00d4ff;--green:#00e5a0;--red:#ff4060;--yellow:#ffd060;--purple:#a060ff;--white:#ffffff;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:14px;min-height:100vh;padding-bottom:env(safe-area-inset-bottom);overflow-x:hidden;}
+html,body{height:100%;overflow-x:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:14px;padding-bottom:env(safe-area-inset-bottom);overscroll-behavior-y:none;}
 .header{background:linear-gradient(180deg,#0d1520 0%,#0a0e14 100%);border-bottom:1px solid var(--border);padding:16px 20px 12px;position:sticky;top:0;z-index:100;}
 .header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
 .logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--white);}
@@ -40,7 +36,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font
 .nav::-webkit-scrollbar{display:none;}
 .nav-btn{flex:1;min-width:90px;padding:13px 8px;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
 .nav-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
-.content{padding:20px 16px;max-width:800px;margin:0 auto;}
+.content{padding:20px 16px 300px;max-width:800px;margin:0 auto;}
 .section-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--white);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
 .section-title::before{content:'';display:block;width:4px;height:20px;background:var(--accent);border-radius:2px;}
 .info-box{background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);border-radius:10px;padding:12px 16px;font-size:12px;color:var(--accent);margin-bottom:18px;line-height:1.8;}
@@ -59,7 +55,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font
 .toggle-btn.act-yellow{border-color:var(--yellow);background:rgba(255,208,96,0.1);color:var(--yellow);}
 .toggle-btn.act-purple{border-color:var(--purple);background:rgba(160,96,255,0.1);color:var(--purple);}
 .rr-display{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:11px 14px;font-size:15px;color:var(--muted);min-height:44px;display:flex;align-items:center;}
-textarea.form-input{min-height:70px;resize:vertical;}
+textarea.form-input{min-height:70px;resize:none;}
 .submit-btn{width:100%;padding:15px;background:var(--accent);color:#000;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;letter-spacing:0.5px;}
 .submit-btn:active{background:#33ddff;}
 .cancel-btn{width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:10px;font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;margin-top:8px;}
@@ -106,8 +102,6 @@ textarea.form-input{min-height:70px;resize:vertical;}
 .config-steps code{background:#0a0e14;padding:2px 6px;border-radius:4px;font-size:11px;color:var(--accent);}
 .config-btn{width:100%;padding:14px;background:var(--accent);color:#000;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;cursor:pointer;}
 select.form-input option{background:#111a24;color:#d8eaff;}
-.content{padding-bottom:300px;}
-html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
 </style>
 </head>
 <body>
@@ -161,7 +155,7 @@ html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
     <button class="nav-btn active" onclick="showTab('saisie',this)">+ Nouveau</button>
     <button class="nav-btn" onclick="showTab('journal',this)">Journal</button>
     <button class="nav-btn" onclick="showTab('stats',this)">Stats</button>
-    <button class="nav-btn" onclick="refreshApp(this)" style="font-size:22px;">&#8635;</button>
+    <button class="nav-btn" onclick="refreshApp()" style="font-size:22px;">&#8635;</button>
   </nav>
 </div>
 
@@ -171,7 +165,6 @@ html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
   <div class="info-box">
     Rappel : Box <strong>7h00 -&gt; 13h00</strong> - CHOCH M15 a l'interieur - Biais defini - Entree <strong>apres 13h00</strong> dans la continuite New York
   </div>
-
   <div class="form-row">
     <div class="form-group">
       <label class="form-label">Date</label>
@@ -182,12 +175,10 @@ html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
       <input type="time" class="form-input" id="fHeure">
     </div>
   </div>
-
   <div class="form-group">
     <label class="form-label">Ratio RR (calcule automatiquement)</label>
     <div class="rr-display" id="rrDisplay">- (renseigne entree / SL / TP)</div>
   </div>
-
   <div class="form-group">
     <label class="form-label">Biais Daily Cycle - CHOCH M15 dans la box 7h-13h</label>
     <div class="btn-group">
@@ -196,7 +187,6 @@ html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
       <button class="toggle-btn" data-group="biais" data-val="neutral" onclick="sel(this,'yellow')">* Indecis</button>
     </div>
   </div>
-
   <div class="form-group">
     <label class="form-label">Moment d'entree</label>
     <div class="btn-group">
@@ -205,7 +195,6 @@ html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
       <button class="toggle-btn" data-group="session" data-val="Pre-NY (avant 13h)" onclick="sel(this,'red');setRulesNo()">! Avant 13h</button>
     </div>
   </div>
-
   <div class="form-row">
     <div class="form-group">
       <label class="form-label">Direction</label>
@@ -219,7 +208,6 @@ html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
       <input type="number" step="0.00001" class="form-input" id="fEntree" placeholder="1.08500" oninput="calcRR()">
     </div>
   </div>
-
   <div class="form-row3">
     <div class="form-group">
       <label class="form-label">Stop Loss</label>
@@ -234,7 +222,6 @@ html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
       <input type="number" step="0.01" class="form-input" id="fPL" placeholder="+12.50">
     </div>
   </div>
-
   <div class="form-group">
     <label class="form-label">Outcome</label>
     <div class="btn-group">
@@ -243,7 +230,6 @@ html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
       <button class="toggle-btn" data-group="outcome" data-val="BE" onclick="sel(this,'purple')">BREAK EVEN</button>
     </div>
   </div>
-
   <div class="form-group">
     <label class="form-label">Regles Daily Cycle respectees ?</label>
     <div class="btn-group">
@@ -251,20 +237,16 @@ html{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
       <button class="toggle-btn" id="rulesNo" data-group="rules" data-val="no" onclick="sel(this,'red')">Hors plan</button>
     </div>
   </div>
-
   <div class="form-group">
     <label class="form-label">Setup - Pourquoi tu es entre ?</label>
-    <textarea class="form-input" id="fRaison" placeholder="Ex : CHOCH M15 haussier forme a 10h30 dans la box. Low casse a 13h10. Entree sur retest IFVG a 1.0845..."></textarea>
+    <textarea class="form-input" id="fRaison" placeholder="Ex : CHOCH M15 haussier forme a 10h30 dans la box..."></textarea>
   </div>
-
   <div class="form-group">
     <label class="form-label">Lecon du jour</label>
-    <textarea class="form-input" id="fLecon" placeholder="Ex : Trade valide, j'ai coupe a +8EUR par peur alors que le TP etait a +22EUR..."></textarea>
+    <textarea class="form-input" id="fLecon" placeholder="Ex : Trade valide, j'ai coupe a +8EUR par peur..."></textarea>
   </div>
-
-<button class="submit-btn" id="submitBtn" onclick="saveTrade()">ENREGISTRER LE TRADE</button>
-<button class="cancel-btn" id="cancelBtn" onclick="cancelEdit()" style="display:none">Annuler la modification</button>
-
+  <button class="submit-btn" id="submitBtn" onclick="saveTrade()">ENREGISTRER LE TRADE</button>
+  <button class="cancel-btn" id="cancelBtn" onclick="cancelEdit()" style="display:none">Annuler la modification</button>
   <div id="successMsg" class="success-msg" style="display:none">Trade enregistre avec succes !</div>
 </div>
 </div>
@@ -328,12 +310,7 @@ function saveConfig(){
 function sbFetch(path,opts){
   opts=opts||{};
   var url=SURL+'/rest/v1/'+path;
-  var headers={
-    'apikey':SKEY,
-    'Authorization':'Bearer '+SKEY,
-    'Content-Type':'application/json',
-    'Prefer':opts.prefer||'return=representation'
-  };
+  var headers={'apikey':SKEY,'Authorization':'Bearer '+SKEY,'Content-Type':'application/json','Prefer':opts.prefer||'return=representation'};
   return fetch(url,Object.assign({},opts,{headers:headers})).then(function(r){
     if(!r.ok)return r.text().then(function(t){throw new Error(t);});
     var ct=r.headers.get('content-type')||'';
@@ -342,7 +319,8 @@ function sbFetch(path,opts){
   });
 }
 
-function refreshApp(btn){
+function refreshApp(){
+  setSyncStatus('loading','Synchronisation...');
   sbFetch('trades?order=date.desc,heure.desc').then(function(data){
     trades=data||[];
     setSyncStatus('ok','Synchronise');
@@ -350,6 +328,7 @@ function refreshApp(btn){
     renderJournal();
   }).catch(function(e){
     setSyncStatus('err','Erreur connexion');
+    console.error(e);
   });
 }
 
@@ -358,7 +337,8 @@ function loadTrades(){
   sbFetch('trades?order=date.desc,heure.desc').then(function(data){
     trades=data||[];
     setSyncStatus('ok','Synchronise');
-    updateHeader();renderJournal();
+    updateHeader();
+    renderJournal();
   }).catch(function(e){
     setSyncStatus('err','Erreur connexion');
     console.error(e);
@@ -472,31 +452,13 @@ function saveTrade(){
   var rules=getVal('rules');
   if(!fdate||!biais||!session||!rules){alert('Remplis : date, biais, session et regles.');return;}
   var rr=calcRR();
-  var trade={
-    id:editId||Date.now(),
-    date:fdate,heure:document.getElementById('fHeure').value,
-    biais:biais,session:session,
-    direction:document.getElementById('fDirection').value,
-    entree:document.getElementById('fEntree').value||null,
-    sl:document.getElementById('fSL').value||null,
-    tp:document.getElementById('fTP').value||null,
-    rr:rr,
-    pl:parseFloat(document.getElementById('fPL').value)||0,
-    outcome:getVal('outcome')||'BE',
-    rules:rules,
-    raison:document.getElementById('fRaison').value,
-    lecon:document.getElementById('fLecon').value
-  };
+  var trade={id:editId||Date.now(),date:fdate,heure:document.getElementById('fHeure').value,biais:biais,session:session,direction:document.getElementById('fDirection').value,entree:document.getElementById('fEntree').value||null,sl:document.getElementById('fSL').value||null,tp:document.getElementById('fTP').value||null,rr:rr,pl:parseFloat(document.getElementById('fPL').value)||0,outcome:getVal('outcome')||'BE',rules:rules,raison:document.getElementById('fRaison').value,lecon:document.getElementById('fLecon').value};
   document.getElementById('submitBtn').textContent='Enregistrement...';
   setSyncStatus('loading','Sauvegarde...');
-  var p=editId?
-    sbFetch('trades?id=eq.'+editId,{method:'PATCH',body:JSON.stringify(trade)}):
-    sbFetch('trades',{method:'POST',body:JSON.stringify(trade)});
+  var p=editId?sbFetch('trades?id=eq.'+editId,{method:'PATCH',body:JSON.stringify(trade)}):sbFetch('trades',{method:'POST',body:JSON.stringify(trade)});
   p.then(function(){
     setSyncStatus('ok','Synchronise');
-    return loadTrades();
-  }).then(function(){
-    var oldEdit=editId;
+    loadTrades();
     resetForm();
     document.getElementById('successMsg').style.display='block';
     setTimeout(function(){document.getElementById('successMsg').style.display='none';},3000);
@@ -514,8 +476,7 @@ function closeConfirm(){deleteId=null;document.getElementById('confirmOverlay').
 function confirmDelete(){
   if(!deleteId)return;
   sbFetch('trades?id=eq.'+deleteId,{method:'DELETE',prefer:'return=minimal'}).then(function(){
-    closeConfirm();
-    loadTrades();
+    closeConfirm();loadTrades();
   }).catch(function(e){console.error(e);alert('Erreur suppression.');});
 }
 
@@ -548,29 +509,7 @@ function renderJournal(){
     var rc=t.rules==='yes'?'#00e5a0':'#ff4060';
     var dc=t.direction==='Long'?'#00e5a0':'#ff4060';
     var prices=[t.entree&&'Entree: '+t.entree,t.sl&&'SL: '+t.sl,t.tp&&'TP: '+t.tp].filter(Boolean).join(' . ');
-    return '<div class="trade-card">'+
-      '<div class="trade-card-top">'+
-        '<div>'+
-          '<span class="trade-date">'+t.date+'</span>'+
-          '<span class="trade-time">'+(t.heure||'')+'</span>'+
-          '<span class="trade-dir" style="color:'+dc+'">'+t.direction+'</span>'+
-        '</div>'+
-        '<span class="trade-pl" style="color:'+cpl(pl)+'">'+plStr+'</span>'+
-      '</div>'+
-      '<div class="badges">'+
-        '<span class="badge" style="color:'+bc+';border-color:'+bc+';background:'+bc+'18;">'+(bL[t.biais]||t.biais)+'</span>'+
-        '<span class="badge" style="color:'+oc+';border-color:'+oc+';background:'+oc+'18;">'+(oL[t.outcome]||t.outcome)+'</span>'+
-        '<span class="badge" style="color:'+rc+';border-color:'+rc+';background:'+rc+'18;">'+(t.rules==='yes'?'Dans le plan':'Hors plan')+'</span>'+
-        (t.rr&&t.rr!=='-'?'<span class="badge" style="color:#00d4ff;border-color:#00d4ff;background:#00d4ff18;">RR 1:'+t.rr+'</span>':'')+
-      '</div>'+
-      (prices?'<div class="trade-prices">'+prices+'</div>':'')+
-      (t.raison?'<div class="trade-setup">'+t.raison+'</div>':'')+
-      (t.lecon?'<div class="trade-lecon">'+t.lecon+'</div>':'')+
-      '<div class="trade-actions">'+
-        '<button class="btn-edit" onclick="editTrade('+t.id+')">MODIFIER</button>'+
-        '<button class="btn-del" onclick="askDelete('+t.id+')">SUPPRIMER</button>'+
-      '</div>'+
-    '</div>';
+    return '<div class="trade-card"><div class="trade-card-top"><div><span class="trade-date">'+t.date+'</span><span class="trade-time">'+(t.heure||'')+'</span><span class="trade-dir" style="color:'+dc+'">'+t.direction+'</span></div><span class="trade-pl" style="color:'+cpl(pl)+'">'+plStr+'</span></div><div class="badges"><span class="badge" style="color:'+bc+';border-color:'+bc+';background:'+bc+'18;">'+(bL[t.biais]||t.biais)+'</span><span class="badge" style="color:'+oc+';border-color:'+oc+';background:'+oc+'18;">'+(oL[t.outcome]||t.outcome)+'</span><span class="badge" style="color:'+rc+';border-color:'+rc+';background:'+rc+'18;">'+(t.rules==='yes'?'Dans le plan':'Hors plan')+'</span>'+(t.rr&&t.rr!=='-'?'<span class="badge" style="color:#00d4ff;border-color:#00d4ff;background:#00d4ff18;">RR 1:'+t.rr+'</span>':'')+'</div>'+(prices?'<div class="trade-prices">'+prices+'</div>':'')+(t.raison?'<div class="trade-setup">'+t.raison+'</div>':'')+(t.lecon?'<div class="trade-lecon">'+t.lecon+'</div>':'')+'<div class="trade-actions"><button class="btn-edit" onclick="editTrade('+t.id+')">MODIFIER</button><button class="btn-del" onclick="askDelete('+t.id+')">SUPPRIMER</button></div></div>';
   }).join('');
 }
 
@@ -592,19 +531,7 @@ function renderStats(){
   if(rok<n)insight+=' | Plan '+Math.round(rok/n*100)+'% - Dans le plan: '+(plR>=0?'+':'')+plR.toFixed(2)+'EUR vs Hors plan: '+(plN>=0?'+':'')+plN.toFixed(2)+'EUR';
   var wrc=wr>=50?'#00e5a0':'#ff4060';
   var rc=rok/n*100>=70?'#00e5a0':rok/n*100>=50?'#ffd060':'#ff4060';
-  el.innerHTML=
-    '<div class="kpi-grid">'+
-      '<div class="kpi-card" style="border-top-color:#00d4ff"><div class="kpi-card-label">Trades totaux</div><div class="kpi-card-val" style="color:#00d4ff">'+n+'</div><div class="kpi-card-sub">'+wins+'W . '+losses+'L . '+bes+'BE</div></div>'+
-      '<div class="kpi-card" style="border-top-color:'+wrc+'"><div class="kpi-card-label">Win Rate</div><div class="kpi-card-val" style="color:'+wrc+'">'+wr+'%</div><div class="kpi-card-sub">'+wins+' / '+n+' trades</div></div>'+
-      '<div class="kpi-card" style="border-top-color:'+cpl(pl)+'"><div class="kpi-card-label">P&amp;L Net</div><div class="kpi-card-val" style="color:'+cpl(pl)+'">'+(pl>=0?'+':'')+pl.toFixed(2)+'EUR</div><div class="kpi-card-sub">Plan: '+(plR>=0?'+':'')+plR.toFixed(2)+' . Hors: '+(plN>=0?'+':'')+plN.toFixed(2)+'</div></div>'+
-      '<div class="kpi-card" style="border-top-color:'+rc+'"><div class="kpi-card-label">Dans le plan</div><div class="kpi-card-val" style="color:'+rc+'">'+Math.round(rok/n*100)+'%</div><div class="kpi-card-sub">'+rok+' / '+n+' trades</div></div>'+
-    '</div>'+
-    '<div class="insight">'+insight+'</div>'+
-    '<div class="chart-card"><div class="chart-title">Courbe de capital (EUR)</div><canvas id="cEq" height="140"></canvas></div>'+
-    '<div class="chart-card"><div class="chart-title">Win / Loss / Break Even</div><canvas id="cOut" height="180"></canvas></div>'+
-    '<div class="chart-card"><div class="chart-title">P&amp;L par session</div><canvas id="cSess" height="140"></canvas></div>'+
-    '<div class="chart-card"><div class="chart-title">Dans le plan vs Hors plan</div><canvas id="cRules" height="140"></canvas></div>';
-
+  el.innerHTML='<div class="kpi-grid"><div class="kpi-card" style="border-top-color:#00d4ff"><div class="kpi-card-label">Trades totaux</div><div class="kpi-card-val" style="color:#00d4ff">'+n+'</div><div class="kpi-card-sub">'+wins+'W . '+losses+'L . '+bes+'BE</div></div><div class="kpi-card" style="border-top-color:'+wrc+'"><div class="kpi-card-label">Win Rate</div><div class="kpi-card-val" style="color:'+wrc+'">'+wr+'%</div><div class="kpi-card-sub">'+wins+' / '+n+' trades</div></div><div class="kpi-card" style="border-top-color:'+cpl(pl)+'"><div class="kpi-card-label">P&amp;L Net</div><div class="kpi-card-val" style="color:'+cpl(pl)+'">'+(pl>=0?'+':'')+pl.toFixed(2)+'EUR</div><div class="kpi-card-sub">Plan: '+(plR>=0?'+':'')+plR.toFixed(2)+' . Hors: '+(plN>=0?'+':'')+plN.toFixed(2)+'</div></div><div class="kpi-card" style="border-top-color:'+rc+'"><div class="kpi-card-label">Dans le plan</div><div class="kpi-card-val" style="color:'+rc+'">'+Math.round(rok/n*100)+'%</div><div class="kpi-card-sub">'+rok+' / '+n+' trades</div></div></div><div class="insight">'+insight+'</div><div class="chart-card"><div class="chart-title">Courbe de capital (EUR)</div><canvas id="cEq" height="140"></canvas></div><div class="chart-card"><div class="chart-title">Win / Loss / Break Even</div><canvas id="cOut" height="180"></canvas></div><div class="chart-card"><div class="chart-title">P&amp;L par session</div><canvas id="cSess" height="140"></canvas></div><div class="chart-card"><div class="chart-title">Dans le plan vs Hors plan</div><canvas id="cRules" height="140"></canvas></div>';
   setTimeout(function(){
     var sorted=[].concat(trades).sort(function(a,b){return (a.date+a.heure)>(b.date+b.heure)?1:-1;});
     var cum=0;
@@ -614,40 +541,17 @@ function renderStats(){
     var gridC='#1a2840';var tickC='#4a6880';
     var xAxis={ticks:{color:tickC,font:{size:11}},grid:{color:gridC}};
     var yAxis={ticks:{color:tickC,font:{size:11},callback:function(v){return v+'EUR';}},grid:{color:gridC}};
-
     dChart('cEq');
-    charts.cEq=new Chart(document.getElementById('cEq'),{
-      type:'line',
-      data:{labels:labels,datasets:[{data:equity,borderColor:ec,borderWidth:2.5,pointBackgroundColor:ec,pointRadius:4,fill:true,backgroundColor:ec+'18',tension:0.3}]},
-      options:{plugins:{legend:{display:false}},scales:{x:xAxis,y:yAxis}}
-    });
-
+    charts.cEq=new Chart(document.getElementById('cEq'),{type:'line',data:{labels:labels,datasets:[{data:equity,borderColor:ec,borderWidth:2.5,pointBackgroundColor:ec,pointRadius:4,fill:true,backgroundColor:ec+'18',tension:0.3}]},options:{plugins:{legend:{display:false}},scales:{x:xAxis,y:yAxis}}});
     dChart('cOut');
-    charts.cOut=new Chart(document.getElementById('cOut'),{
-      type:'doughnut',
-      data:{labels:['Win','Loss','Break Even'],datasets:[{data:[wins,losses,bes],backgroundColor:['#00e5a0','#ff4060','#a060ff'],borderColor:'#0d1520',borderWidth:3}]},
-      options:{plugins:{legend:{labels:{color:'#d8eaff',font:{size:13}}}},cutout:'60%'}
-    });
-
+    charts.cOut=new Chart(document.getElementById('cOut'),{type:'doughnut',data:{labels:['Win','Loss','Break Even'],datasets:[{data:[wins,losses,bes],backgroundColor:['#00e5a0','#ff4060','#a060ff'],borderColor:'#0d1520',borderWidth:3}]},options:{plugins:{legend:{labels:{color:'#d8eaff',font:{size:13}}}},cutout:'60%'}});
     var sessions={};
-    trades.forEach(function(t){
-      var key=t.session&&t.session.indexOf('13h')>=0?'NY 13h-17h':t.session&&t.session.indexOf('17h+')>=0?'Fin 17h+':'Avant 13h';
-      sessions[key]=(sessions[key]||0)+(parseFloat(t.pl)||0);
-    });
+    trades.forEach(function(t){var key=t.session&&t.session.indexOf('13h')>=0?'NY 13h-17h':t.session&&t.session.indexOf('17h+')>=0?'Fin 17h+':'Avant 13h';sessions[key]=(sessions[key]||0)+(parseFloat(t.pl)||0);});
     var sk=Object.keys(sessions);var sv=Object.values(sessions);
     dChart('cSess');
-    charts.cSess=new Chart(document.getElementById('cSess'),{
-      type:'bar',
-      data:{labels:sk,datasets:[{data:sv,backgroundColor:sv.map(function(v){return v>=0?'#00e5a0':'#ff4060';}),borderRadius:6}]},
-      options:{plugins:{legend:{display:false}},scales:{x:xAxis,y:yAxis}}
-    });
-
+    charts.cSess=new Chart(document.getElementById('cSess'),{type:'bar',data:{labels:sk,datasets:[{data:sv,backgroundColor:sv.map(function(v){return v>=0?'#00e5a0':'#ff4060';}),borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xAxis,y:yAxis}}});
     dChart('cRules');
-    charts.cRules=new Chart(document.getElementById('cRules'),{
-      type:'bar',
-      data:{labels:['Dans le plan','Hors plan'],datasets:[{data:[plR,plN],backgroundColor:[plR>=0?'#00e5a0':'#ff4060',plN>=0?'#00e5a0':'#ff4060'],borderRadius:6}]},
-      options:{plugins:{legend:{display:false}},scales:{x:xAxis,y:yAxis}}
-    });
+    charts.cRules=new Chart(document.getElementById('cRules'),{type:'bar',data:{labels:['Dans le plan','Hors plan'],datasets:[{data:[plR,plN],backgroundColor:[plR>=0?'#00e5a0':'#ff4060',plN>=0?'#00e5a0':'#ff4060'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xAxis,y:yAxis}}});
   },50);
 }
 </script>
