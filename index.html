@@ -202,14 +202,14 @@ select.form-input option{background:#111a24;color:#d8eaff;}
     <div class="form-group"><label class="form-label">Stop Loss</label><input type="number" step="0.00001" class="form-input" id="fSL" placeholder="1.08300" oninput="calcRR()"></div>
     <div class="form-group"><label class="form-label">Take Profit</label><input type="number" step="0.00001" class="form-input" id="fTP" placeholder="1.09000" oninput="calcRR()"></div>
     <div class="form-group"><label class="form-label">Resultat (EUR)</label><input type="number" step="0.01" class="form-input" id="fPL" placeholder="12.50"></div>
-    <div class="form-group"><label class="form-label">Commission (EUR) - saisir positif</label><input type="number" step="0.01" class="form-input" id="fCommission" placeholder="0.06" min="0"></div>
-    <div class="form-group"><label class="form-label">Echange/Swap (EUR) - saisir positif</label><input type="number" step="0.01" class="form-input" id="fSwap" placeholder="0.02" min="0"></div>
+    <div class="form-group"><label class="form-label">Commission (EUR)</label><input type="number" step="0.01" class="form-input" id="fCommission" placeholder="0.06" min="0"></div>
+    <div class="form-group"><label class="form-label">Echange/Swap (EUR)</label><input type="number" step="0.01" class="form-input" id="fSwap" placeholder="0.02" min="0"></div>
   </div>
   <div class="form-group">
     <label class="form-label">Outcome</label>
     <div class="btn-group">
       <button class="toggle-btn" data-group="outcome" data-val="Win" onclick="sel(this,'green')">WIN</button>
-      <button class="toggle-btn" data-group="outcome" data-val="Loss" onclick="sel(this,'red')">LOSS</button>
+      <button class="toggle-btn" data-group="outcome" data-val="Loss" onclick="sel(this,'red');setLoss()">LOSS</button>
       <button class="toggle-btn" data-group="outcome" data-val="BE" onclick="sel(this,'purple')">BREAK EVEN</button>
     </div>
   </div>
@@ -409,6 +409,12 @@ function sel(btn,color){
 function getVal(group){
   var a=document.querySelector('[data-group="'+group+'"].act-green,[data-group="'+group+'"].act-red,[data-group="'+group+'"].act-yellow,[data-group="'+group+'"].act-purple');
   return a?a.dataset.val:'';
+}
+
+function setLoss(){
+  var pl=document.getElementById('fPL');
+  var v=parseFloat(pl.value);
+  if(v>0)pl.value=-v;
 }
 
 function setRulesNo(){
