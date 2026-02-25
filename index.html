@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 
 <html lang="fr">
@@ -202,8 +201,9 @@ select.form-input option{background:#111a24;color:#d8eaff;}
   <div class="form-row3">
     <div class="form-group"><label class="form-label">Stop Loss</label><input type="number" step="0.00001" class="form-input" id="fSL" placeholder="1.08300" oninput="calcRR()"></div>
     <div class="form-group"><label class="form-label">Take Profit</label><input type="number" step="0.00001" class="form-input" id="fTP" placeholder="1.09000" oninput="calcRR()"></div>
-    <div class="form-group"><label class="form-label">Resultat (EUR)</label><input type="number" step="0.01" class="form-input" id="fPL" placeholder="+12.50"></div>
-    <div class="form-group"><label class="form-label">Commission (EUR)</label><input type="number" step="0.01" class="form-input" id="fCommission" placeholder="-3.50"></div>
+    <div class="form-group"><label class="form-label">Resultat (EUR)</label><input type="number" step="0.01" class="form-input" id="fPL" placeholder="12.50"></div>
+    <div class="form-group"><label class="form-label">Commission (EUR) - saisir positif</label><input type="number" step="0.01" class="form-input" id="fCommission" placeholder="0.06" min="0"></div>
+    <div class="form-group"><label class="form-label">Echange/Swap (EUR) - saisir positif</label><input type="number" step="0.01" class="form-input" id="fSwap" placeholder="0.02" min="0"></div>
   </div>
   <div class="form-group">
     <label class="form-label">Outcome</label>
@@ -436,7 +436,7 @@ function resetForm(){
   document.getElementById('fDate').value=new Date().toISOString().split('T')[0];
   document.getElementById('fHeure').value='';document.getElementById('fEntree').value='';
   document.getElementById('fSL').value='';document.getElementById('fTP').value='';
-  document.getElementById('fPL').value='';document.getElementById('fCommission').value='';document.getElementById('fRaison').value='';
+  document.getElementById('fPL').value='';document.getElementById('fCommission').value='';document.getElementById('fSwap').value='';document.getElementById('fRaison').value='';
   document.getElementById('fLecon').value='';document.getElementById('fDirection').value='Long';
   document.querySelectorAll('.toggle-btn').forEach(function(b){b.className='toggle-btn';});
   calcRR();
@@ -458,7 +458,8 @@ function editTrade(id){
   document.getElementById('fSL').value=t.sl||'';
   document.getElementById('fTP').value=t.tp||'';
   document.getElementById('fPL').value=t.pl||'';
-  document.getElementById('fCommission').value=t.commission||'';
+  document.getElementById('fCommission').value=t.commission?Math.abs(t.commission):'';
+  document.getElementById('fSwap').value=t.swap?Math.abs(t.swap):'';
   document.getElementById('fRaison').value=t.raison||'';
   document.getElementById('fLecon').value=t.lecon||'';
   document.getElementById('fDirection').value=t.direction||'Long';
@@ -482,7 +483,13 @@ function saveTrade(){
   var biais=getVal('biais');var session=getVal('session');var rules=getVal('rules');
   if(!fdate||!biais||!session||!rules){alert('Remplis : date, biais, session et regles.');return;}
   var rr=calcRR();
-  var trade={id:editId||Date.now(),date:fdate,heure:document.getElementById('fHeure').value,biais:biais,session:session,direction:document.getElementById('fDirection').value,entree:document.getElementById('fEntree').value||null,sl:document.getElementById('fSL').value||null,tp:document.getElementById('fTP').value||null,rr:rr,pl:parseFloat(document.getElementById('fPL').value)||0,commission:parseFloat(document.getElementById('fCommission').value)||0,outcome:getVal('outcome')||'BE',rules:rules,raison:document.getElementById('fRaison').value,lecon:document.getElementById('fLecon').value};
+  var rawPL=parseFloat(document.getElementById('fPL').value)||0;
+  var rawComm=parseFloat(document.getElementById('fCommission').value)||0;
+  var rawSwap=parseFloat(document.getElementById('fSwap').value)||0;
+  var rawSL=parseFloat(document.getElementById('fSL').value)||0;
+  var rawTP=parseFloat(document.getElementById('fTP').value)||0;
+  var rawEntree=parseFloat(document.getElementById('fEntree').value)||0;
+  var trade={id:editId||Date.now(),date:fdate,heure:document.getElementById('fHeure').value,biais:biais,session:session,direction:document.getElementById('fDirection').value,entree:rawEntree||null,sl:rawSL?-Math.abs(rawSL):null,tp:rawTP||null,rr:rr,pl:rawPL,commission:rawComm?-Math.abs(rawComm):0,swap:rawSwap?-Math.abs(rawSwap):0,outcome:getVal('outcome')||'BE',rules:rules,raison:document.getElementById('fRaison').value,lecon:document.getElementById('fLecon').value};
   document.getElementById('submitBtn').textContent='Enregistrement...';
   setSyncStatus('loading','Sauvegarde...');
   var p=editId?sbFetch('trades?id=eq.'+editId,{method:'PATCH',body:JSON.stringify(trade)}):sbFetch('trades',{method:'POST',body:JSON.stringify(trade)});
@@ -556,7 +563,7 @@ function updateHeader(){
   var n=trades.length;
   var wins=trades.filter(function(t){return t.outcome==='Win';}).length;
   var wr=n?Math.round(wins/n*100):0;
-  var pl=trades.reduce(function(s,t){return s+(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0);},0);
+  var pl=trades.reduce(function(s,t){return s+(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0)+(parseFloat(t.swap)||0);},0);
   var capital=parseFloat(localStorage.getItem('sb_capital')||0);
   var capitalActuel=capital+pl;
   document.getElementById('hdrTrades').textContent=n;
@@ -598,13 +605,14 @@ function renderJournal(){
   el.innerHTML=filtered.map(function(t){
     var pl=parseFloat(t.pl)||0;
     var comm=parseFloat(t.commission)||0;
-    var plNet=pl+comm;
+    var swap=parseFloat(t.swap)||0;
+    var plNet=pl+comm+swap;
     var plStr=(plNet>=0?'+':'')+plNet.toFixed(2)+'EUR';
-    var commStr=comm!==0?(' | Comm: '+(comm>=0?'+':'')+comm.toFixed(2)+'EUR'):'';
+    var fraisStr=(comm!==0||swap!==0)?' | Frais: '+(comm+swap).toFixed(2)+'EUR':'';
     var bc=bC[t.biais]||'#6080a0';var oc=oC[t.outcome]||'#6080a0';
     var rc=t.rules==='yes'?'#00e5a0':'#ff4060';var dc=t.direction==='Long'?'#00e5a0':'#ff4060';
     var prices=[t.entree&&'Entree: '+t.entree,t.sl&&'SL: '+t.sl,t.tp&&'TP: '+t.tp].filter(Boolean).join(' . ');
-    return '<div class="trade-card"><div class="trade-card-top"><div><span class="trade-date">'+t.date+'</span><span class="trade-time">'+(t.heure||'')+'</span><span class="trade-dir" style="color:'+dc+'">'+t.direction+'</span></div><span class="trade-pl" style="color:'+cpl(plNet)+'">'+plStr+'</span></div><div class="badges"><span class="badge" style="color:'+bc+';border-color:'+bc+';background:'+bc+'18;">'+(bL[t.biais]||t.biais)+'</span><span class="badge" style="color:'+oc+';border-color:'+oc+';background:'+oc+'18;">'+(oL[t.outcome]||t.outcome)+'</span><span class="badge" style="color:'+rc+';border-color:'+rc+';background:'+rc+'18;">'+(t.rules==='yes'?'Dans le plan':'Hors plan')+'</span>'+(t.rr&&t.rr!=='-'?'<span class="badge" style="color:#00d4ff;border-color:#00d4ff;background:#00d4ff18;">RR 1:'+t.rr+'</span>':'')+'</div>'+(prices?'<div class="trade-prices">'+prices+commStr+'</div>':'')+(t.raison?'<div class="trade-setup">'+t.raison+'</div>':'')+(t.lecon?'<div class="trade-lecon">'+t.lecon+'</div>':'')+'<div class="trade-actions"><button class="btn-edit" onclick="editTrade('+t.id+')">MODIFIER</button><button class="btn-del" onclick="askDelete('+t.id+')">SUPPRIMER</button></div></div>';
+    return '<div class="trade-card"><div class="trade-card-top"><div><span class="trade-date">'+t.date+'</span><span class="trade-time">'+(t.heure||'')+'</span><span class="trade-dir" style="color:'+dc+'">'+t.direction+'</span></div><span class="trade-pl" style="color:'+cpl(plNet)+'">'+plStr+'</span></div><div class="badges"><span class="badge" style="color:'+bc+';border-color:'+bc+';background:'+bc+'18;">'+(bL[t.biais]||t.biais)+'</span><span class="badge" style="color:'+oc+';border-color:'+oc+';background:'+oc+'18;">'+(oL[t.outcome]||t.outcome)+'</span><span class="badge" style="color:'+rc+';border-color:'+rc+';background:'+rc+'18;">'+(t.rules==='yes'?'Dans le plan':'Hors plan')+'</span>'+(t.rr&&t.rr!=='-'?'<span class="badge" style="color:#00d4ff;border-color:#00d4ff;background:#00d4ff18;">RR 1:'+t.rr+'</span>':'')+'</div>'+(prices?'<div class="trade-prices">'+prices+fraisStr+'</div>':'')+(t.raison?'<div class="trade-setup">'+t.raison+'</div>':'')+(t.lecon?'<div class="trade-lecon">'+t.lecon+'</div>':'')+'<div class="trade-actions"><button class="btn-edit" onclick="editTrade('+t.id+')">MODIFIER</button><button class="btn-del" onclick="askDelete('+t.id+')">SUPPRIMER</button></div></div>';
   }).join('');
 }
 
@@ -651,10 +659,10 @@ function renderStats(){
   var losses=trades.filter(function(t){return t.outcome==='Loss';}).length;
   var bes=trades.filter(function(t){return t.outcome==='BE';}).length;
   var wr=Math.round(wins/n*100);
-  var pl=trades.reduce(function(s,t){return s+(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0);},0);
-  var totalComm=trades.reduce(function(s,t){return s+(parseFloat(t.commission)||0);},0);
-  var plR=trades.filter(function(t){return t.rules==='yes';}).reduce(function(s,t){return s+(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0);},0);
-  var plN=trades.filter(function(t){return t.rules==='no';}).reduce(function(s,t){return s+(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0);},0);
+  var pl=trades.reduce(function(s,t){return s+(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0)+(parseFloat(t.swap)||0);},0);
+  var totalComm=trades.reduce(function(s,t){return s+(parseFloat(t.commission)||0)+(parseFloat(t.swap)||0);},0);
+  var plR=trades.filter(function(t){return t.rules==='yes';}).reduce(function(s,t){return s+(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0)+(parseFloat(t.swap)||0);},0);
+  var plN=trades.filter(function(t){return t.rules==='no';}).reduce(function(s,t){return s+(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0)+(parseFloat(t.swap)||0);},0);
   var rok=trades.filter(function(t){return t.rules==='yes';}).length;
   var pf=calcProfitFactor();
   var pfNum=parseFloat(pf);
@@ -681,7 +689,7 @@ function renderStats(){
       '<div class="kpi-card" style="border-top-color:#00d4ff"><div class="kpi-card-label">Trades totaux</div><div class="kpi-card-val" style="color:#00d4ff">'+n+'</div><div class="kpi-card-sub">'+wins+'W . '+losses+'L . '+bes+'BE</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+wrc+'"><div class="kpi-card-label">Win Rate</div><div class="kpi-card-val" style="color:'+wrc+'">'+wr+'%</div><div class="kpi-card-sub">'+wins+' / '+n+' trades</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+cpl(pl)+'"><div class="kpi-card-label">P&amp;L Net</div><div class="kpi-card-val" style="color:'+cpl(pl)+'">'+(pl>=0?'+':'')+pl.toFixed(2)+'EUR</div><div class="kpi-card-sub">Plan: '+(plR>=0?'+':'')+plR.toFixed(2)+' . Hors: '+(plN>=0?'+':'')+plN.toFixed(2)+'</div></div>'+
-      '<div class="kpi-card" style="border-top-color:#ff4060"><div class="kpi-card-label">Commissions totales</div><div class="kpi-card-val" style="color:#ff4060">'+(totalComm>=0?'+':'')+totalComm.toFixed(2)+'EUR</div><div class="kpi-card-sub">Moyenne: '+(trades.length?(totalComm/trades.length).toFixed(2):0)+'EUR/trade</div></div>'+
+      '<div class="kpi-card" style="border-top-color:#ff4060"><div class="kpi-card-label">Frais totaux (comm + swap)</div><div class="kpi-card-val" style="color:#ff4060">'+(totalComm>=0?'+':'')+totalComm.toFixed(2)+'EUR</div><div class="kpi-card-sub">Moyenne: '+(trades.length?(totalComm/trades.length).toFixed(2):0)+'EUR/trade</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+rc+'"><div class="kpi-card-label">Dans le plan</div><div class="kpi-card-val" style="color:'+rc+'">'+Math.round(rok/n*100)+'%</div><div class="kpi-card-sub">'+rok+' / '+n+' trades</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+pfColor+'"><div class="kpi-card-label">Profit Factor</div><div class="kpi-card-val" style="color:'+pfColor+'">'+pf+'</div><div class="kpi-card-sub">Gains / Pertes brutes</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+otColor+'"><div class="kpi-card-label">Trades semaine</div><div class="kpi-card-val" style="color:'+otColor+'">'+weekCount+'</div><div class="kpi-card-sub">Limite : '+OVERTRADING_LIMIT+' trades</div></div>'+
@@ -701,7 +709,7 @@ function renderStats(){
     var sorted=[].concat(trades).sort(function(a,b){return (a.date+a.heure)>(b.date+b.heure)?1:-1;});
     var capital=parseFloat(localStorage.getItem('sb_capital')||0);
     var cum=capital;
-    var equity=sorted.map(function(t){cum+=(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0);return parseFloat(cum.toFixed(2));});
+    var equity=sorted.map(function(t){cum+=(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0)+(parseFloat(t.swap)||0);return parseFloat(cum.toFixed(2));});
     if(capital>0)equity.unshift(capital);
     var labels=sorted.map(function(t){return t.date.slice(5);});
     var ec=pl>=0?'#00e5a0':'#ff4060';
