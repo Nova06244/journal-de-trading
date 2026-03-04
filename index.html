@@ -240,7 +240,8 @@ select option{background:#111a24;color:#d8eaff;}
     <span class="timing-label">TIMING :</span>
     <span class="timing-badge timing-8">8H–9H · Biais M15</span>
     <span class="timing-badge timing-9">9H–10H · Entrée M5</span>
-    <span class="timing-badge timing-9">CHoCH M15 · OB/IFVG</span>
+    <span class="timing-badge timing-8">CHoCH M15</span>
+    <span class="timing-badge timing-9">OB / IFVG</span>
   </div>
 
   <!-- DATE / HEURE -->
@@ -271,9 +272,9 @@ select option{background:#111a24;color:#d8eaff;}
   <div class="form-group">
     <label class="form-label">Biais M15 — 8H à 9H</label>
     <div class="btn-group">
-      <button class="toggle-btn" data-group="biais" data-val="bullish" onclick="sel(this,'green')">▲ Haussier</button>
-      <button class="toggle-btn" data-group="biais" data-val="bearish" onclick="sel(this,'red')">▼ Baissier</button>
-      <button class="toggle-btn" data-group="biais" data-val="neutral" onclick="sel(this,'yellow')">— Indécis</button>
+      <button class="toggle-btn" data-group="biais" data-val="bullish" onclick="sel(this,'green');autoSetup()">▲ Haussier</button>
+      <button class="toggle-btn" data-group="biais" data-val="bearish" onclick="sel(this,'red');autoSetup()">▼ Baissier</button>
+      <button class="toggle-btn" data-group="biais" data-val="neutral" onclick="sel(this,'yellow');autoSetup()">— Indécis</button>
     </div>
   </div>
 
@@ -281,8 +282,8 @@ select option{background:#111a24;color:#d8eaff;}
   <div class="form-group">
     <label class="form-label">Type de setup — 9H à 10H</label>
     <div class="btn-group">
-      <button class="toggle-btn" data-group="setuptype" data-val="REVERSAL" onclick="sel(this,'red')">🔴 REVERSAL</button>
-      <button class="toggle-btn" data-group="setuptype" data-val="CONTINUATION" onclick="sel(this,'green')">🟢 CONTINUATION</button>
+      <button class="toggle-btn" data-group="setuptype" data-val="REVERSAL" onclick="sel(this,'red');autoSetup()">🔴 REVERSAL</button>
+      <button class="toggle-btn" data-group="setuptype" data-val="CONTINUATION" onclick="sel(this,'green');autoSetup()">🟢 CONTINUATION</button>
     </div>
   </div>
 
@@ -290,11 +291,11 @@ select option{background:#111a24;color:#d8eaff;}
   <div class="form-group">
     <label class="form-label">Signal de déclenchement M5</label>
     <div class="btn-group">
-      <button class="toggle-btn" data-group="signal" data-val="IFVG-" onclick="sel(this,'red')">IFVG− M5</button>
-      <button class="toggle-btn" data-group="signal" data-val="IFVG+" onclick="sel(this,'green')">IFVG+ M5</button>
-      <button class="toggle-btn" data-group="signal" data-val="OB- M5" onclick="sel(this,'red')">OB− M5</button>
-      <button class="toggle-btn" data-group="signal" data-val="OB+ M5" onclick="sel(this,'green')">OB+ M5</button>
-      <button class="toggle-btn" data-group="signal" data-val="CHoCH M15" onclick="sel(this,'orange')">CHoCH M15</button>
+      <button class="toggle-btn" data-group="signal" data-val="IFVG-" onclick="sel(this,'red');autoSetup()">IFVG− M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="IFVG+" onclick="sel(this,'green');autoSetup()">IFVG+ M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="OB- M5" onclick="sel(this,'red');autoSetup()">OB− M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="OB+ M5" onclick="sel(this,'green');autoSetup()">OB+ M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="CHoCH M15" onclick="sel(this,'orange');autoSetup()">CHoCH M15</button>
     </div>
   </div>
 
@@ -378,10 +379,11 @@ select option{background:#111a24;color:#d8eaff;}
     </div>
   </div>
 
-  <!-- SETUP NOTES -->
+  <!-- SETUP AUTO -->
   <div class="form-group">
-    <label class="form-label">Setup — Pourquoi tu es entré ? (structure M15 + signal M5)</label>
-    <textarea class="form-input" id="fRaison" placeholder="Ex : Sweep BSL 1.16257 à 9H · IFVG− M5 breaké · Entrée clôture bougie short..."></textarea>
+    <label class="form-label">Setup — généré automatiquement</label>
+    <textarea class="form-input" id="fRaison" placeholder="Se remplit automatiquement..." style="color:var(--accent);font-size:13px;" readonly></textarea>
+    <div style="font-size:10px;color:var(--muted);margin-top:4px;">Complète manuellement si besoin — clique pour éditer</div>
   </div>
 
   <!-- LECON -->
@@ -443,6 +445,9 @@ var OVERTRADING_LIMIT=5; // Max 1 trade/jour = 5/semaine
 window.addEventListener('load',function(){
   document.getElementById('fDate').value=new Date().toISOString().split('T')[0];
   document.getElementById('fCommission').value='0.06';
+  // Textarea éditable manuellement au clic
+  var ta=document.getElementById('fRaison');
+  ta.addEventListener('focus',function(){ta.removeAttribute('readonly');ta.dataset.manualEdit='1';});
   SURL=localStorage.getItem('sb_url')||'';
   SKEY=localStorage.getItem('sb_key')||'';
   if(!SURL||!SKEY){document.getElementById('configScreen').style.display='flex';return;}
@@ -563,6 +568,7 @@ function selLiq(btn){
     if(selectedLiq.indexOf(liq)<0)selectedLiq.push(liq);
   }
   updateLiqSummary();
+  autoSetup();
 }
 
 function updateLiqSummary(){
@@ -585,6 +591,37 @@ function resetLiq(){
   updateLiqSummary();
 }
 
+function autoSetup(){
+  var biais=getVal('biais');
+  var setuptype=getVal('setuptype');
+  var signal=getVal('signal');
+  var dir=document.getElementById('fDirection').value;
+  var entree=document.getElementById('fEntree').value;
+  var heure=document.getElementById('fHeure').value;
+
+  var liqLabels={
+    'asl':'ASL','ash':'ASH','pdl':'PDL','pdh':'PDH',
+    'swing-low':'Swing Low','swing-high':'Swing High',
+    'asl-ash-break':'Break ASL/ASH','asl-ash-sweep':'Sweep ASL/ASH',
+    'pdl-pdh-break':'Break PDL/PDH','pdl-pdh-sweep':'Sweep PDL/PDH',
+    'swing-break':'Break Swing','swing-sweep':'Sweep Swing'
+  };
+  var biaisLabel={bullish:'Haussier ▲',bearish:'Baissier ▼',neutral:'Indécis'};
+
+  var parts=[];
+  if(biais)parts.push('Biais M15 : '+( biaisLabel[biais]||biais));
+  if(selectedLiq.length)parts.push('Liquidité : '+selectedLiq.map(function(k){return liqLabels[k]||k;}).join(' + '));
+  if(setuptype)parts.push('Setup : '+setuptype);
+  if(signal)parts.push('Signal : '+signal+' breaké');
+  if(dir&&entree)parts.push('Entrée '+dir+' @ '+parseFloat(entree).toFixed(5));
+  if(heure)parts.push('Clôture bougie '+heure);
+
+  var ta=document.getElementById('fRaison');
+  if(!ta.dataset.manualEdit){
+    ta.value=parts.join('\n');
+  }
+}
+
 function setLoss(){var pl=document.getElementById('fPL');var v=parseFloat(pl.value);if(v>0)pl.value=-v;}
 
 function autoSlTp(){
@@ -602,11 +639,15 @@ function autoSlTp(){
   }
   document.getElementById('fSL').value=sl;
   document.getElementById('fTP').value=tp;
+  autoSetup();
 }
 
 function resetForm(){
   document.getElementById('fDate').value=new Date().toISOString().split('T')[0];
   ['fHeure','fEntree','fSL','fTP','fPL','fSwap','fRaison','fLecon'].forEach(function(id){document.getElementById(id).value='';});
+  var ta=document.getElementById('fRaison');
+  ta.setAttribute('readonly','');
+  delete ta.dataset.manualEdit;
   document.getElementById('fCommission').value='0.06';
   document.getElementById('fDirection').value='Long';
   document.querySelectorAll('.toggle-btn').forEach(function(b){b.className='toggle-btn';});
