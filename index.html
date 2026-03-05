@@ -92,7 +92,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font
 .fixed-box-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
 
 .rr-display{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:11px 14px;font-size:15px;color:var(--muted);min-height:44px;display:flex;align-items:center;}
-textarea.form-input{min-height:70px;resize:none;}
+textarea.form-input{min-height:70px;resize:none;overflow:hidden;}
 .submit-btn{width:100%;padding:15px;background:var(--accent);color:#000;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:10px;letter-spacing:0.5px;}
 .submit-btn:active{background:#33ddff;}
 .cancel-btn{width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:10px;font-family:'DM Mono',monospace;font-size:13px;cursor:pointer;margin-top:8px;}
@@ -161,8 +161,8 @@ textarea.form-input{min-height:70px;resize:none;}
 .liq-row:last-child{border-bottom:none;}
 .liq-rowlabel{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:1px;}
 .liq-btn{width:100%;padding:7px 4px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all 0.15s;letter-spacing:0.5px;}
-.liq-btn.sel-low{border-color:var(--green);background:rgba(0,229,160,0.15);color:var(--green);}
-.liq-btn.sel-high{border-color:var(--red);background:rgba(255,64,96,0.15);color:var(--red);}
+.liq-btn.sel-low{border-color:var(--red);background:rgba(255,64,96,0.15);color:var(--red);}
+.liq-btn.sel-high{border-color:var(--green);background:rgba(0,229,160,0.15);color:var(--green);}
 .liq-break.sel-action{border-color:var(--yellow);background:rgba(255,208,96,0.15);color:var(--yellow);}
 .liq-sweep.sel-action{border-color:var(--purple);background:rgba(160,96,255,0.15);color:var(--purple);}
 
@@ -446,7 +446,8 @@ window.addEventListener('load',function(){
   document.getElementById('fCommission').value='0.06';
   // Textarea éditable manuellement au clic
   var ta=document.getElementById('fRaison');
-  ta.addEventListener('focus',function(){ta.removeAttribute('readonly');ta.dataset.manualEdit='1';});
+  ta.addEventListener('focus',function(){ta.removeAttribute('readonly');ta.dataset.manualEdit='1';autoResize(ta);});
+  ta.addEventListener('input',function(){autoResize(ta);});
   SURL=localStorage.getItem('sb_url')||'';
   SKEY=localStorage.getItem('sb_key')||'';
   if(!SURL||!SKEY){document.getElementById('configScreen').style.display='flex';return;}
@@ -590,6 +591,8 @@ function resetLiq(){
   updateLiqSummary();
 }
 
+function autoResize(ta){ta.style.height='auto';ta.style.height=(ta.scrollHeight)+'px';}
+
 function autoSetup(){
   var biais=getVal('biais');
   var setuptype=getVal('setuptype');
@@ -598,17 +601,18 @@ function autoSetup(){
   var entree=document.getElementById('fEntree').value;
   var heure=document.getElementById('fHeure').value;
 
+  // Labels précis — on affiche EXACTEMENT ce qui est coché, sans préfixe générique
   var liqLabels={
-    'asl':'ASL','ash':'ASH','pdl':'PDL','pdh':'PDH',
+    'asl':'SSL/ASL','ash':'ASH','pdl':'PDL','pdh':'PDH',
     'swing-low':'Swing Low','swing-high':'Swing High',
-    'asl-ash-break':'Break ASL/ASH','asl-ash-sweep':'Sweep ASL/ASH',
-    'pdl-pdh-break':'Break PDL/PDH','pdl-pdh-sweep':'Sweep PDL/PDH',
-    'swing-break':'Break Swing','swing-sweep':'Sweep Swing'
+    'asl-ash-break':'Break ASH','asl-ash-sweep':'Sweep ASH',
+    'pdl-pdh-break':'Break PDH','pdl-pdh-sweep':'Sweep PDH',
+    'swing-break':'Break Swing High','swing-sweep':'Sweep Swing High'
   };
   var biaisLabel={bullish:'Haussier ▲',bearish:'Baissier ▼',neutral:'Indécis'};
 
   var parts=[];
-  if(biais)parts.push('Biais M15 : '+( biaisLabel[biais]||biais));
+  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais));
   if(selectedLiq.length)parts.push('Liquidité : '+selectedLiq.map(function(k){return liqLabels[k]||k;}).join(' + '));
   if(setuptype)parts.push('Setup : '+setuptype);
   if(signal)parts.push('Signal : '+signal+' breaké');
@@ -618,6 +622,7 @@ function autoSetup(){
   var ta=document.getElementById('fRaison');
   if(!ta.dataset.manualEdit){
     ta.value=parts.join('\n');
+    autoResize(ta);
   }
 }
 
@@ -668,19 +673,61 @@ function editTrade(id){
   document.getElementById('fSL').value=t.sl||'';
   document.getElementById('fTP').value=t.tp||'';
   document.getElementById('fPL').value=t.pl||'';
-  document.getElementById('fCommission').value=t.commission?Math.abs(t.commission):'';
+  document.getElementById('fCommission').value=t.commission?Math.abs(t.commission):'0.06';
   document.getElementById('fSwap').value=t.swap?Math.abs(t.swap):'';
-  document.getElementById('fRaison').value=t.raison||'';
+  // Setup textarea - on enlève la ligne [Liq:...] pour l'affichage propre
+  var raison=(t.raison||'').replace(/\n?\[Liq:[^\]]*\]/g,'').trim();
+  var ta=document.getElementById('fRaison');
+  ta.value=raison;
+  ta.setAttribute('readonly','');
+  delete ta.dataset.manualEdit;
+  setTimeout(function(){autoResize(ta);},50);
   document.getElementById('fLecon').value=t.lecon||'';
   document.getElementById('fDirection').value=t.direction||'Long';
+
+  // Biais
   var bc={bullish:'green',bearish:'red',neutral:'yellow'};
   if(t.biais){var b=document.querySelector('[data-group="biais"][data-val="'+t.biais+'"]');if(b)b.className='toggle-btn act-'+(bc[t.biais]||'green');}
-  if(t.setuptype){var st=document.querySelector('[data-group="setuptype"][data-val="'+t.setuptype+'"]');if(st)st.className='toggle-btn act-'+(t.setuptype==='REVERSAL'?'red':'green');}
-  if(t.signal){var sig=document.querySelector('[data-group="signal"][data-val="'+t.signal+'"]');if(sig)sig.className='toggle-btn act-'+(t.signal.indexOf('-')>=0?'red':t.signal.indexOf('+')>=0?'green':'orange');}
-  if(t.sweep){var sw=document.querySelector('[data-group="sweep"][data-val="'+t.sweep+'"]');if(sw)sw.className='toggle-btn act-'+(t.sweep==='BSL'?'green':t.sweep==='SSL'?'red':'yellow');}
+
+  // Setup type depuis champ session
+  var sess=t.session||'';
+  var stVal=sess.indexOf('REVERSAL')>=0?'REVERSAL':sess.indexOf('CONTINUATION')>=0?'CONTINUATION':'';
+  if(stVal){var st=document.querySelector('[data-group="setuptype"][data-val="'+stVal+'"]');if(st)st.className='toggle-btn act-'+(stVal==='REVERSAL'?'red':'green');}
+
+  // Signal
+  if(t.signal){
+    var sigColor=t.signal.indexOf('-')>=0?'red':t.signal.indexOf('+')>=0?'green':'orange';
+    var sig=document.querySelector('[data-group="signal"][data-val="'+t.signal+'"]');
+    if(sig)sig.className='toggle-btn act-'+sigColor;
+  }
+
+  // Outcome
   var oc={Win:'green',Loss:'red',BE:'purple'};
   if(t.outcome){var o=document.querySelector('[data-group="outcome"][data-val="'+t.outcome+'"]');if(o)o.className='toggle-btn act-'+(oc[t.outcome]||'green');}
+
+  // Rules
   if(t.rules){var r=document.querySelector('[data-group="rules"][data-val="'+t.rules+'"]');if(r)r.className='toggle-btn act-'+(t.rules==='yes'?'green':'red');}
+
+  // Restaurer liquidité depuis raison [Liq:...]
+  resetLiq();
+  var liqMatch=(t.raison||'').match(/\[Liq:([^\]]*)\]/);
+  if(liqMatch){
+    var liqKeys=liqMatch[1].split(',').map(function(s){return s.trim();}).filter(Boolean);
+    liqKeys.forEach(function(liq){
+      var btn=document.querySelector('.liq-btn[data-liq="'+liq+'"]');
+      if(btn){
+        var isAction=btn.classList.contains('liq-break')||btn.classList.contains('liq-sweep');
+        var isLow=(!isAction)&&(liq==='asl'||liq==='pdl'||liq==='swing-low');
+        var isHigh=(!isAction)&&(liq==='ash'||liq==='pdh'||liq==='swing-high');
+        if(isAction)btn.classList.add('sel-action');
+        else if(isLow)btn.classList.add('sel-low');
+        else if(isHigh)btn.classList.add('sel-high');
+        if(selectedLiq.indexOf(liq)<0)selectedLiq.push(liq);
+      }
+    });
+    updateLiqSummary();
+  }
+
   document.getElementById('formTitle').textContent='Modifier le trade';
   document.getElementById('submitBtn').textContent='METTRE À JOUR';
   document.getElementById('cancelBtn').style.display='block';
@@ -808,27 +855,30 @@ function renderJournal(){
   var bC={bullish:'#00e5a0',bearish:'#ff4060',neutral:'#ffd060'};
   var oL={Win:'WIN ✅',Loss:'LOSS ❌',BE:'BREAK EVEN'};
   var oC={Win:'#00e5a0',Loss:'#ff4060',BE:'#a060ff'};
-  var stC={REVERSAL:'#ff4060',CONTINUATION:'#00e5a0'};
   el.innerHTML=filtered.map(function(t){
     var pl=parseFloat(t.pl)||0;var comm=parseFloat(t.commission)||0;var swap=parseFloat(t.swap)||0;var plNet=pl+comm+swap;
     var plStr=(plNet>=0?'+':'')+plNet.toFixed(2)+'€';
     var bc=bC[t.biais]||'#6080a0';var oc=oC[t.outcome]||'#6080a0';
     var rc=t.rules==='yes'?'#00e5a0':'#ff4060';var dc=t.direction==='Long'?'#00e5a0':'#ff4060';
-    var stc=stC[t.setuptype]||'#00d4ff';
+    // Détecter REVERSAL/CONTINUATION depuis session
+    var sess=t.session||'';
+    var stVal=sess.indexOf('REVERSAL')>=0?'REVERSAL':sess.indexOf('CONTINUATION')>=0?'CONTINUATION':'';
+    var stc=stVal==='REVERSAL'?'#ff4060':stVal==='CONTINUATION'?'#00e5a0':'#00d4ff';
     var prices=[t.entree&&'Entrée: '+t.entree,t.sl&&'SL: '+t.sl,t.tp&&'TP: '+t.tp].filter(Boolean).join(' · ');
+    // Nettoyer raison pour affichage
+    var raisonDisplay=(t.raison||'').replace(/\n?\[Liq:[^\]]*\]/g,'').trim();
     return '<div class="trade-card">'+
-      '<div class="trade-card-top"><div><span class="trade-date">'+t.date+'</span><span class="trade-time">'+(t.heure||'')+'</span><span class="trade-dir" style="color:'+dc+'">'+t.direction+'</span></div><span class="trade-pl" style="color:'+cpl(plNet)+'">'+plStr+'</span></div>'+
+      '<div class="trade-card-top"><div><span class="trade-date">'+t.date+'</span><span class="trade-time">'+(t.heure||'')+'</span><span class="trade-dir" style="color:'+dc+'"> '+t.direction+'</span></div><span class="trade-pl" style="color:'+cpl(plNet)+'">'+plStr+'</span></div>'+
       '<div class="badges">'+
-        '<span class="badge" style="color:'+bc+';border-color:'+bc+';background:'+bc+'18;">'+(bL[t.biais]||t.biais)+'</span>'+
-        (t.setuptype?'<span class="badge" style="color:'+stc+';border-color:'+stc+';background:'+stc+'18;">'+t.setuptype+'</span>':'')+
+        '<span class="badge" style="color:'+bc+';border-color:'+bc+';background:'+bc+'18;">'+(bL[t.biais]||t.biais||'—')+'</span>'+
+        (stVal?'<span class="badge" style="color:'+stc+';border-color:'+stc+';background:'+stc+'18;">'+stVal+'</span>':'')+
         (t.signal?'<span class="badge" style="color:#00d4ff;border-color:#00d4ff;background:#00d4ff18;">'+t.signal+'</span>':'')+
-        (t.sweep&&t.sweep!=='none'?'<span class="badge" style="color:#ffd060;border-color:#ffd060;background:#ffd06018;">Sweep '+t.sweep+'</span>':'')+
         '<span class="badge" style="color:'+oc+';border-color:'+oc+';background:'+oc+'18;">'+(oL[t.outcome]||t.outcome)+'</span>'+
         '<span class="badge" style="color:'+rc+';border-color:'+rc+';background:'+rc+'18;">'+(t.rules==='yes'?'Dans le timing':'Hors timing')+'</span>'+
         '<span class="badge" style="color:#00d4ff;border-color:#00d4ff;background:#00d4ff18;">RR 1:2</span>'+
       '</div>'+
       (prices?'<div class="trade-prices">'+prices+'</div>':'')+
-      (t.raison?'<div class="trade-setup">'+t.raison+'</div>':'')+
+      (raisonDisplay?'<div class="trade-setup">'+raisonDisplay.replace(/\n/g,'<br>')+'</div>':'')+
       (t.lecon?'<div class="trade-lecon">💡 '+t.lecon+'</div>':'')+
       '<div class="trade-actions"><button class="btn-edit" onclick="editTrade('+t.id+')">MODIFIER</button><button class="btn-del" onclick="askDelete('+t.id+')">SUPPRIMER</button></div>'+
     '</div>';
