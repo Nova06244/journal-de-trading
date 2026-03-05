@@ -363,9 +363,9 @@ select option{background:#111a24;color:#d8eaff;}
   <div class="form-group">
     <label class="form-label">Outcome</label>
     <div class="btn-group">
-      <button class="toggle-btn" data-group="outcome" data-val="Win" onclick="sel(this,'green')">✅ WIN +20 pips</button>
-      <button class="toggle-btn" data-group="outcome" data-val="Loss" onclick="sel(this,'red');setLoss()">❌ LOSS −10 pips</button>
-      <button class="toggle-btn" data-group="outcome" data-val="BE" onclick="sel(this,'purple')">➖ BREAK EVEN</button>
+      <button class="toggle-btn" data-group="outcome" data-val="Win" onclick="sel(this,'green');autoLecon()">✅ WIN +20 pips</button>
+      <button class="toggle-btn" data-group="outcome" data-val="Loss" onclick="sel(this,'red');setLoss();autoLecon()">❌ LOSS −10 pips</button>
+      <button class="toggle-btn" data-group="outcome" data-val="BE" onclick="sel(this,'purple');autoLecon()">➖ BREAK EVEN</button>
     </div>
   </div>
 
@@ -387,8 +387,9 @@ select option{background:#111a24;color:#d8eaff;}
 
   <!-- LECON -->
   <div class="form-group">
-    <label class="form-label">Leçon du jour</label>
-    <textarea class="form-input" id="fLecon" placeholder="Ex : TP 20 pips atteint en 35 min · Ne pas étendre l'objectif..."></textarea>
+    <label class="form-label">Leçon du jour — générée automatiquement</label>
+    <textarea class="form-input" id="fLecon" placeholder="Se remplit avec l'outcome..." style="color:var(--accent);font-size:13px;" readonly></textarea>
+    <div style="font-size:10px;color:var(--muted);margin-top:4px;">Clique pour éditer manuellement</div>
   </div>
 
   <button class="submit-btn" id="submitBtn" onclick="saveTrade()">ENREGISTRER LE TRADE</button>
@@ -448,6 +449,9 @@ window.addEventListener('load',function(){
   var ta=document.getElementById('fRaison');
   ta.addEventListener('focus',function(){ta.removeAttribute('readonly');ta.dataset.manualEdit='1';autoResize(ta);});
   ta.addEventListener('input',function(){autoResize(ta);});
+  var tl=document.getElementById('fLecon');
+  tl.addEventListener('focus',function(){tl.removeAttribute('readonly');tl.dataset.manualEdit='1';autoResize(tl);});
+  tl.addEventListener('input',function(){autoResize(tl);});
   SURL=localStorage.getItem('sb_url')||'';
   SKEY=localStorage.getItem('sb_key')||'';
   if(!SURL||!SKEY){document.getElementById('configScreen').style.display='flex';return;}
@@ -601,28 +605,88 @@ function autoSetup(){
   var entree=document.getElementById('fEntree').value;
   var heure=document.getElementById('fHeure').value;
 
-  // Labels précis — on affiche EXACTEMENT ce qui est coché, sans préfixe générique
-  var liqLabels={
-    'asl':'SSL/ASL','ash':'ASH','pdl':'PDL','pdh':'PDH',
-    'swing-low':'Swing Low','swing-high':'Swing High',
-    'asl-ash-break':'Break ASH','asl-ash-sweep':'Sweep ASH',
-    'pdl-pdh-break':'Break PDH','pdl-pdh-sweep':'Sweep PDH',
-    'swing-break':'Break Swing High','swing-sweep':'Sweep Swing High'
+  // Labels condensés : on regroupe niveau + action
+  // Ex: ASH sélectionné + asl-ash-break sélectionné → "ASH Break"
+  var niveaux={
+    'asl':'ASL','ash':'ASH','pdl':'PDL','pdh':'PDH','swing-low':'Swing Low','swing-high':'Swing High'
   };
-  var biaisLabel={bullish:'Haussier ▲',bearish:'Baissier ▼',neutral:'Indécis'};
+  var actions={
+    'asl-ash-break':'Break','asl-ash-sweep':'Sweep',
+    'pdl-pdh-break':'Break','pdl-pdh-sweep':'Sweep',
+    'swing-break':'Break','swing-sweep':'Sweep'
+  };
+  // Grouper : associer chaque action à son niveau sélectionné
+  var liqParts=[];
+  // ASL/ASH row
+  var ashSel=selectedLiq.indexOf('ash')>=0;
+  var aslSel=selectedLiq.indexOf('asl')>=0;
+  var ashBreak=selectedLiq.indexOf('asl-ash-break')>=0;
+  var ashSweep=selectedLiq.indexOf('asl-ash-sweep')>=0;
+  if(ashSel&&ashBreak)liqParts.push('ASH Break');
+  else if(ashSel&&ashSweep)liqParts.push('ASH Sweep');
+  else if(ashSel)liqParts.push('ASH');
+  else if(aslSel&&ashBreak)liqParts.push('ASL Break');
+  else if(aslSel&&ashSweep)liqParts.push('ASL Sweep');
+  else if(aslSel)liqParts.push('ASL');
+  else if(ashBreak)liqParts.push('ASH Break');
+  else if(ashSweep)liqParts.push('ASH Sweep');
+  // PDL/PDH row
+  var pdhSel=selectedLiq.indexOf('pdh')>=0;
+  var pdlSel=selectedLiq.indexOf('pdl')>=0;
+  var pdhBreak=selectedLiq.indexOf('pdl-pdh-break')>=0;
+  var pdhSweep=selectedLiq.indexOf('pdl-pdh-sweep')>=0;
+  if(pdhSel&&pdhBreak)liqParts.push('PDH Break');
+  else if(pdhSel&&pdhSweep)liqParts.push('PDH Sweep');
+  else if(pdhSel)liqParts.push('PDH');
+  else if(pdlSel&&pdhBreak)liqParts.push('PDL Break');
+  else if(pdlSel&&pdhSweep)liqParts.push('PDL Sweep');
+  else if(pdlSel)liqParts.push('PDL');
+  else if(pdhBreak)liqParts.push('PDH Break');
+  else if(pdhSweep)liqParts.push('PDH Sweep');
+  // Swing row
+  var swHigh=selectedLiq.indexOf('swing-high')>=0;
+  var swLow=selectedLiq.indexOf('swing-low')>=0;
+  var swBreak=selectedLiq.indexOf('swing-break')>=0;
+  var swSweep=selectedLiq.indexOf('swing-sweep')>=0;
+  if(swHigh&&swBreak)liqParts.push('Swing High Break');
+  else if(swHigh&&swSweep)liqParts.push('Swing High Sweep');
+  else if(swHigh)liqParts.push('Swing High');
+  else if(swLow&&swBreak)liqParts.push('Swing Low Break');
+  else if(swLow&&swSweep)liqParts.push('Swing Low Sweep');
+  else if(swLow)liqParts.push('Swing Low');
+  else if(swBreak)liqParts.push('Swing Break');
+  else if(swSweep)liqParts.push('Swing Sweep');
 
+  var biaisLabel={bullish:'Haussier ▲',bearish:'Baissier ▼',neutral:'Indécis'};
   var parts=[];
-  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais));
-  if(selectedLiq.length)parts.push('Liquidité : '+selectedLiq.map(function(k){return liqLabels[k]||k;}).join(' + '));
+  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' CHoCH M15 identifié à '+(heure||'___'));
+  if(liqParts.length)parts.push('Liquidité : '+liqParts.join(' + '));
   if(setuptype)parts.push('Setup : '+setuptype);
-  if(signal)parts.push('Signal : '+signal+' breaké');
+  if(signal)parts.push('Signal : '+signal+' M5 breaké');
   if(dir&&entree)parts.push('Entrée '+dir+' @ '+parseFloat(entree).toFixed(5));
-  if(heure)parts.push('Clôture bougie '+heure);
 
   var ta=document.getElementById('fRaison');
   if(!ta.dataset.manualEdit){
     ta.value=parts.join('\n');
     autoResize(ta);
+  }
+}
+
+function autoLecon(){
+  var outcome=getVal('outcome');
+  var heure=document.getElementById('fHeure').value;
+  var tl=document.getElementById('fLecon');
+  if(!tl.dataset.manualEdit){
+    if(outcome==='Win'){
+      tl.value='TP validé en '+(heure||'___')+' · RR 1:2 respecté · Méthode dans le timing';
+    } else if(outcome==='Loss'){
+      tl.value='SL touché · ';
+    } else if(outcome==='BE'){
+      tl.value='Break Even · ';
+    } else {
+      tl.value='';
+    }
+    autoResize(tl);
   }
 }
 
@@ -652,6 +716,10 @@ function resetForm(){
   var ta=document.getElementById('fRaison');
   ta.setAttribute('readonly','');
   delete ta.dataset.manualEdit;
+  var tl=document.getElementById('fLecon');
+  tl.value='';
+  tl.setAttribute('readonly','');
+  delete tl.dataset.manualEdit;
   document.getElementById('fCommission').value='0.06';
   document.getElementById('fDirection').value='Long';
   document.querySelectorAll('.toggle-btn').forEach(function(b){b.className='toggle-btn';});
@@ -682,7 +750,12 @@ function editTrade(id){
   ta.setAttribute('readonly','');
   delete ta.dataset.manualEdit;
   setTimeout(function(){autoResize(ta);},50);
-  document.getElementById('fLecon').value=t.lecon||'';
+  var tl=document.getElementById('fLecon');
+  tl.value=t.lecon||'';
+  tl.setAttribute('readonly','');
+  delete tl.dataset.manualEdit;
+  if(t.lecon)tl.dataset.manualEdit='1'; // si leçon existante, pas d'écrasement
+  setTimeout(function(){autoResize(tl);},50);
   document.getElementById('fDirection').value=t.direction||'Long';
 
   // Biais
