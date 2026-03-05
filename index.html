@@ -659,7 +659,7 @@ function autoSetup(){
 
   var biaisLabel={bullish:'Haussier ▲',bearish:'Baissier ▼',neutral:'Indécis'};
   var parts=[];
-  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' CHoCH M15 identifié');
+  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' CHoCH M15 identifié à ___');
   if(liqParts.length)parts.push('Liquidité : '+liqParts.join(' + '));
   if(setuptype)parts.push('Setup : '+setuptype);
   if(signal){
@@ -680,7 +680,7 @@ function autoLecon(){
   var tl=document.getElementById('fLecon');
   if(!tl.dataset.manualEdit){
     if(outcome==='Win'){
-      tl.value='TP validé en · RR 1:2 respecté';
+      tl.value='TP validé en ___ · RR 1:2 respecté';
     } else {
       tl.value='';
     }
