@@ -659,11 +659,10 @@ function autoSetup(){
 
   var biaisLabel={bullish:'Haussier ▲',bearish:'Baissier ▼',neutral:'Indécis'};
   var parts=[];
-  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' CHoCH M15 identifié à '+(heure||'___'));
+  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' CHoCH M15 identifié');
   if(liqParts.length)parts.push('Liquidité : '+liqParts.join(' + '));
   if(setuptype)parts.push('Setup : '+setuptype);
   if(signal){
-    // Eviter doublon M5 : OB+ M5 → "OB+ M5 breaké" et non "OB+ M5 M5 breaké"
     var signalClean=signal.replace(/\s*M5\s*$/,'');
     parts.push('Signal : '+signalClean+' M5 breaké');
   }
@@ -678,11 +677,10 @@ function autoSetup(){
 
 function autoLecon(){
   var outcome=getVal('outcome');
-  var heure=document.getElementById('fHeure').value;
   var tl=document.getElementById('fLecon');
   if(!tl.dataset.manualEdit){
     if(outcome==='Win'){
-      tl.value='TP validé en '+(heure||'___')+' · RR 1:2 respecté';
+      tl.value='TP validé en · RR 1:2 respecté';
     } else {
       tl.value='';
     }
@@ -767,11 +765,17 @@ function editTrade(id){
   var stVal=sess.indexOf('REVERSAL')>=0?'REVERSAL':sess.indexOf('CONTINUATION')>=0?'CONTINUATION':'';
   if(stVal){var st=document.querySelector('[data-group="setuptype"][data-val="'+stVal+'"]');if(st)st.className='toggle-btn act-'+(stVal==='REVERSAL'?'red':'green');}
 
-  // Signal
-  if(t.signal){
-    var sigColor=t.signal.indexOf('-')>=0?'red':t.signal.indexOf('+')>=0?'green':'orange';
-    var sig=document.querySelector('[data-group="signal"][data-val="'+t.signal+'"]');
-    if(sig)sig.className='toggle-btn act-'+sigColor;
+  // Signal — restaurer depuis le champ raison "Signal : XXX M5 breaké"
+  var signalMatch=raison.match(/Signal : ([^\n]+?) M5 breaké/);
+  if(signalMatch){
+    var sigVal=signalMatch[1].trim(); // ex: "OB+" ou "IFVG-"
+    // Chercher bouton correspondant (data-val peut être "OB+ M5" ou "IFVG-" etc)
+    var sigBtn=document.querySelector('[data-group="signal"][data-val="'+sigVal+' M5"]')||
+               document.querySelector('[data-group="signal"][data-val="'+sigVal+'"]');
+    if(sigBtn){
+      var sigColor=sigVal.indexOf('-')>=0?'red':sigVal.indexOf('+')>=0?'green':'orange';
+      sigBtn.className='toggle-btn act-'+sigColor;
+    }
   }
 
   // Outcome
