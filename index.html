@@ -363,9 +363,9 @@ select option{background:#111a24;color:#d8eaff;}
   <div class="form-group">
     <label class="form-label">Outcome</label>
     <div class="btn-group">
-      <button class="toggle-btn" data-group="outcome" data-val="Win" onclick="sel(this,'green');autoLecon()">✅ WIN +20 pips</button>
+      <button class="toggle-btn" data-group="outcome" data-val="Win" onclick="sel(this,'green');setWin();autoLecon()">✅ WIN +20 pips</button>
       <button class="toggle-btn" data-group="outcome" data-val="Loss" onclick="sel(this,'red');setLoss();autoLecon()">❌ LOSS −10 pips</button>
-      <button class="toggle-btn" data-group="outcome" data-val="BE" onclick="sel(this,'purple');autoLecon()">➖ BREAK EVEN</button>
+      <button class="toggle-btn" data-group="outcome" data-val="BE" onclick="sel(this,'purple');setBE();autoLecon()">➖ BREAK EVEN</button>
     </div>
   </div>
 
@@ -688,7 +688,22 @@ function autoLecon(){
   }
 }
 
-function setLoss(){var pl=document.getElementById('fPL');var v=parseFloat(pl.value);if(v>0)pl.value=-v;}
+function setLoss(){
+  var pl=document.getElementById('fPL');
+  var v=parseFloat(pl.value);
+  if(v>0)pl.value=-v;
+}
+
+function setWin(){
+  var pl=document.getElementById('fPL');
+  var v=parseFloat(pl.value);
+  if(v<0)pl.value=Math.abs(v);
+}
+
+function setBE(){
+  var pl=document.getElementById('fPL');
+  pl.value='0';
+}
 
 function autoSlTp(){
   var entree=parseFloat(document.getElementById('fEntree').value);
