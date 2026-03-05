@@ -662,7 +662,11 @@ function autoSetup(){
   if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' CHoCH M15 identifié à '+(heure||'___'));
   if(liqParts.length)parts.push('Liquidité : '+liqParts.join(' + '));
   if(setuptype)parts.push('Setup : '+setuptype);
-  if(signal)parts.push('Signal : '+signal+' M5 breaké');
+  if(signal){
+    // Eviter doublon M5 : OB+ M5 → "OB+ M5 breaké" et non "OB+ M5 M5 breaké"
+    var signalClean=signal.replace(/\s*M5\s*$/,'');
+    parts.push('Signal : '+signalClean+' M5 breaké');
+  }
   if(dir&&entree)parts.push('Entrée '+dir+' @ '+parseFloat(entree).toFixed(5));
 
   var ta=document.getElementById('fRaison');
@@ -678,11 +682,7 @@ function autoLecon(){
   var tl=document.getElementById('fLecon');
   if(!tl.dataset.manualEdit){
     if(outcome==='Win'){
-      tl.value='TP validé en '+(heure||'___')+' · RR 1:2 respecté · Méthode dans le timing';
-    } else if(outcome==='Loss'){
-      tl.value='SL touché · ';
-    } else if(outcome==='BE'){
-      tl.value='Break Even · ';
+      tl.value='TP validé en '+(heure||'___')+' · RR 1:2 respecté';
     } else {
       tl.value='';
     }
