@@ -188,8 +188,8 @@ select option{background:#111a24;color:#d8eaff;}
   <div class="timing-banner">
     <span style="font-size:16px;">&#9200;</span>
     <span class="timing-label">TIMING :</span>
-    <span class="timing-badge timing-8">8H45 — Biais M15 / CHoCH M15</span>
-    <span class="timing-badge timing-9">9H-10H — Entree OB / IFVG M5</span>
+    <span class="timing-badge timing-8">8H-8H45 — Biais M15 / CHoCH M15</span>
+    <span class="timing-badge timing-9">8H45-10H — Entree OB / IFVG M5</span>
   </div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="fDate"></div>
@@ -834,7 +834,7 @@ function renderStats(){
   var bestDay=calcBestDay();
   var bestHour=calcBestHour();
 
-  var insight=wr<35?'Win rate '+wr+'% - Priorite a la qualite des setups 8H-9H.':wr>=50?'Excellent win rate '+wr+'% ! La methode TIMING fonctionne.':'Win rate '+wr+'% - Verifie que ton biais M15 est bien valide avant 9H.';
+  var insight=wr<35?'Win rate '+wr+'% - Priorite a la qualite des setups 8H-9H.':wr>=50?'Excellent win rate '+wr+'% ! La methode TIMING fonctionne.':'Win rate '+wr+'% - Verifie que ton biais M15 est bien valide avant 8H45.';
   if(pf!=='N/A')insight+=' | Profit Factor '+pf+(pfNum<1?' - Systeme non rentable.':pfNum<1.5?' - A ameliorer.':' - Excellent !');
 
   var streakHtml='';
