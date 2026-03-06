@@ -188,12 +188,12 @@ select option{background:#111a24;color:#d8eaff;}
   <div class="timing-banner">
     <span style="font-size:16px;">&#9200;</span>
     <span class="timing-label">TIMING :</span>
-    <span class="timing-badge timing-8">8H-9H - Biais M15 - CHoCH M15</span>
-    <span class="timing-badge timing-9">9H-10H - Entree OB / IFVG M5</span>
+    <span class="timing-badge timing-8">8H45 — Biais M15 / CHoCH M15</span>
+    <span class="timing-badge timing-9">9H-10H — Entree OB / IFVG M5</span>
   </div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="fDate"></div>
-    <div class="form-group"><label class="form-label">Heure d entree</label><input type="time" class="form-input" id="fHeure"></div>
+    <div class="form-group"><label class="form-label">Heure d entree</label><input type="time" class="form-input" id="fHeure" onchange="autoTiming();autoSetup()"></div>
   </div>
   <div class="fixed-sl-tp">
     <div class="fixed-box fixed-box-sl"><div class="fixed-box-label" style="color:var(--red);">Stop Loss</div><div class="fixed-box-val" style="color:var(--red);">10 pips</div></div>
@@ -497,10 +497,12 @@ function autoSetup(){
   var biais=getVal('biais');var setuptype=getVal('setuptype');var signal=getVal('signal');
   var dir=document.getElementById('fDirection').value;var entree=document.getElementById('fEntree').value;
   var biaisLabel={bullish:'Haussier',bearish:'Baissier',neutral:'Indecis'};
+  var heure=document.getElementById('fHeure').value;
+  var heureLabel=heure?heure.slice(0,5):'__:__';
   var liqLabels={'asl':'ASL','ash':'ASH','pdl':'PDL','pdh':'PDH','swing-low':'Swing Low','swing-high':'Swing High','asl-ash-break':'ASH Break','asl-ash-sweep':'ASH Sweep','pdl-pdh-break':'PDH Break','pdl-pdh-sweep':'PDH Sweep','swing-break':'Swing Break','swing-sweep':'Swing Sweep'};
   var liqStr=selectedLiq.map(function(k){return liqLabels[k]||k;}).join(' + ');
   var parts=[];
-  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' / CHoCH M15 identifie');
+  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' / CHoCH M15 identifie a '+heureLabel);
   if(liqStr)parts.push('Liquidite : '+liqStr);
   if(setuptype)parts.push('Setup : '+setuptype);
   if(signal)parts.push('Signal : '+signal+' M5 broke');
@@ -531,6 +533,23 @@ function autoSlTp(){
   document.getElementById('fSL').value=(dir==='Long'?(entree-10*pip):(entree+10*pip)).toFixed(5);
   document.getElementById('fTP').value=(dir==='Long'?(entree+20*pip):(entree-20*pip)).toFixed(5);
   autoSetup();
+}
+
+function autoTiming(){
+  var heure=document.getElementById('fHeure').value;
+  if(!heure)return;
+  var parts=heure.split(':');
+  var h=parseInt(parts[0]);var m=parseInt(parts[1]);
+  var totalMin=h*60+m;
+  var start=8*60+45; // 8h45
+  var end=10*60;     // 10h00
+  var inTiming=(totalMin>=start && totalMin<end);
+  var btnYes=document.getElementById('rulesYes');
+  var btnNo=document.getElementById('rulesNo');
+  btnYes.className='toggle-btn';
+  btnNo.className='toggle-btn';
+  if(inTiming){btnYes.className='toggle-btn act-green';}
+  else{btnNo.className='toggle-btn act-red';}
 }
 
 function resetForm(){
