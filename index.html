@@ -868,12 +868,12 @@ function renderStats(){
     var revPL=reversals.reduce(function(s,t){return s+(parseFloat(t.pl)||0);},0);
     var contPL=continuations.reduce(function(s,t){return s+(parseFloat(t.pl)||0);},0);
     dChart('cSetup');
-    charts.cSetup=new Chart(document.getElementById('cSetup'),{type:'bar',data:{labels:['REVERSAL','CONTINUATION'],datasets:[{data:[revPL,contPL],backgroundColor:[revPL>=0?'#00e5a0':'#ff4060',contPL>=0?'#00e5a0':'#ff4060'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yA}}});
+    charts.cSetup=new Chart(document.getElementById('cSetup'),{type:'bar',data:{labels:['REVERSAL','CONTINUATION'],datasets:[{data:[revPL,contPL],backgroundColor:['#a060ff','#00d4ff'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yA}}});
 
     var plTimingVal=trades.filter(function(t){return t.rules==='yes';}).reduce(function(s,t){return s+(parseFloat(t.pl)||0);},0);
     var plHorsVal=trades.filter(function(t){return t.rules==='no';}).reduce(function(s,t){return s+(parseFloat(t.pl)||0);},0);
     dChart('cRules');
-    charts.cRules=new Chart(document.getElementById('cRules'),{type:'bar',data:{labels:['Dans le timing','Hors timing'],datasets:[{data:[plTimingVal,plHorsVal],backgroundColor:[plTimingVal>=0?'#00e5a0':'#ff4060',plHorsVal>=0?'#00e5a0':'#ff4060'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yA}}});
+    charts.cRules=new Chart(document.getElementById('cRules'),{type:'bar',data:{labels:['Dans le timing','Hors timing'],datasets:[{data:[plTimingVal,plHorsVal],backgroundColor:['#00e5a0','#ffd060'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yA}}});
 
     // P&L par heure
     var hourMap={};
