@@ -6,9 +6,9 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="DC Journal">
+<meta name="apple-mobile-web-app-title" content="TRADING Journal">
 <meta name="theme-color" content="#0a0e14">
-<title>DailyCycle Journal</title>
+<title>TRADING Journal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
@@ -162,7 +162,7 @@ select option{background:#111a24;color:#d8eaff;}
 <div class="header">
   <div class="header-top">
     <div>
-      <div class="logo">Daily<span>Cycle</span></div>
+      <div class="logo">TRADING<span> Journal</span></div>
       <div class="logo-sub">EUR/USD - Christophe Meoni</div>
       <div id="syncStatus" class="sync-badge sync-loading">Connexion...</div>
       <div onclick="resetConfig()" style="font-size:9px;color:#4a6880;margin-top:3px;cursor:pointer;text-decoration:underline;">Changer de compte</div>
@@ -835,9 +835,9 @@ function renderStats(){
       // Ligne 3 : Reversal + Continuation
       '<div class="kpi-card" style="border-top-color:#a060ff"><div class="kpi-card-label">REVERSAL</div><div class="kpi-card-val" style="color:#a060ff">'+(reversals.length?Math.round(revWins/reversals.length*100):0)+'%</div><div class="kpi-card-sub">'+revWins+' / '+reversals.length+' wins</div></div>'+
       '<div class="kpi-card" style="border-top-color:#00d4ff"><div class="kpi-card-label">CONTINUATION</div><div class="kpi-card-val" style="color:#00d4ff">'+(continuations.length?Math.round(contWins/continuations.length*100):0)+'%</div><div class="kpi-card-sub">'+contWins+' / '+continuations.length+' wins</div></div>'+
-      // Ligne 4 : Hors timing + Dans le timing
-      '<div class="kpi-card" style="border-top-color:#ffd060"><div class="kpi-card-label">Hors timing</div><div class="kpi-card-val" style="color:#ffd060">'+Math.round((n-rok)/n*100)+'%</div><div class="kpi-card-sub">'+(n-rok)+' / '+n+' trades</div></div>'+
+      // Ligne 4 : Dans le timing + Hors timing
       '<div class="kpi-card" style="border-top-color:#00e5a0"><div class="kpi-card-label">Dans le timing</div><div class="kpi-card-val" style="color:#00e5a0">'+Math.round(rok/n*100)+'%</div><div class="kpi-card-sub">'+rok+' / '+n+' trades</div></div>'+
+      '<div class="kpi-card" style="border-top-color:#ffd060"><div class="kpi-card-label">Hors timing</div><div class="kpi-card-val" style="color:#ffd060">'+Math.round((n-rok)/n*100)+'%</div><div class="kpi-card-sub">'+(n-rok)+' / '+n+' trades</div></div>'+
       // Ligne 5 : Meilleur jour + Meilleure heure
       bestDayHtml+
       bestHourHtml+
