@@ -137,10 +137,8 @@ select option{background:#111a24;color:#d8eaff;}
 .choch-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
 .choch-time{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:15px;padding:11px 14px;outline:none;transition:border-color 0.2s;width:130px;-webkit-appearance:none;}
 .choch-time:focus{border-color:var(--accent);}
-.choch-hier{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);padding:10px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);transition:all 0.15s;white-space:nowrap;user-select:none;}
-.choch-hier.checked{border-color:var(--yellow);background:rgba(255,208,96,0.1);color:var(--yellow);}
-.choch-hier .check-icon{width:14px;height:14px;border:1.5px solid var(--muted);border-radius:3px;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
-.choch-hier.checked .check-icon{border-color:var(--yellow);background:var(--yellow);color:#000;font-size:10px;font-weight:700;}
+.choch-hier-btn{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted);padding:10px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);transition:all 0.15s;white-space:nowrap;user-select:none;}
+.choch-hier-btn.checked{border-color:var(--yellow);background:rgba(255,208,96,0.1);color:var(--yellow);}
 .toggle-btn.act-blue{border-color:#4488ff;background:rgba(68,136,255,0.15);color:#4488ff;}
 @media(max-width:768px){
   .kpi-grid{grid-template-columns:1fr!important;}
@@ -219,17 +217,53 @@ select option{background:#111a24;color:#d8eaff;}
     </div>
     <div class="choch-row">
       <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;">CHoCH M15</span>
-      <input type="time" class="choch-time" id="fChochHeure" oninput="autoSetup()">
-      <div class="choch-hier" id="chochHierLabel" onclick="toggleHier()">
-        <span class="check-icon" id="chochHierIcon"></span>
+      <input type="time" class="choch-time" id="fChochHeure">
+      <button class="choch-hier-btn" id="chochHierBtn" onclick="this.classList.toggle('checked');autoSetup()">
         <span>Hier</span>
-      </div>
+      </button>
     </div>
   </div>
   <div class="form-group">
     <label class="form-label">Liquidite - Break &amp; Sweep</label>
     <div class="liq-table">
       <div class="liq-header"><div></div><div>LOW / ASL / PDL</div><div>HIGH / ASH / PDH</div><div>BREAK</div><div>SWEEP</div></div>
+  <div class="form-group">
+    <label class="form-label">Setup 9H-10H</label>
+    <div class="btn-group">
+      <button class="toggle-btn" data-group="setuptype" data-val="REVERSAL" onclick="sel(this,'red');autoSetup()" style="flex:1;line-height:1.5;">REVERSAL<br><span style="font-size:10px;opacity:0.65;">OB Break</span></button>
+      <button class="toggle-btn" data-group="setuptype" data-val="CONTINUATION" onclick="sel(this,'green');autoSetup()" style="flex:1;line-height:1.5;">CONTINUATION<br><span style="font-size:10px;opacity:0.65;">OB Sweep</span></button>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Signal M5</label>
+    <div class="btn-group">
+      <button class="toggle-btn" data-group="signal" data-val="IFVG-" onclick="sel(this,'red');autoSetup()">IFVG- M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="IFVG+" onclick="sel(this,'green');autoSetup()">IFVG+ M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="OB- M5" onclick="sel(this,'red');autoSetup()">OB- M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="OB+ M5" onclick="sel(this,'green');autoSetup()">OB+ M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="FVG-" onclick="sel(this,'red');autoSetup()">FVG- M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="FVG+" onclick="sel(this,'green');autoSetup()">FVG+ M5</button>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Setup 9H-10H</label>
+    <div class="btn-group">
+      <button class="toggle-btn" data-group="setuptype" data-val="REVERSAL" onclick="sel(this,'red');autoSetup()" style="flex:1;line-height:1.5;">REVERSAL<br><span style="font-size:10px;opacity:0.65;">OB Break</span></button>
+      <button class="toggle-btn" data-group="setuptype" data-val="CONTINUATION" onclick="sel(this,'green');autoSetup()" style="flex:1;line-height:1.5;">CONTINUATION<br><span style="font-size:10px;opacity:0.65;">OB Sweep</span></button>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Signal M5</label>
+    <div class="btn-group">
+      <button class="toggle-btn" data-group="signal" data-val="IFVG-" onclick="sel(this,'red');autoSetup()">IFVG- M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="IFVG+" onclick="sel(this,'green');autoSetup()">IFVG+ M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="OB- M5" onclick="sel(this,'red');autoSetup()">OB- M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="OB+ M5" onclick="sel(this,'green');autoSetup()">OB+ M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="FVG-" onclick="sel(this,'red');autoSetup()">FVG- M5</button>
+      <button class="toggle-btn" data-group="signal" data-val="FVG+" onclick="sel(this,'green');autoSetup()">FVG+ M5</button>
+    </div>
+  </div>
+
       <div class="liq-row">
         <div class="liq-rowlabel">ASL / ASH</div>
         <div><button class="liq-btn" data-liq="asl" onclick="selLiq(this)">ASL</button></div>
@@ -254,31 +288,13 @@ select option{background:#111a24;color:#d8eaff;}
     </div>
     <div id="liqSummary" style="font-size:11px;color:var(--accent);margin-top:8px;min-height:16px;"></div>
   </div>
-  <div class="form-group">
-    <label class="form-label">Setup 9H-10H</label>
-    <div class="btn-group">
-      <button class="toggle-btn" data-group="setuptype" data-val="REVERSAL" onclick="sel(this,'red');autoSetup()" style="flex:1;line-height:1.4;">REVERSAL<br><span style="font-size:10px;opacity:0.7;">OB Break</span></button>
-      <button class="toggle-btn" data-group="setuptype" data-val="CONTINUATION" onclick="sel(this,'green');autoSetup()" style="flex:1;line-height:1.4;">CONTINUATION<br><span style="font-size:10px;opacity:0.7;">OB Sweep</span></button>
-    </div>
-  </div>
-  <div class="form-group">
-    <label class="form-label">Signal M5</label>
-    <div class="btn-group">
-      <button class="toggle-btn" data-group="signal" data-val="IFVG-" onclick="sel(this,'red');autoSetup()">IFVG- M5</button>
-      <button class="toggle-btn" data-group="signal" data-val="IFVG+" onclick="sel(this,'green');autoSetup()">IFVG+ M5</button>
-      <button class="toggle-btn" data-group="signal" data-val="OB- M5" onclick="sel(this,'red');autoSetup()">OB- M5</button>
-      <button class="toggle-btn" data-group="signal" data-val="OB+ M5" onclick="sel(this,'green');autoSetup()">OB+ M5</button>
-      <button class="toggle-btn" data-group="signal" data-val="FVG-" onclick="sel(this,'red');autoSetup()">FVG- M5</button>
-      <button class="toggle-btn" data-group="signal" data-val="FVG+" onclick="sel(this,'green');autoSetup()">FVG+ M5</button>
-    </div>
-  </div>
-
   <div class="form-row">
     <div class="form-group">
       <label class="form-label">Direction</label>
+      <select id="fDirection" style="display:none;" onchange="autoSlTp()"><option value="Long">Long</option><option value="Short">Short</option></select>
       <div class="btn-group">
-        <button class="toggle-btn act-blue" data-group="direction" data-val="Long" onclick="selDir(this,'Long')" style="flex:1;">LONG</button>
-        <button class="toggle-btn" data-group="direction" data-val="Short" onclick="selDir(this,'Short')" style="flex:1;">SHORT</button>
+        <button class="toggle-btn act-blue" onclick="document.getElementById('fDirection').value='Long';sel(this,'blue');autoSlTp();" style="flex:1;">LONG</button>
+        <button class="toggle-btn" onclick="document.getElementById('fDirection').value='Short';sel(this,'yellow');autoSlTp();" style="flex:1;">SHORT</button>
       </div>
     </div>
     <div class="form-group"><label class="form-label">Prix d entree</label><input type="number" step="0.00001" class="form-input" id="fEntree" placeholder="1.16165" oninput="autoSlTp()"></div>
@@ -516,15 +532,12 @@ function autoResize(ta){ta.style.height='auto';ta.style.height=(ta.scrollHeight)
 
 function autoSetup(){
   var biais=getVal('biais');var setuptype=getVal('setuptype');var signal=getVal('signal');
-  var dir=getDir();var entree=document.getElementById('fEntree').value;
+  var dir=document.getElementById('fDirection').value;var entree=document.getElementById('fEntree').value;
   var biaisLabel={bullish:'Haussier',bearish:'Baissier',neutral:'Indecis'};
-  var chochHeure=document.getElementById('fChochHeure')?document.getElementById('fChochHeure').value:'';
-  var chochHier=document.getElementById('chochHierLabel')&&document.getElementById('chochHierLabel').classList.contains('checked');
-  var chochLabel=chochHeure?(chochHier?'CHoCH M15 Hier a '+chochHeure:'CHoCH M15 identifie a '+chochHeure):'CHoCH M15 identifie a __:__';
   var liqLabels={'asl':'ASL','ash':'ASH','pdl':'PDL','pdh':'PDH','swing-low':'Swing Low','swing-high':'Swing High','asl-ash-break':'ASH Break','asl-ash-sweep':'ASH Sweep','pdl-pdh-break':'PDH Break','pdl-pdh-sweep':'PDH Sweep','swing-break':'Swing Break','swing-sweep':'Swing Sweep'};
   var liqStr=selectedLiq.map(function(k){return liqLabels[k]||k;}).join(' + ');
   var parts=[];
-  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' / '+chochLabel);
+  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' / CHoCH M15 identifie');
   if(liqStr)parts.push('Liquidite : '+liqStr);
   if(setuptype)parts.push('Setup : '+setuptype);
   if(signal)parts.push('Signal : '+signal+' M5 broke');
@@ -548,27 +561,10 @@ function setLoss(){var pl=document.getElementById('fPL');var v=parseFloat(pl.val
 function setWin(){var pl=document.getElementById('fPL');var v=parseFloat(pl.value);if(v<0)pl.value=Math.abs(v);}
 function setBE(){document.getElementById('fPL').value='0';}
 
-function getDir(){
-  var a=document.querySelector('[data-group="direction"].act-blue,[data-group="direction"].act-yellow');
-  return a?a.dataset.val:'Long';
-}
-function selDir(btn,dir){
-  document.querySelectorAll('[data-group="direction"]').forEach(function(b){b.className='toggle-btn';});
-  btn.classList.add(dir==='Long'?'act-blue':'act-yellow');
-  autoSlTp();
-}
-function toggleHier(){
-  var label=document.getElementById('chochHierLabel');
-  var icon=document.getElementById('chochHierIcon');
-  var isChecked=label.classList.contains('checked');
-  label.classList.toggle('checked',!isChecked);
-  icon.textContent=isChecked?'':'✓';
-  autoSetup();
-}
 function autoSlTp(){
   var entree=parseFloat(document.getElementById('fEntree').value);
   if(!entree||isNaN(entree))return;
-  var dir=getDir();
+  var dir=document.getElementById('fDirection').value;
   var pip=0.0001;
   document.getElementById('fSL').value=(dir==='Long'?(entree-10*pip):(entree+10*pip)).toFixed(5);
   document.getElementById('fTP').value=(dir==='Long'?(entree+20*pip):(entree-20*pip)).toFixed(5);
@@ -581,15 +577,11 @@ function resetForm(){
   var ta=document.getElementById('fRaison');ta.setAttribute('readonly','');delete ta.dataset.manualEdit;
   var tl=document.getElementById('fLecon');tl.value='';tl.setAttribute('readonly','');delete tl.dataset.manualEdit;
   document.getElementById('fCommission').value='0.06';
-  if(document.getElementById('fChochHeure'))document.getElementById('fChochHeure').value='';
-  var hierLabel=document.getElementById('chochHierLabel');
-  var hierIcon=document.getElementById('chochHierIcon');
-  if(hierLabel)hierLabel.classList.remove('checked');
-  if(hierIcon)hierIcon.textContent='';
-  document.getElementById('fOutcome').value='';
+  document.getElementById('fDirection').value='Long';
+  var chochEl2=document.getElementById('fChochHeure');if(chochEl2)chochEl2.value='';
+  var hierBtn=document.getElementById('chochHierBtn');if(hierBtn)hierBtn.classList.remove('checked');
   document.querySelectorAll('.toggle-btn').forEach(function(b){b.className='toggle-btn';});
-  var longBtn=document.querySelector('[data-group="direction"][data-val="Long"]');
-  if(longBtn)longBtn.classList.add('act-blue');
+  var longBtns=document.querySelectorAll('[onclick*="value=\'Long\'"]');longBtns.forEach(function(b){b.classList.add('act-blue');});
   resetLiq();
   document.getElementById('formTitle').textContent='Nouveau trade EUR/USD';
   document.getElementById('submitBtn').textContent='ENREGISTRER LE TRADE';
@@ -614,17 +606,7 @@ function editTrade(id){
 ?\[Liq:[^\]]*\]/g,'').trim();
   var ta=document.getElementById('fRaison');ta.value=raison;ta.setAttribute('readonly','');delete ta.dataset.manualEdit;setTimeout(function(){autoResize(ta);},50);
   var tl=document.getElementById('fLecon');tl.value=t.lecon||'';tl.setAttribute('readonly','');delete tl.dataset.manualEdit;if(t.lecon)tl.dataset.manualEdit='1';setTimeout(function(){autoResize(tl);},50);
-  // Restaurer direction
-  document.querySelectorAll('[data-group="direction"]').forEach(function(b){b.className='toggle-btn';});
-  var dirBtn=document.querySelector('[data-group="direction"][data-val="'+(t.direction||'Long')+'"]');
-  if(dirBtn)dirBtn.classList.add(t.direction==='Short'?'act-yellow':'act-blue');
-  // Restaurer CHoCH
-  if(document.getElementById('fChochHeure'))document.getElementById('fChochHeure').value=t.choch_heure||'';
-  var hierLabel=document.getElementById('chochHierLabel');
-  var hierIcon=document.getElementById('chochHierIcon');
-  var isHier=t.choch_hier==='true'||t.choch_hier===true;
-  if(hierLabel)hierLabel.classList.toggle('checked',isHier);
-  if(hierIcon)hierIcon.textContent=isHier?'✓':'';
+  document.getElementById('fDirection').value=t.direction||'Long';
   var bc={bullish:'green',bearish:'red',neutral:'yellow'};
   if(t.biais){var b=document.querySelector('[data-group="biais"][data-val="'+t.biais+'"]');if(b)b.className='toggle-btn act-'+(bc[t.biais]||'green');}
   // CORRECTION : restaurer setuptype depuis le champ dedie
@@ -672,9 +654,7 @@ function saveTrade(){
     setuptype:setuptype,
     signal:signal,
     session:setuptype+'(9H-10H)',
-    choch_heure:document.getElementById('fChochHeure')?document.getElementById('fChochHeure').value:'',
-    choch_hier:document.getElementById('chochHierLabel')&&document.getElementById('chochHierLabel').classList.contains('checked')?'true':'false',
-    direction:getDir(),
+    direction:document.getElementById('fDirection').value,
     entree:rawEntree||null,
     sl:parseFloat(document.getElementById('fSL').value)||null,
     tp:parseFloat(document.getElementById('fTP').value)||null,
@@ -817,12 +797,10 @@ function renderJournal(){
     var pl=parseFloat(t.pl)||0;var comm=parseFloat(t.commission)||0;var swap=parseFloat(t.swap)||0;var plNet=pl+comm+swap;
     var plStr=(plNet>=0?'+':'')+plNet.toFixed(2)+'EUR';
     var bc=bC[t.biais]||'#6080a0';var oc=oC[t.outcome]||'#6080a0';
-    var rc=t.rules==='yes'?'#00e5a0':'#ff4060';var dc=t.direction==='Long'?'#00e5a0':'#ff4060';
+    var rc=t.rules==='yes'?'#00e5a0':'#ff4060';var dc=t.direction==='Long'?'#4488ff':'#ffd060';
     var stVal=getSetupType(t);
     var stc=stVal==='REVERSAL'?'#ff4060':stVal==='CONTINUATION'?'#00e5a0':'#00d4ff';
     var prices=[t.entree&&'Entree: '+t.entree,t.sl&&'SL: '+t.sl,t.tp&&'TP: '+t.tp].filter(Boolean).join(' / ');
-    var dateDisplay=t.date?t.date.split('-').reverse().join('/'):'-';
-    var dc=t.direction==='Long'?'#4488ff':'#ffd060';
     var raisonDisplay=(t.raison||'').replace(/\
 ?\[Liq:[^\]]*\]/g,'').trim();
     return '<div class="trade-card">'+
@@ -855,8 +833,8 @@ function calcProfitFactor(){
 function calcDrawdown(){
   if(!trades.length)return 0;
   var sorted=[].concat(trades).sort(function(a,b){return (a.date+a.heure)>(b.date+b.heure)?1:-1;});
-  var capital=parseFloat(localStorage.getItem('sb_capital')||0);
-  var cum=capital;var peak=capital;var maxDD=0;
+  var cap=parseFloat(localStorage.getItem('sb_capital')||0);
+  var cum=cap;var peak=cap;var maxDD=0;
   sorted.forEach(function(t){
     cum+=(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0)+(parseFloat(t.swap)||0);
     if(cum>peak)peak=cum;
@@ -865,7 +843,6 @@ function calcDrawdown(){
   });
   return maxDD;
 }
-
 function renderStats(){
   var el=document.getElementById('statsContent');
   if(!trades.length){el.innerHTML='<div class="empty">Enregistre des trades pour voir tes statistiques.</div>';return;}
@@ -896,9 +873,9 @@ function renderStats(){
   var bestDay=calcBestDay();
   var bestHour=calcBestHour();
   var maxDD=calcDrawdown();
-  var capital=parseFloat(localStorage.getItem('sb_capital')||0);
-  var capitalActuel=capital+pl;
-  var perfPct=capital>0?((capitalActuel-capital)/capital*100):0;
+  var cap2=parseFloat(localStorage.getItem('sb_capital')||0);
+  var capNow=cap2+pl;
+  var perfPct=cap2>0?((capNow-cap2)/cap2*100):0;
   var ddColor=maxDD>20?'#ff4060':maxDD>10?'#ffd060':'#00e5a0';
 
   var insight=wr<35?'Win rate '+wr+'% - Priorite a la qualite des setups 8H-9H.':wr>=50?'Excellent win rate '+wr+'% ! La methode TIMING fonctionne.':'Win rate '+wr+'% - Verifie que ton biais M15 est bien valide avant 9H.';
@@ -924,7 +901,7 @@ function renderStats(){
       bestDayHtml+
       bestHourHtml+
       '<div class="kpi-card" style="border-top-color:'+ddColor+'"><div class="kpi-card-label">Drawdown Max</div><div class="kpi-card-val" style="color:'+ddColor+'">'+maxDD.toFixed(1)+'%</div><div class="kpi-card-sub">Depuis capital initial</div></div>'+
-      '<div class="kpi-card" style="border-top-color:'+cpl(perfPct)+'"><div class="kpi-card-label">Performance</div><div class="kpi-card-val" style="color:'+cpl(perfPct)+'">'+(perfPct>=0?'+':'')+perfPct.toFixed(1)+'%</div><div class="kpi-card-sub">Capital: '+capitalActuel.toFixed(2)+'EUR</div></div>'+
+      '<div class="kpi-card" style="border-top-color:'+cpl(perfPct)+'"><div class="kpi-card-label">Performance</div><div class="kpi-card-val" style="color:'+cpl(perfPct)+'">'+(perfPct>=0?'+':'')+perfPct.toFixed(1)+'%</div><div class="kpi-card-sub">Capital: '+capNow.toFixed(2)+'EUR</div></div>'+
       streakHtml+
     '</div>'+
     '<div class="insight">'+insight+'</div>'+
@@ -948,11 +925,9 @@ function renderStats(){
     var xA={ticks:{color:tickC,font:{size:10}},grid:{color:gridC}};
     var yA={ticks:{color:tickC,font:{size:11},callback:function(v){return v+'EUR';}},grid:{color:gridC}};
 
-    // Courbe EUR
     dChart('cEq');
     charts.cEq=new Chart(document.getElementById('cEq'),{type:'line',data:{labels:labels,datasets:[{data:equity,borderColor:ec,borderWidth:2.5,pointBackgroundColor:ec,pointRadius:3,fill:true,backgroundColor:ec+'18',tension:0.3}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yA}}});
-    // Courbe %
-    var equityPct=equity.map(function(v){return capital>0?parseFloat(((v-capital)/capital*100).toFixed(2)):0;});
+    var equityPct=equity.map(function(v){return cap2>0?parseFloat(((v-cap2)/cap2*100).toFixed(2)):0;});
     var yAPct={ticks:{color:tickC,font:{size:11},callback:function(v){return v+'%';}},grid:{color:gridC}};
     dChart('cEqPct');
     charts.cEqPct=new Chart(document.getElementById('cEqPct'),{type:'line',data:{labels:labels,datasets:[{data:equityPct,borderColor:'#a060ff',borderWidth:2.5,pointBackgroundColor:'#a060ff',pointRadius:3,fill:true,backgroundColor:'#a060ff18',tension:0.3}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yAPct}}});
