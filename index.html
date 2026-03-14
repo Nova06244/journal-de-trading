@@ -274,9 +274,8 @@ select option{background:#111a24;color:#d8eaff;}
       <label class="form-label">Direction</label>
       <select id="fDirection" style="display:none;" onchange="autoSlTp()"><option value="Long">Long</option><option value="Short">Short</option></select>
       <div class="btn-group">
-        <button class="toggle-btn" data-group="direction" data-val="Long" onclick="document.getElementById('fDirection').value='';
-  document.querySelectorAll('[data-group="direction"]').forEach(function(b){b.className='toggle-btn';});sel(this,'blue');autoSlTp();" style="flex:1;">LONG</button>
-        <button class="toggle-btn" data-group="direction" data-val="Short" onclick="document.getElementById('fDirection').value='Short';sel(this,'yellow');autoSlTp();" style="flex:1;">SHORT</button>
+        <button class="toggle-btn" data-group="direction" data-val="Long" onclick="toggleDir(this,'Long','blue');" style="flex:1;">LONG</button>
+        <button class="toggle-btn" data-group="direction" data-val="Short" onclick="toggleDir(this,'Short','yellow');" style="flex:1;">SHORT</button>
       </div>
     </div>
     <div class="form-group"><label class="form-label">Prix d entree</label><input type="number" step="0.00001" class="form-input" id="fEntree" placeholder="1.16165" oninput="autoSlTp()"></div>
@@ -470,6 +469,14 @@ function showTab(name,btn){
   document.getElementById('tab-'+name).classList.add('active');
   if(btn)btn.classList.add('active');
   if(name==='stats')renderStats();
+}
+
+function toggleDir(btn,val,color){
+  var isActive=btn.classList.contains('act-'+color);
+  document.querySelectorAll('[data-group="direction"]').forEach(function(b){b.className='toggle-btn';});
+  if(!isActive){btn.classList.add('act-'+color);document.getElementById('fDirection').value=val;}
+  else{document.getElementById('fDirection').value='';}
+  autoSlTp();
 }
 
 function sel(btn,color){
