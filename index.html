@@ -971,8 +971,8 @@ function renderStats(){
     var capital=parseFloat(localStorage.getItem('sb_capital')||0);
     var cum=capital;
     var equity=sorted.map(function(t){cum+=(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0)+(parseFloat(t.swap)||0);return parseFloat(cum.toFixed(2));});
-    if(capital>0)equity.unshift(capital);
     var labels=sorted.map(function(t){return t.date.slice(5)+(t.heure?' '+t.heure.slice(0,5):'');});
+    if(capital>0){equity.unshift(capital);labels.unshift('Départ');}
     var ec=pl>=0?'#00e5a0':'#ff4060';
     var gridC='#1a2840';var tickC='#4a6880';
     var xA={ticks:{color:tickC,font:{size:10}},grid:{color:gridC}};
