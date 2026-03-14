@@ -146,6 +146,7 @@ select option{background:#111a24;color:#d8eaff;}
   .kpis{flex-direction:column;align-items:flex-end;gap:4px;}
   .kpi-val{font-size:14px;}
 }
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -184,7 +185,7 @@ select option{background:#111a24;color:#d8eaff;}
     <button class="nav-btn active" onclick="showTab('saisie',this)">+ Nouveau</button>
     <button class="nav-btn" onclick="showTab('journal',this)">Journal</button>
     <button class="nav-btn" onclick="showTab('stats',this)">Stats</button>
-    <button class="nav-btn" onclick="refreshApp()" style="font-size:22px;">&#8635;</button>
+    <button class="nav-btn" id="refreshBtn" onclick="refreshApp()" style="font-size:22px;">&#8635;</button>
   </nav>
 </div>
 
@@ -255,7 +256,7 @@ select option{background:#111a24;color:#d8eaff;}
     <label class="form-label">Setup 9H-10H</label>
     <div class="btn-group">
       <button class="toggle-btn" data-group="setuptype" data-val="REVERSAL" onclick="sel(this,'red');autoSetup()" style="flex:1;line-height:1.5;">REVERSAL<br><span style="font-size:10px;opacity:0.65;">OB Break</span></button>
-      <button class="toggle-btn" data-group="setuptype" data-val="CONTINUATION" onclick="sel(this,'green');autoSetup()" style="flex:1;line-height:1.5;">CONTINUATION<br><span style="font-size:10px;opacity:0.65;">OB Sweep</span></button>
+      <button class="toggle-btn" data-group="setuptype" data-val="CONTINUATION" onclick="sel(this,'orange');autoSetup()" style="flex:1;line-height:1.5;">CONTINUATION<br><span style="font-size:10px;opacity:0.65;">OB Sweep</span></button>
     </div>
   </div>
   <div class="form-group">
@@ -435,10 +436,14 @@ function exportCSV(){
 
 function refreshApp(){
   setSyncStatus('loading','Synchronisation...');
+  var btn=document.getElementById('refreshBtn');
+  if(btn){btn.style.animation='spin 0.8s linear infinite';btn.style.color='var(--accent)';}
   Promise.all([sbFetch('trades?order=date.desc,heure.desc'),loadSetting('capital')]).then(function(results){
     trades=results[0]||[];
     if(results[1]){localStorage.setItem('sb_capital',results[1]);}
     setSyncStatus('ok','Synchronise');updateHeader();renderJournal();
+    var btn2=document.getElementById('refreshBtn');
+    if(btn2){btn2.style.animation='';btn2.style.color='';}
   }).catch(function(e){
     setSyncStatus('err','Erreur connexion');
     var d=document.getElementById('errBox');
@@ -453,6 +458,8 @@ function loadTrades(){
     trades=results[0]||[];
     if(results[1]){localStorage.setItem('sb_capital',results[1]);}
     setSyncStatus('ok','Synchronise');updateHeader();renderJournal();
+    var btn2=document.getElementById('refreshBtn');
+    if(btn2){btn2.style.animation='';btn2.style.color='';}
   }).catch(function(e){
     setSyncStatus('err','Erreur connexion');
     var d=document.getElementById('errBox');
@@ -847,7 +854,7 @@ function renderJournal(){
     var bc=bC[t.biais]||'#6080a0';var oc=oC[t.outcome]||'#6080a0';
     var rc=t.rules==='yes'?'#00e5a0':'#ff4060';var dc=t.direction==='Long'?'#4488ff':'#ffd060';
     var stVal=getSetupType(t);
-    var stc=stVal==='REVERSAL'?'#ff4060':stVal==='CONTINUATION'?'#00e5a0':'#00d4ff';
+    var stc=stVal==='REVERSAL'?'#a060ff':stVal==='CONTINUATION'?'#ff9f1c':'#00d4ff';
     var prices=[t.entree&&'Entree: '+t.entree,t.sl&&'SL: '+t.sl,t.tp&&'TP: '+t.tp].filter(Boolean).join(' / ');
     var raisonDisplay=(t.raison||'').replace(/\n?\[Liq:[^\]]*\]/g,'').trim();
     var dateDisplay=t.date?t.date.split('-').reverse().join('/'):t.date;
@@ -940,7 +947,7 @@ function renderStats(){
       '<div class="kpi-card" style="border-top-color:'+wrc+'"><div class="kpi-card-label">Win Rate</div><div class="kpi-card-val" style="color:'+wrc+'">'+wr+'%</div><div class="kpi-card-sub">'+wins+' / '+n+' trades</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+cpl(pl)+'"><div class="kpi-card-label">P&L Net</div><div class="kpi-card-val" style="color:'+cpl(pl)+'">'+(pl>=0?'+':'')+pl.toFixed(2)+'EUR</div><div class="kpi-card-sub">Timing: '+(plR>=0?'+':'')+plR.toFixed(2)+' / Hors: '+(plN>=0?'+':'')+plN.toFixed(2)+'</div></div>'+
       '<div class="kpi-card" style="border-top-color:#ff4060"><div class="kpi-card-label">REVERSAL</div><div class="kpi-card-val" style="color:#ff4060">'+(reversals.length?Math.round(revWins/reversals.length*100):0)+'%</div><div class="kpi-card-sub">'+revWins+' / '+reversals.length+' wins</div></div>'+
-      '<div class="kpi-card" style="border-top-color:#00e5a0"><div class="kpi-card-label">CONTINUATION</div><div class="kpi-card-val" style="color:#00e5a0">'+(continuations.length?Math.round(contWins/continuations.length*100):0)+'%</div><div class="kpi-card-sub">'+contWins+' / '+continuations.length+' wins</div></div>'+
+      '<div class="kpi-card" style="border-top-color:#ff9f1c"><div class="kpi-card-label">CONTINUATION</div><div class="kpi-card-val" style="color:#ff9f1c">'+(continuations.length?Math.round(contWins/continuations.length*100):0)+'%</div><div class="kpi-card-sub">'+contWins+' / '+continuations.length+' wins</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+rc+'"><div class="kpi-card-label">Dans le timing</div><div class="kpi-card-val" style="color:'+rc+'">'+Math.round(rok/n*100)+'%</div><div class="kpi-card-sub">'+rok+' / '+n+' trades</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+pfColor+'"><div class="kpi-card-label">Profit Factor</div><div class="kpi-card-val" style="color:'+pfColor+'">'+pf+'</div><div class="kpi-card-sub">Gains bruts / Pertes brutes</div></div>'+
       '<div class="kpi-card" style="border-top-color:#ff4060"><div class="kpi-card-label">Frais totaux</div><div class="kpi-card-val" style="color:#ff4060">'+(totalComm>=0?'+':'')+totalComm.toFixed(2)+'EUR</div><div class="kpi-card-sub">Moy: '+(n?(totalComm/n).toFixed(2):0)+'EUR/trade</div></div>'+
@@ -985,12 +992,12 @@ function renderStats(){
     var revPL=reversals.reduce(function(s,t){return s+(parseFloat(t.pl)||0);},0);
     var contPL=continuations.reduce(function(s,t){return s+(parseFloat(t.pl)||0);},0);
     dChart('cSetup');
-    charts.cSetup=new Chart(document.getElementById('cSetup'),{type:'bar',data:{labels:['REVERSAL','CONTINUATION'],datasets:[{data:[revPL,contPL],backgroundColor:[revPL>=0?'#00e5a0':'#ff4060',contPL>=0?'#00e5a0':'#ff4060'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yA}}});
+    charts.cSetup=new Chart(document.getElementById('cSetup'),{type:'bar',data:{labels:['REVERSAL','CONTINUATION'],datasets:[{data:[revPL,contPL],backgroundColor:['#a060ff','#ff9f1c'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yA}}});
 
     var plTimingVal=trades.filter(function(t){return t.rules==='yes';}).reduce(function(s,t){return s+(parseFloat(t.pl)||0);},0);
     var plHorsVal=trades.filter(function(t){return t.rules==='no';}).reduce(function(s,t){return s+(parseFloat(t.pl)||0);},0);
     dChart('cRules');
-    charts.cRules=new Chart(document.getElementById('cRules'),{type:'bar',data:{labels:['Dans le timing','Hors timing'],datasets:[{data:[plTimingVal,plHorsVal],backgroundColor:[plTimingVal>=0?'#00e5a0':'#ff4060',plHorsVal>=0?'#00e5a0':'#ff4060'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yA}}});
+    charts.cRules=new Chart(document.getElementById('cRules'),{type:'bar',data:{labels:['Dans le timing','Hors timing'],datasets:[{data:[plTimingVal,plHorsVal],backgroundColor:['#00e5a0','#ff4060'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:xA,y:yA}}});
 
     // P&L par heure
     var hourMap={};
