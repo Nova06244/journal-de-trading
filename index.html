@@ -213,9 +213,9 @@ select option{background:#111a24;color:#d8eaff;}
   <div class="form-group">
     <label class="form-label">Biais M15 — 8H a 8H45</label>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <button class="toggle-btn" data-group="biais" data-val="bullish" onclick="sel(this,'green');autoSetup()" style="flex:0 1 auto;">Haussier</button>
-      <button class="toggle-btn" data-group="biais" data-val="bearish" onclick="sel(this,'red');autoSetup()" style="flex:0 1 auto;">Baissier</button>
-      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;">CHoCH</span>
+      <button class="toggle-btn" data-group="biais" data-val="bullish" onclick="sel(this,'green');autoSetup()">Haussier</button>
+      <button class="toggle-btn" data-group="biais" data-val="bearish" onclick="sel(this,'red');autoSetup()">Baissier</button>
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;">CHoCH M15</span>
       <input type="time" class="choch-time" id="fChochHeure" oninput="autoSetup()" style="width:110px;">
       <button class="choch-hier-btn" id="chochHierBtn" onclick="this.classList.toggle('checked');autoSetup()">
         <span>Hier</span>
@@ -944,15 +944,16 @@ function renderStats(){
       '<div class="kpi-card" style="border-top-color:#00d4ff"><div class="kpi-card-label">Trades totaux</div><div class="kpi-card-val" style="color:#00d4ff">'+n+'</div><div class="kpi-card-sub">'+wins+'W / '+losses+'L / '+bes+'BE</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+wrc+'"><div class="kpi-card-label">Win Rate</div><div class="kpi-card-val" style="color:'+wrc+'">'+wr+'%</div><div class="kpi-card-sub">'+wins+' / '+n+' trades</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+cpl(pl)+'"><div class="kpi-card-label">P&L Net</div><div class="kpi-card-val" style="color:'+cpl(pl)+'">'+(pl>=0?'+':'')+pl.toFixed(2)+'EUR</div><div class="kpi-card-sub">Timing: '+(plR>=0?'+':'')+plR.toFixed(2)+' / Hors: '+(plN>=0?'+':'')+plN.toFixed(2)+'</div></div>'+
-      '<div class="kpi-card" style="border-top-color:#ff4060"><div class="kpi-card-label">REVERSAL</div><div class="kpi-card-val" style="color:#ff4060">'+(reversals.length?Math.round(revWins/reversals.length*100):0)+'%</div><div class="kpi-card-sub">'+revWins+' / '+reversals.length+' wins</div></div>'+
-      '<div class="kpi-card" style="border-top-color:#ff9f1c"><div class="kpi-card-label">CONTINUATION</div><div class="kpi-card-val" style="color:#ff9f1c">'+(continuations.length?Math.round(contWins/continuations.length*100):0)+'%</div><div class="kpi-card-sub">'+contWins+' / '+continuations.length+' wins</div></div>'+
-      '<div class="kpi-card" style="border-top-color:'+rc+'"><div class="kpi-card-label">Dans le timing</div><div class="kpi-card-val" style="color:'+rc+'">'+Math.round(rok/n*100)+'%</div><div class="kpi-card-sub">'+rok+' / '+n+' trades</div></div>'+
-      '<div class="kpi-card" style="border-top-color:'+pfColor+'"><div class="kpi-card-label">Profit Factor</div><div class="kpi-card-val" style="color:'+pfColor+'">'+pf+'</div><div class="kpi-card-sub">Gains bruts / Pertes brutes</div></div>'+
       '<div class="kpi-card" style="border-top-color:#ff4060"><div class="kpi-card-label">Frais totaux</div><div class="kpi-card-val" style="color:#ff4060">'+(totalComm>=0?'+':'')+totalComm.toFixed(2)+'EUR</div><div class="kpi-card-sub">Moy: '+(n?(totalComm/n).toFixed(2):0)+'EUR/trade</div></div>'+
-      '<div class="kpi-card" style="border-top-color:'+otColor+'"><div class="kpi-card-label">Trades semaine</div><div class="kpi-card-val" style="color:'+otColor+'">'+weekCount+'</div><div class="kpi-card-sub">Limite : '+OVERTRADING_LIMIT+'/semaine</div></div>'+
+      '<div class="kpi-card" style="border-top-color:#a060ff"><div class="kpi-card-label">REVERSAL</div><div class="kpi-card-val" style="color:#a060ff">'+(reversals.length?Math.round(revWins/reversals.length*100):0)+'%</div><div class="kpi-card-sub">'+revWins+' / '+reversals.length+' wins</div></div>'+
+      '<div class="kpi-card" style="border-top-color:#ff9f1c"><div class="kpi-card-label">CONTINUATION</div><div class="kpi-card-val" style="color:#ff9f1c">'+(continuations.length?Math.round(contWins/continuations.length*100):0)+'%</div><div class="kpi-card-sub">'+contWins+' / '+continuations.length+' wins</div></div>'+
+      '<div class="kpi-card" style="border-top-color:#00e5a0"><div class="kpi-card-label">Dans le timing</div><div class="kpi-card-val" style="color:#00e5a0">'+Math.round(rok/n*100)+'%</div><div class="kpi-card-sub">'+rok+' / '+n+' trades</div></div>'+
+      '<div class="kpi-card" style="border-top-color:#ff4060"><div class="kpi-card-label">Hors timing</div><div class="kpi-card-val" style="color:#ff4060">'+Math.round((n-rok)/n*100)+'%</div><div class="kpi-card-sub">'+(n-rok)+' / '+n+' trades</div></div>'+
+      '<div class="kpi-card" style="border-top-color:'+pfColor+'"><div class="kpi-card-label">Profit Factor</div><div class="kpi-card-val" style="color:'+pfColor+'">'+pf+'</div><div class="kpi-card-sub">Gains bruts / Pertes brutes</div></div>'+
+      '<div class="kpi-card" style="border-top-color:'+ddColor+'"><div class="kpi-card-label">Drawdown Max</div><div class="kpi-card-val" style="color:'+ddColor+'">'+maxDD.toFixed(1)+'%</div><div class="kpi-card-sub">Depuis capital initial</div></div>'+
       bestDayHtml+
       bestHourHtml+
-      '<div class="kpi-card" style="border-top-color:'+ddColor+'"><div class="kpi-card-label">Drawdown Max</div><div class="kpi-card-val" style="color:'+ddColor+'">'+maxDD.toFixed(1)+'%</div><div class="kpi-card-sub">Depuis capital initial</div></div>'+
+      '<div class="kpi-card" style="border-top-color:'+otColor+'"><div class="kpi-card-label">Trades semaine</div><div class="kpi-card-val" style="color:'+otColor+'">'+weekCount+'</div><div class="kpi-card-sub">Limite : '+OVERTRADING_LIMIT+'/sem</div></div>'+
       '<div class="kpi-card" style="border-top-color:'+cpl(perfPct)+'"><div class="kpi-card-label">Performance</div><div class="kpi-card-val" style="color:'+cpl(perfPct)+'">'+(perfPct>=0?'+':'')+perfPct.toFixed(1)+'%</div><div class="kpi-card-sub">Capital: '+capNow.toFixed(2)+'EUR</div></div>'+
       streakHtml+
     '</div>'+
