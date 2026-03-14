@@ -274,8 +274,9 @@ select option{background:#111a24;color:#d8eaff;}
       <label class="form-label">Direction</label>
       <select id="fDirection" style="display:none;" onchange="autoSlTp()"><option value="Long">Long</option><option value="Short">Short</option></select>
       <div class="btn-group">
-        <button class="toggle-btn" onclick="document.getElementById('fDirection').value='Long';sel(this,'blue');autoSlTp();" style="flex:1;">LONG</button>
-        <button class="toggle-btn" onclick="document.getElementById('fDirection').value='Short';sel(this,'yellow');autoSlTp();" style="flex:1;">SHORT</button>
+        <button class="toggle-btn" data-group="direction" data-val="Long" onclick="document.getElementById('fDirection').value='';
+  document.querySelectorAll('[data-group="direction"]').forEach(function(b){b.className='toggle-btn';});sel(this,'blue');autoSlTp();" style="flex:1;">LONG</button>
+        <button class="toggle-btn" data-group="direction" data-val="Short" onclick="document.getElementById('fDirection').value='Short';sel(this,'yellow');autoSlTp();" style="flex:1;">SHORT</button>
       </div>
     </div>
     <div class="form-group"><label class="form-label">Prix d entree</label><input type="number" step="0.00001" class="form-input" id="fEntree" placeholder="1.16165" oninput="autoSlTp()"></div>
@@ -581,7 +582,9 @@ function autoSetup(){
   if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' / '+chochLabel);
   if(liqStr)parts.push('Liquidite : '+liqStr);
   if(setuptype)parts.push('Setup : '+setuptype);
-  if(signal)parts.push('Signal : '+signal);
+  var signalLabel=signal;
+  if(signal==='FVG-'||signal==='FVG+'||signal==='IFVG-'||signal==='IFVG+')signalLabel=signal+' M5';
+  if(signal)parts.push('Signal : '+signalLabel);
   if(dir&&entree)parts.push('Entree '+dir+' @ '+parseFloat(entree).toFixed(5));
   var ta=document.getElementById('fRaison');
   if(!ta.dataset.manualEdit){ta.value=parts.join('\n');autoResize(ta);}
