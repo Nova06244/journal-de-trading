@@ -539,10 +539,15 @@ function autoSetup(){
   var biais=getVal('biais');var setuptype=getVal('setuptype');var signal=getVal('signal');
   var dir=document.getElementById('fDirection').value;var entree=document.getElementById('fEntree').value;
   var biaisLabel={bullish:'Haussier',bearish:'Baissier',neutral:'Indecis'};
+  var chochEl=document.getElementById('fChochHeure');
+  var chochHeure=chochEl?chochEl.value:'';
+  var chochHierEl=document.getElementById('chochHierBtn');
+  var chochHier=chochHierEl&&chochHierEl.classList.contains('checked');
+  var chochLabel=chochHeure?(chochHier?'CHoCH M15 Hier a '+chochHeure:'CHoCH M15 identifie a '+chochHeure):'CHoCH M15 identifie a __:__';
   var liqLabels={'asl':'ASL','ash':'ASH','pdl':'PDL','pdh':'PDH','swing-low':'Swing Low','swing-high':'Swing High','asl-ash-break':'ASH Break','asl-ash-sweep':'ASH Sweep','pdl-pdh-break':'PDH Break','pdl-pdh-sweep':'PDH Sweep','swing-break':'Swing Break','swing-sweep':'Swing Sweep'};
   var liqStr=selectedLiq.map(function(k){return liqLabels[k]||k;}).join(' + ');
   var parts=[];
-  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' / CHoCH M15 identifie');
+  if(biais)parts.push('Biais M15 : '+(biaisLabel[biais]||biais)+' / '+chochLabel);
   if(liqStr)parts.push('Liquidite : '+liqStr);
   if(setuptype)parts.push('Setup : '+setuptype);
   if(signal)parts.push('Signal : '+signal+' M5 broke');
