@@ -212,13 +212,11 @@ select option{background:#111a24;color:#d8eaff;}
   </div>
   <div class="form-group">
     <label class="form-label">Biais M15 — 8H a 8H45</label>
-    <div class="btn-group">
-      <button class="toggle-btn" data-group="biais" data-val="bullish" onclick="sel(this,'green');autoSetup()">Haussier</button>
-      <button class="toggle-btn" data-group="biais" data-val="bearish" onclick="sel(this,'red');autoSetup()">Baissier</button>
-    </div>
-    <div class="choch-row">
-      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;">CHoCH M15</span>
-      <input type="time" class="choch-time" id="fChochHeure" oninput="autoSetup()">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="toggle-btn" data-group="biais" data-val="bullish" onclick="sel(this,'green');autoSetup()" style="flex:0 1 auto;">Haussier</button>
+      <button class="toggle-btn" data-group="biais" data-val="bearish" onclick="sel(this,'red');autoSetup()" style="flex:0 1 auto;">Baissier</button>
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;">CHoCH</span>
+      <input type="time" class="choch-time" id="fChochHeure" oninput="autoSetup()" style="width:110px;">
       <button class="choch-hier-btn" id="chochHierBtn" onclick="this.classList.toggle('checked');autoSetup()">
         <span>Hier</span>
       </button>
