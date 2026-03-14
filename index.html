@@ -543,7 +543,7 @@ function autoSetup(){
   var chochHeure=chochEl?chochEl.value:'';
   var chochHierEl=document.getElementById('chochHierBtn');
   var chochHier=chochHierEl&&chochHierEl.classList.contains('checked');
-  var chochLabel=chochHeure?(chochHier?'CHoCH M15 Hier a '+chochHeure:'CHoCH M15 identifie a '+chochHeure):'CHoCH M15 identifie a __:__';
+  var chochLabel=chochHeure?(chochHier?'CHoCH M15 Hier à '+chochHeure:'CHoCH M15 identifié à '+chochHeure):'CHoCH M15 identifié à __:__';
   var liqLabels={'asl':'ASL','ash':'ASH','pdl':'PDL','pdh':'PDH','swing-low':'Swing Low','swing-high':'Swing High','asl-ash-break':'ASH Break','asl-ash-sweep':'ASH Sweep','pdl-pdh-break':'PDH Break','pdl-pdh-sweep':'PDH Sweep','swing-break':'Swing Break','swing-sweep':'Swing Sweep'};
   var liqStr=selectedLiq.map(function(k){return liqLabels[k]||k;}).join(' + ');
   var parts=[];
