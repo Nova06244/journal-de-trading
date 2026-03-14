@@ -217,7 +217,7 @@ select option{background:#111a24;color:#d8eaff;}
     </div>
     <div class="choch-row">
       <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;white-space:nowrap;">CHoCH M15</span>
-      <input type="time" class="choch-time" id="fChochHeure">
+      <input type="time" class="choch-time" id="fChochHeure" oninput="autoSetup()">
       <button class="choch-hier-btn" id="chochHierBtn" onclick="this.classList.toggle('checked');autoSetup()">
         <span>Hier</span>
       </button>
