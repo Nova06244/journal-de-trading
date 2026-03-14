@@ -439,7 +439,12 @@ function refreshApp(){
     trades=results[0]||[];
     if(results[1]){localStorage.setItem('sb_capital',results[1]);}
     setSyncStatus('ok','Synchronise');updateHeader();renderJournal();
-  }).catch(function(e){setSyncStatus('err','Erreur connexion');console.error(e);});
+  }).catch(function(e){
+    setSyncStatus('err','Erreur connexion');
+    var d=document.getElementById('errBox');
+    if(!d){d=document.createElement('div');d.id='errBox';d.style.cssText='position:fixed;bottom:10px;left:10px;right:10px;background:#1a0010;border:1px solid #ff4060;border-radius:8px;padding:10px;font-size:11px;color:#ff4060;z-index:9999;word-break:break-all;';document.body.appendChild(d);}
+    d.textContent='ERR: '+(e&&e.message?e.message:JSON.stringify(e));
+  });
 }
 
 function loadTrades(){
@@ -448,7 +453,12 @@ function loadTrades(){
     trades=results[0]||[];
     if(results[1]){localStorage.setItem('sb_capital',results[1]);}
     setSyncStatus('ok','Synchronise');updateHeader();renderJournal();
-  }).catch(function(e){setSyncStatus('err','Erreur connexion');console.error(e);});
+  }).catch(function(e){
+    setSyncStatus('err','Erreur connexion');
+    var d=document.getElementById('errBox');
+    if(!d){d=document.createElement('div');d.id='errBox';d.style.cssText='position:fixed;bottom:10px;left:10px;right:10px;background:#1a0010;border:1px solid #ff4060;border-radius:8px;padding:10px;font-size:11px;color:#ff4060;z-index:9999;word-break:break-all;';document.body.appendChild(d);}
+    d.textContent='ERR: '+(e&&e.message?e.message:JSON.stringify(e));
+  });
 }
 
 function setSyncStatus(type,msg){var el=document.getElementById('syncStatus');el.className='sync-badge sync-'+type;el.textContent=msg;}
