@@ -504,9 +504,6 @@ function selDirection(btn,dir){
   currentDirection=dir;
   document.querySelectorAll('[data-group="direction"]').forEach(function(b){b.className='toggle-btn';});
   btn.classList.add(dir==='Long'?'act-blue':'act-yellow');
-  // Sync avec le select cache
-  var sel=document.getElementById('fDirection');
-  if(sel)sel.value=dir;
   autoSlTp();
 }
 
