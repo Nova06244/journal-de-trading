@@ -175,6 +175,7 @@ select option{background:#111a24;color:#d8eaff;}
 .cal-dot-pl.loss{color:var(--red);}
 .cal-dot-pl.be{color:var(--purple);}
 .cal-dot-type{font-size:9px;color:var(--muted);line-height:1.2;}
+.cal-count{position:absolute;top:-4px;right:0;background:var(--accent);color:#000;font-size:8px;font-weight:800;border-radius:4px;padding:1px 4px;font-family:'Syne',sans-serif;}
 .cal-detail{background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:14px;}
 .cal-detail-title{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
 .cal-detail-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);}
@@ -1100,8 +1101,9 @@ function renderCalendar(){
       var pn=(parseFloat(t.pl)||0)+(parseFloat(t.commission)||0)+(parseFloat(t.swap)||0);
       var oc=t.outcome==='Win'?'win':t.outcome==='Loss'?'loss':'be';
       var pl=(pn>=0?'+':'')+pn.toFixed(2);
-      var st=getSetupType(t)==='REVERSAL'?'REV':getSetupType(t)==='CONTINUATION'?'CON':'';
-      dot='<div class="cal-dot '+oc+'"><div class="cal-dot-pl '+oc+'">'+pl+'</div><div class="cal-dot-type">'+st+'</div></div>';
+      var count=tm[ds].length;
+      var countBadge=count>1?'<div class="cal-count">'+count+'</div>':'';
+      dot='<div style="position:relative;width:100%;">'+countBadge+'<div class="cal-dot '+oc+'"><div class="cal-dot-pl '+oc+'">'+pl+'</div></div></div>';
     }
     cells+='<div class="'+cls+'" data-date="'+fd+'" onclick="calSelectDay(this.dataset.date)"><div class="cal-cell-num">'+n+'</div>'+dot+'</div>';
   }
