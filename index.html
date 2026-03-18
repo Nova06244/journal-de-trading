@@ -26,9 +26,8 @@ function renderCalendar(){
   var tradeMap={};
   trades.forEach(function(t){
     if(!t.date)return;
-    var d=t.date.slice(0,7);
     var ym=calYear+'-'+(calMonth+1<10?'0':'')+(calMonth+1);
-    if(d!==ym)return;
+    if(t.date.slice(0,7)!==ym)return;
     var day=t.date.slice(8,10);
     if(!tradeMap[day])tradeMap[day]=[];
     tradeMap[day].push(t);
