@@ -15,6 +15,7 @@ var calMonth=new Date().getMonth();
 var calSelectedDay=null;
 
 function renderCalendar(){
+  try{
   calYear=calYear||new Date().getFullYear();
   calMonth=calMonth!==undefined?calMonth:new Date().getMonth();
   var el=document.getElementById('calendarContent');
@@ -129,6 +130,10 @@ function renderCalendar(){
       '<div class="cal-days">'+cells+'</div>'+
     '</div>'+
     detailHtml;
+  }catch(e){
+    var el=document.getElementById('calendarContent');
+    if(el)el.innerHTML='<div style="color:#ff4060;padding:20px;font-size:12px;">ERREUR: '+e.message+'</div>';
+  }
 }
 
 function calSelectDay(d){
