@@ -229,8 +229,8 @@ select option{background:#111a24;color:#d8eaff;}
   <div class="timing-banner">
     <span style="font-size:16px;">&#9200;</span>
     <span class="timing-label">TIMING :</span>
-    <span class="timing-badge timing-8">8H-9H - Biais M15 - CHoCH M15</span>
-    <span class="timing-badge timing-9">9H-10H - Entree OB / IFVG M5</span>
+    <span class="timing-badge timing-8">8H-9H — Biais M15 / CHoCH M15</span>
+    <span class="timing-badge timing-9">9H-10H — Entrée OB / IFVG M5</span>
   </div>
   <div class="form-row">
     <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="fDate"></div>
@@ -245,7 +245,7 @@ select option{background:#111a24;color:#d8eaff;}
     <div class="rr-display" style="color:var(--green);font-family:'Syne',sans-serif;font-size:18px;font-weight:700;">1 : 2.00</div>
   </div>
   <div class="form-group">
-    <label class="form-label">Biais M15 — 8H a 8H45</label>
+    <label class="form-label">Biais M15 — 8H à 9H</label>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <button class="toggle-btn" data-group="biais" data-val="bullish" onclick="sel(this,'green');autoSetup()">Haussier</button>
       <button class="toggle-btn" data-group="biais" data-val="bearish" onclick="sel(this,'red');autoSetup()">Baissier</button>
@@ -581,7 +581,7 @@ function autoTiming(){
   var parts=heure.split(':');
   var h=parseInt(parts[0]);var m=parseInt(parts[1]);
   var totalMin=h*60+m;
-  var start=8*60+45;
+  var start=9*60;
   var end=10*60;
   var inTiming=(totalMin>=start && totalMin<end);
   var btnYes=document.getElementById('rulesYes');
