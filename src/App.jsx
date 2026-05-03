@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 // ─── SUPABASE ─────────────────────────────────────────────────────────────────
 const SB_URL = "https://zqtmjxsjurdrcnwissmn.supabase.co";
-const SB_KEY = "sb_publishable_1R5i05wu8WkSRIAGqhZ29Q_4hmVC4vS";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxdG1qeHNqdXJkcmNud2lzc21uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTY3NjksImV4cCI6MjA4NzI3Mjc2OX0.hAiO03vpGlfAnqlkVZ34yy-tQ3JqRhWDCG3h05Nq-qM";
 
 async function sbGet(table, params) {
   var url = SB_URL + "/rest/v1/" + table + "?order=id.desc";
