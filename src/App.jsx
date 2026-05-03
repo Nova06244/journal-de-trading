@@ -385,6 +385,16 @@ function TabJournal(props){
             </select>
           </div>
         </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+          <div>
+            <div style={{fontSize:9,color:"#475569",marginBottom:4}}>DATE</div>
+            <input type="date" value={props.jDate} onChange={function(e){props.setJDate(e.target.value);}} style={{...INP}}/>
+          </div>
+          <div>
+            <div style={{fontSize:9,color:"#475569",marginBottom:4}}>HEURE</div>
+            <input type="time" value={props.jHeure2} onChange={function(e){props.setJHeure2(e.target.value);}} style={{...INP}}/>
+          </div>
+        </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
           <div>
             <div style={{fontSize:9,color:"#475569",marginBottom:4}}>GAINS / PERTES (€)</div>
@@ -399,9 +409,12 @@ function TabJournal(props){
             <input type="text" placeholder="Note..." value={props.jNote} onChange={function(e){props.setJNote(e.target.value);}} style={INP}/>
           </div>
         </div>
-        <button onClick={props.onAdd} disabled={props.loading} style={{width:"100%",padding:10,background:"rgba(59,130,246,0.2)",border:"1px solid rgba(59,130,246,0.4)",borderRadius:8,color:"#93c5fd",fontSize:11,letterSpacing:1,fontWeight:600,cursor:"pointer",fontFamily:"'DM Mono',monospace"}}>
-          {props.loading?"⟳ SYNC...":"+ ENREGISTRER"}
-        </button>
+        <div style={{display:"grid",gridTemplateColumns:props.editTrade?"1fr 1fr":"1fr",gap:8}}>
+          <button onClick={props.onAdd} disabled={props.loading} style={{padding:10,background:props.editTrade?"rgba(234,179,8,0.2)":"rgba(59,130,246,0.2)",border:"1px solid "+(props.editTrade?"rgba(234,179,8,0.4)":"rgba(59,130,246,0.4)"),borderRadius:8,color:props.editTrade?"#fbbf24":"#93c5fd",fontSize:11,letterSpacing:1,fontWeight:600,cursor:"pointer",fontFamily:"'DM Mono',monospace"}}>
+            {props.loading?"⟳ SYNC...":props.editTrade?"✏ MODIFIER":"+ ENREGISTRER"}
+          </button>
+          {props.editTrade&&<button onClick={props.onCancelEdit} style={{padding:10,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,color:"#64748b",fontSize:11,cursor:"pointer",fontFamily:"'DM Mono',monospace"}}>✕ ANNULER</button>}
+        </div>
       </div>
 
       {total>0&&(
@@ -437,6 +450,7 @@ function TabJournal(props){
                 <span style={{fontSize:9,color:"#334155",flex:1}}>{t.date} {t.heure}</span>
                 <span style={{fontSize:9,color:"#475569"}}>{t.lot}L</span>
                 <span style={{fontSize:11,fontWeight:700,color:pl>=0?"#22c55e":"#ef4444"}}>{pl>=0?"+":""}{pl.toFixed(2)}€</span>
+                <span onClick={function(){props.startEdit(t);}} style={{cursor:"pointer",opacity:0.5,fontSize:12,color:"#fbbf24",marginRight:4}}>✏</span>
                 <span onClick={function(){props.onDel(t.id);}} style={{cursor:"pointer",opacity:0.4,fontSize:12,color:"#94a3b8"}}>✕</span>
               </div>
             );
@@ -602,8 +616,11 @@ export default function PivotAgent(){
   var [jDir,setJDir]=useState("SHORT");
   var [jRes,setJRes]=useState("WIN");
   var [jNote,setJNote]=useState("");
+  var [jDate,setJDate]=useState(TODAY);
+  var [jHeure2,setJHeure2]=useState(gn);
   var [jGain,setJGain]=useState("");
   var [jComm,setJComm]=useState("-0.06");
+  var [editTrade,setEditTrade]=useState(null);
   var [loading,setLoading]=useState(false);
   var [initializing,setInitializing]=useState(true);
 
@@ -673,14 +690,29 @@ export default function PivotAgent(){
 
   async function onAdd(){
     var lotTrade=capDepart&&capSaved?calcLot(capActuel,parseFloat(rsk)):0.01;
-    var data={date:TODAY,heure:gn(),niveau:jNiv,dir:jDir,resultat:jRes,note:jNote,lot:lotTrade,gain:jGain!==""?parseFloat(jGain):null,commission:jComm!==""?parseFloat(jComm):0};
+    var data={date:jDate,heure:jHeure2,niveau:jNiv,dir:jDir,resultat:jRes,note:jNote,lot:lotTrade,gain:jGain!==""?parseFloat(jGain):null,commission:jComm!==""?parseFloat(jComm):0};
     setLoading(true);
     try {
-      var n=await sbInsert("trades",data);
-      if(n){setJournal(function(j){return [n].concat(j);});}
-      setJNote("");setJGain("");setJComm("-0.06");
+      if(editTrade){
+        await sbUpdate("trades",editTrade,data);
+        setJournal(function(j){return j.map(function(t){return t.id===editTrade?Object.assign({},t,data,{id:editTrade}):t;});});
+        setEditTrade(null);
+      } else {
+        var n=await sbInsert("trades",data);
+        if(n){setJournal(function(j){return [n].concat(j);});}
+      }
+      setJNote("");setJGain("");setJComm("-0.06");setJDate(TODAY);setJHeure2(gn());
     } catch(e){setErr("Erreur lors de l'enregistrement.");}
     setLoading(false);
+  }
+
+  function startEdit(t){
+    setJNiv(t.niveau);setJDir(t.dir);setJRes(t.resultat);
+    setJDate(t.date);setJHeure2(t.heure||gn());
+    setJGain(t.gain!=null?String(t.gain):"");
+    setJComm(t.commission!=null?String(t.commission):"-0.06");
+    setJNote(t.note||"");setEditTrade(t.id);
+    window.scrollTo(0,0);
   }
 
   async function onDel(id){
@@ -729,7 +761,7 @@ export default function PivotAgent(){
       <div style={{maxWidth:640,margin:"0 auto"}}>
         {tab==="signal"&&<TabSignal mode={mode} setMode={setMode} res={res} setRes={setRes} syncOk={syncOk} syncErr={syncErr} smsg={smsg} onSave={onSave} r2={r2} setR2={setR2} r1={r1} setR1={setR1} pp={pp} setPp={setPp} s1={s1} setS1={setS1} s2={s2} setS2={setS2} price={price} setPrice={setPrice} heure={heure} setHeure={setHeure} hauto={hauto} setHauto={setHauto} resetHeure={function(){setHauto(true);setHeure(gn());}} ctx={ctx} setCtx={setCtx} err={err} onAnalyse={onAnalyse} lot={lot}/>}
         {tab==="lot"&&<TabCapital capDepart={capDepart} setCapDepart={setCapDepart} capSaved={capSaved} setCapSaved={setCapSaved} capActuel={capActuel} rsk={rsk} setRsk={setRsk} lot={lot} journal={journal} onSaveCapital={onSaveCapital}/>}
-        {tab==="journal"&&<TabJournal journal={journal} jNiv={jNiv} setJNiv={setJNiv} jDir={jDir} setJDir={setJDir} jRes={jRes} setJRes={setJRes} jNote={jNote} setJNote={setJNote} jGain={jGain} setJGain={setJGain} jComm={jComm} setJComm={setJComm} onAdd={onAdd} onDel={onDel} lot={lot} loading={loading}/>}
+        {tab==="journal"&&<TabJournal journal={journal} jNiv={jNiv} setJNiv={setJNiv} jDir={jDir} setJDir={setJDir} jRes={jRes} setJRes={setJRes} jNote={jNote} setJNote={setJNote} jGain={jGain} setJGain={setJGain} jComm={jComm} setJComm={setJComm} jDate={jDate} setJDate={setJDate} jHeure2={jHeure2} setJHeure2={setJHeure2} editTrade={editTrade} startEdit={startEdit} onCancelEdit={function(){setEditTrade(null);setJNote("");setJGain("");setJComm("-0.06");setJDate(TODAY);setJHeure2(gn());}} onAdd={onAdd} onDel={onDel} lot={lot} loading={loading}/>}
         {tab==="cal"&&<TabCal journal={journal}/>}
         {tab==="news"&&<TabNews checks={checks} tc={tc}/>}
         <p style={{textAlign:"center",fontSize:9,color:"#1e293b",marginTop:24}}>PIVOT AGENT · EUR/USD · ICMARKETS · ☁ SUPABASE</p>
