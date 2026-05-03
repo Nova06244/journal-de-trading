@@ -774,7 +774,7 @@ return(
     {tab==="journal"&&<TabJournal journal={journal} jNiv={jNiv} setJNiv={setJNiv} jDir={jDir} setJDir={setJDir} jRes={jRes} setJRes={setJRes} jNote={jNote} setJNote={setJNote} jGain={jGain} setJGain={setJGain} jComm={jComm} setJComm={setJComm} jDate={jDate} setJDate={setJDate} jHeure2={jHeure2} setJHeure2={setJHeure2} editTrade={editTrade} startEdit={startEdit} onCancelEdit={function(){setEditTrade(null);setJNote("");setJGain("");setJComm("-0.06");setJDate(TODAY);setJHeure2(gn());}} onAdd={onAdd} onDel={onDel} lot={lot} loading={loading}/>}
     {tab==="cal"&&<TabCal journal={journal}/>}
     {tab==="news"&&<TabNews checks={checks} tc={tc}/>}
-    <p style={{textAlign:"center",fontSize:9,color:"#1e293b",marginTop:24}}>PIVOT AGENT · EUR/USD · ICMARKETS · ☁ SUPABASE</p>
+    <p style={{textAlign:"center",fontSize:9,color:"#1e293b",marginTop:24}}>PIVOT AGENT · EUR/USD · ICMARKETS · ☁ SUPABASE v2</p>
   </div>
 </div>
 ```
