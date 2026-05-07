@@ -593,7 +593,7 @@ function TabNews(props){
     try{
       var r=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":"ANTHROPIC_KEY_PLACEHOLDER","anthropic-version":"2023-06-01"},
+        headers:{"Content-Type":"application/json","x-api-key":"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","anthropic-version":"2023-06-01"},
         body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1500,messages:[{role:"user",content:prompt}]})
       });
       var raw=await r.json();
