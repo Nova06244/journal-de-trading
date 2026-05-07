@@ -588,7 +588,7 @@ function TabNews(props){
   async function fetchNews(){
     setNewsLoading(true);setNewsErr("");
     try{
-      var r=await fetch("/api/news",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})});
+      var r=await fetch("/api/news.cjs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})});
       if(!r.ok)throw new Error("Erreur API");
       var d=await r.json();
       setNewsData(d);
