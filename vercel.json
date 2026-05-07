@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/news.js": {
+    "api/news.cjs": {
       "runtime": "nodejs20.x"
     }
   }
