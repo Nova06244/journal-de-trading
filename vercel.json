@@ -3,12 +3,5 @@
     "api/news.js": {
       "runtime": "nodejs20.x"
     }
-  },
-  "builds": [
-    {
-      "src": "api/news.js",
-      "use": "@vercel/node",
-      "config": { "includeFiles": ["api/**"] }
-    }
-  ]
+  }
 }
