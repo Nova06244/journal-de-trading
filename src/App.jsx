@@ -248,7 +248,7 @@ function TabSignal(props){
         </div>
         <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:12}}>
           <div style={{fontSize:9,color:"#475569",marginBottom:6}}>CONTEXTE</div>
-          <textarea placeholder="Biais H1, contexte macro..." value={props.ctx} onChange={function(e){props.setCtx(e.target.value);}} rows={2} style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:8,color:"#e2e8f0",fontSize:11,resize:"none",fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+          <textarea placeholder="Biais H4..., PP H4..." value={props.ctx} onChange={function(e){props.setCtx(e.target.value);}} rows={2} style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:8,padding:8,color:"#e2e8f0",fontSize:11,resize:"none",fontFamily:"'DM Mono',monospace",outline:"none"}}/>
         </div>
       </div>
 
