@@ -107,7 +107,7 @@ function doAnalyse(price,pp,r1,r2,s1,s2,heure,mode,ctx){
 
   if(mode==="limite"){
     var nb=all.filter(function(s){return s.ok;}).length;
-    // Filtrer selon biais H4
+    // Filtrer selon biais M30
     if(biaisH4==="LONG") nb=all.filter(function(s){return s.ok&&s.dir==="LONG";}).length;
     if(biaisH4==="SHORT") nb=all.filter(function(s){return s.ok&&s.dir==="SHORT";}).length;
     sig="ORDRES DU JOUR";conf=fen?"FORTE":"MOYENNE";
