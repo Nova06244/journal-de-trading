@@ -116,15 +116,15 @@ function doAnalyse(price,pp,r1,r2,s1,s2,heure,mode,ctx){
     csl=fen?"Place les ordres "+( biaisM30||"")+" sur ICMarkets dès l'ouverture.":"⚠ Hors fenêtre.";
   } else if(sur&&ms){
     // Vérifier si le setup est dans le sens du Biais M30
-    var contraH4=biaisM30&&biaisM30!=="CONTRA"&&ms.dir!==biaisM30;
+    var contraM30=biaisM30&&biaisM30!=="CONTRA"&&ms.dir!==biaisM30;
     var isContraMode=biaisM30==="CONTRA";
-    sig=contraH4?"NO TRADE":ms.ok?ms.dir:"NO TRADE";
-    conf=contraH4?"FAIBLE":isContraMode?"MOYENNE":!ms.ok?"FAIBLE":(fen?"FORTE":"MOYENNE");
-    if(contraH4){
+    sig=contraM30?"NO TRADE":ms.ok?ms.dir:"NO TRADE";
+    conf=contraM30?"FAIBLE":isContraMode?"MOYENNE":!ms.ok?"FAIBLE":(fen?"FORTE":"MOYENNE");
+    if(contraM30){
       anl="Setup "+ms.dir+" sur "+cn+" mais CONTRA le Biais M30. Trade invalide.";
-      csl="Ignorer ce setup. Structure H4 contre ce trade.";
+      csl="Ignorer ce setup. Structure M30 contre ce trade.";
     } else if(isContraMode){
-      anl="⚠ Mode CONTRA PP actif — structure H4 contredit la position du prix. Prudence maximale sur "+cn+".";
+      anl="⚠ Mode CONTRA PP actif — structure M30 contredit la position du prix. Prudence maximale sur "+cn+".";
       csl=ms.ok?"Setup possible mais risqué — attendre confirmation M15 forte sur "+cn+".":"Trade invalide.";
     } else {
       anl=ms.ok?"Prix sur "+cn+". Rebond "+ms.dir+" confirmé par Biais M30. SL 10p TP 20p RR 1:2.":"TP dépasse "+ms.tpn+". Trade invalide.";
@@ -262,8 +262,8 @@ function TabSignal(props){
             </div>
           </div>
           <div style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:10,padding:10}}>
-            <div style={{fontSize:9,color:"#475569",marginBottom:6,letterSpacing:1}}>STRUCTURE H4</div>
-            <input type="text" placeholder="ex: rejet R1, retest PP..." value={props.structureH4} onChange={function(e){props.setStructureH4(e.target.value);}} style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(234,179,8,0.3)",borderRadius:7,padding:"7px 8px",color:"#eab308",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
+            <div style={{fontSize:9,color:"#475569",marginBottom:6,letterSpacing:1}}>STRUCTURE M30</div>
+            <input type="text" placeholder="ex: rejet R1, retest PP..." value={props.structureM30} onChange={function(e){props.setStructureM30(e.target.value);}} style={{width:"100%",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(234,179,8,0.3)",borderRadius:7,padding:"7px 8px",color:"#eab308",fontSize:11,fontFamily:"'DM Mono',monospace",outline:"none"}}/>
           </div>
         </div>
       </div>
@@ -293,7 +293,7 @@ function TabSignal(props){
             <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
               <span style={{background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.25)",borderRadius:6,padding:"5px 10px",fontSize:10,color:"#22c55e",fontWeight:600}}>RR 1:2 · SL 10 · TP 20</span>
               <span style={{background:"rgba(0,0,0,0.2)",borderRadius:6,padding:"5px 10px",fontSize:10,color:res.fen?"#22c55e":"#f97316"}}>{res.fen?"✓ Fenêtre valide":"⚠ Hors fenêtre"}</span>
-              {res.biaisM30&&<span style={{background:res.biaisM30==="LONG"?"rgba(34,197,94,0.1)":res.biaisM30==="CONTRA"?"rgba(234,179,8,0.1)":"rgba(239,68,68,0.1)",border:"1px solid "+(res.biaisM30==="LONG"?"rgba(34,197,94,0.3)":res.biaisM30==="CONTRA"?"rgba(234,179,8,0.3)":"rgba(239,68,68,0.3)"),borderRadius:6,padding:"5px 10px",fontSize:10,color:res.biaisM30==="LONG"?"#22c55e":res.biaisM30==="CONTRA"?"#eab308":"#ef4444",fontWeight:600}}>H4 {res.biaisM30==="LONG"?"▲":res.biaisM30==="CONTRA"?"↕":"▼"} {res.biaisM30}</span>}
+              {res.biaisM30&&<span style={{background:res.biaisM30==="LONG"?"rgba(34,197,94,0.1)":res.biaisM30==="CONTRA"?"rgba(234,179,8,0.1)":"rgba(239,68,68,0.1)",border:"1px solid "+(res.biaisM30==="LONG"?"rgba(34,197,94,0.3)":res.biaisM30==="CONTRA"?"rgba(234,179,8,0.3)":"rgba(239,68,68,0.3)"),borderRadius:6,padding:"5px 10px",fontSize:10,color:res.biaisM30==="LONG"?"#22c55e":res.biaisM30==="CONTRA"?"#eab308":"#ef4444",fontWeight:600}}>M30 {res.biaisM30==="LONG"?"▲":res.biaisM30==="CONTRA"?"↕":"▼"} {res.biaisM30}</span>}
               {props.lot&&<span style={{background:"rgba(59,130,246,0.1)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:6,padding:"5px 10px",fontSize:10,color:"#93c5fd"}}>Lot : {props.lot}</span>}
             </div>
             <p style={{fontSize:11,color:"#94a3b8",lineHeight:1.6,margin:"0 0 10px"}}>{res.anl}</p>
@@ -781,8 +781,8 @@ export default function PivotAgent(){
   var [hauto,setHauto]=useState(true);
   var [ctx,setCtx]=useState("");
   var [biaisM30sel,setbiaisM30sel]=useState("");
-  var [ppH4,setPpH4]=useState("");
-  var [structureH4,setStructureH4]=useState("");
+  var [ppM30,setPpM30]=useState("");
+  var [structureM30,setStructureM30]=useState("");
   var [res,setRes]=useState(null);
   var [err,setErr]=useState("");
   var [smsg,setSmsg]=useState("");
@@ -868,7 +868,7 @@ export default function PivotAgent(){
   function onAnalyse(){
     if(!pp||!r1||!r2||!s1||!s2){setErr("Remplis tous les niveaux.");return;}
     if(mode==="confirmation"&&!price){setErr("Remplis le prix actuel.");return;}
-    var ctxFull=(biaisM30sel?("H4 "+biaisM30sel):"")+(structureH4?" structure:"+structureH4:"")+(ctx?" "+ctx:"");
+    var ctxFull=(biaisM30sel?("M30 "+biaisM30sel):"")+(structureM30?" structure:"+structureM30:"")+(ctx?" "+ctx:"");
     setErr("");setRes(doAnalyse(price||"0",pp,r1,r2,s1,s2,heure,mode,ctxFull));
   }
 
@@ -948,7 +948,7 @@ export default function PivotAgent(){
       </div>
 
       <div style={{maxWidth:640,margin:"0 auto"}}>
-        {tab==="signal"&&<TabSignal mode={mode} setMode={setMode} res={res} setRes={setRes} syncOk={syncOk} syncErr={syncErr} smsg={smsg} onSave={onSave} r2={r2} setR2={setR2} r1={r1} setR1={setR1} pp={pp} setPp={setPp} s1={s1} setS1={setS1} s2={s2} setS2={setS2} price={price} setPrice={setPrice} heure={heure} setHeure={setHeure} hauto={hauto} setHauto={setHauto} resetHeure={function(){setHauto(true);setHeure(gn());}} ctx={ctx} setCtx={setCtx} biaisM30sel={biaisM30sel} setbiaisM30sel={setbiaisM30sel} ppH4={ppH4} setPpH4={setPpH4} structureH4={structureH4} setStructureH4={setStructureH4} err={err} onAnalyse={onAnalyse} lot={lot}/>}
+        {tab==="signal"&&<TabSignal mode={mode} setMode={setMode} res={res} setRes={setRes} syncOk={syncOk} syncErr={syncErr} smsg={smsg} onSave={onSave} r2={r2} setR2={setR2} r1={r1} setR1={setR1} pp={pp} setPp={setPp} s1={s1} setS1={setS1} s2={s2} setS2={setS2} price={price} setPrice={setPrice} heure={heure} setHeure={setHeure} hauto={hauto} setHauto={setHauto} resetHeure={function(){setHauto(true);setHeure(gn());}} ctx={ctx} setCtx={setCtx} biaisM30sel={biaisM30sel} setbiaisM30sel={setbiaisM30sel} ppM30={ppM30} setPpM30={setPpM30} structureM30={structureM30} setStructureM30={setStructureM30} err={err} onAnalyse={onAnalyse} lot={lot}/>}
         {tab==="lot"&&<TabCapital capDepart={capDepart} setCapDepart={setCapDepart} capSaved={capSaved} setCapSaved={setCapSaved} capActuel={capActuel} rsk={rsk} setRsk={setRsk} lot={lot} journal={journal} onSaveCapital={onSaveCapital}/>}
         {tab==="journal"&&<TabJournal journal={journal} jNiv={jNiv} setJNiv={setJNiv} jDir={jDir} setJDir={setJDir} jRes={jRes} setJRes={setJRes} jNote={jNote} setJNote={setJNote} jGain={jGain} setJGain={setJGain} jComm={jComm} setJComm={setJComm} jDate={jDate} setJDate={setJDate} jHeure2={jHeure2} setJHeure2={setJHeure2} editTrade={editTrade} startEdit={startEdit} onCancelEdit={function(){setEditTrade(null);setJNote("");setJGain("");setJComm("-0.06");setJDate(TODAY);setJHeure2(gn());}} onAdd={onAdd} onDel={onDel} lot={lot} loading={loading}/>}
         {tab==="cal"&&<TabCal journal={journal}/>}
