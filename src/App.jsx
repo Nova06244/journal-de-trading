@@ -670,8 +670,7 @@ function TabJournal(props){
                   return v;
                 }).join(",");
               });
-              var csv=[headers.join(",")].concat(rows).join("
-");
+              var csv=[headers.join(",")].concat(rows).join("\n");
               var blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
               var url=URL.createObjectURL(blob);
               var a=document.createElement("a");
