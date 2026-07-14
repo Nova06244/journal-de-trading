@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from oauth_routes import router as oauth_router
 import httpx
 import os
+
+from oauth_routes import router as oauth_router
 
 app = FastAPI()
 
@@ -18,17 +19,34 @@ app.include_router(oauth_router)
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-async def send_telegram(text: str, keyboard: dict = None):
+
+async def send_telegram(text: str):
+    """Notification passive uniquement -- plus de boutons ACCEPT/REFUSER,
+    le trade est déjà exécuté au moment où ce message part."""
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": text,
         "parse_mode": "HTML"
     }
-    if keyboard:
-        payload["reply_markup"] = keyboard
     async with httpx.AsyncClient() as client:
         await client.post(url, json=payload)
+
+
+async def execute_trade_ctrader(symbol: str, direction: str, prix: float) -> dict:
+    """
+    TODO: brique non encore codée.
+    Doit envoyer un ProtoOANewOrderReq (ordre au marché) via le client
+    cTrader Open API (WebSocket/Protobuf), avec :
+      - calcul du volume à 1% de risque à partir du solde du compte démo
+      - stopLoss / takeProfit selon les règles de la stratégie
+      - enregistrement de l'entryTime + positionId pour le job de BE à 15 min
+    Tant que cette fonction n'est pas implémentée, l'automatisation
+    n'est PAS complète -- le webhook reçoit bien le signal, mais aucun
+    ordre n'est réellement envoyé à cTrader pour l'instant.
+    """
+    raise NotImplementedError("Module d'exécution cTrader pas encore codé.")
+
 
 @app.post("/webhook/signal")
 async def receive_signal(request: Request):
@@ -42,8 +60,15 @@ async def receive_signal(request: Request):
 
     emoji = "🟢" if direction == "BUY" else "🔴"
 
+    try:
+        await execute_trade_ctrader(symbol, direction, prix)
+        statut = "✅ Trade exécuté automatiquement"
+    except NotImplementedError:
+        statut = "⚠️ Signal reçu -- exécution cTrader pas encore branchée"
+
     message = (
         f"{emoji} <b>SIGNAL {symbol}</b>\n"
+        f"{statut}\n"
         f"Direction : <b>{direction}</b>\n"
         f"Niveau : {niveau}\n"
         f"Type : {type_trade}\n"
@@ -51,28 +76,9 @@ async def receive_signal(request: Request):
         f"Session : {session}"
     )
 
-    keyboard = {
-        "inline_keyboard": [[
-            {"text": "✅ ACCEPTER", "callback_data": f"accept|{symbol}|{direction}|{prix}"},
-            {"text": "❌ REFUSER", "callback_data": "refuse"}
-        ]]
-    }
+    await send_telegram(message)
+    return {"status": "signal reçu et traité"}
 
-    await send_telegram(message, keyboard)
-    return {"status": "signal reçu"}
-
-@app.post("/webhook/telegram")
-async def telegram_webhook(request: Request):
-    data = await request.json()
-    callback = data.get("callback_query")
-    if callback:
-        answer = callback.get("data", "")
-        if answer.startswith("accept"):
-            _, symbol, direction, prix = answer.split("|")
-            await send_telegram(f"✅ Trade <b>ACCEPTÉ</b>\n{symbol} {direction} @ {prix}\n⏳ Envoi à cTrader...")
-        elif answer == "refuse":
-            await send_telegram("❌ Trade <b>REFUSÉ</b>")
-    return {"ok": True}
 
 @app.get("/")
 async def root():
