@@ -134,22 +134,20 @@ function TabTrade(props){
 
         <div style={{marginBottom:10}}>
           <div style={LABEL}>VOLUME (lots)</div>
-          <input type="number" step="0.01" placeholder="Obligatoire" value={props.tVolume} onChange={function(e){props.setTVolume(e.target.value);}} style={INP}/>
+          <input type="number" step="0.01" value={props.tVolume} onChange={function(e){props.setTVolume(e.target.value);}} style={INP}/>
         </div>
 
         <div style={{marginBottom:10}}>
-          <div style={LABEL}>BE DÉCLENCHÉ ?</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-            <button onClick={function(){props.setTBe(false);}} style={{padding:"9px 4px",background:!props.tBe?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,color:"#64748b",fontSize:11,cursor:"pointer",fontFamily:"'DM Mono',monospace"}}>NON</button>
-            <button onClick={function(){props.setTBe(true);}} style={{padding:"9px 4px",background:props.tBe?"rgba(234,179,8,0.2)":"rgba(255,255,255,0.03)",border:"1px solid "+(props.tBe?"rgba(234,179,8,0.5)":"rgba(255,255,255,0.1)"),borderRadius:8,color:props.tBe?"#eab308":"#475569",fontSize:11,fontWeight:props.tBe?700:400,cursor:"pointer",fontFamily:"'DM Mono',monospace"}}>OUI</button>
+          <div style={LABEL}>DATE ENTRÉE</div>
+          <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,overflow:"hidden",width:"100%"}}>
+            <input type="date" value={props.tDateEntry} onChange={function(e){props.setTDateEntry(e.target.value);}} style={{background:"transparent",border:"none",padding:"9px 10px",color:"#e2e8f0",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none",width:"100%",colorScheme:"dark",display:"block"}}/>
           </div>
         </div>
 
         <div style={{marginBottom:10}}>
-          <div style={LABEL}>DATE / HEURE ENTRÉE</div>
-          <div style={{display:"grid",gridTemplateColumns:"3fr 2fr",gap:6}}>
-            <input type="date" value={props.tDateEntry} onChange={function(e){props.setTDateEntry(e.target.value);}} style={{...INP,colorScheme:"dark"}}/>
-            <input type="time" value={props.tHeureEntry} onChange={function(e){props.setTHeureEntry(e.target.value);}} style={{...INP,colorScheme:"dark"}}/>
+          <div style={LABEL}>HEURE ENTRÉE</div>
+          <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:8,overflow:"hidden",width:"100%"}}>
+            <input type="time" value={props.tHeureEntry} onChange={function(e){props.setTHeureEntry(e.target.value);}} style={{background:"transparent",border:"none",padding:"9px 10px",color:"#e2e8f0",fontSize:12,fontFamily:"'DM Mono',monospace",outline:"none",width:"100%",colorScheme:"dark",display:"block"}}/>
           </div>
         </div>
 
@@ -462,8 +460,7 @@ export default function App(){
   var [tEntry,setTEntry] = useState("");
   var [tSlPoints,setTSlPoints] = useState("50");
   var [tTpPoints,setTTpPoints] = useState("100");
-  var [tVolume,setTVolume] = useState("");
-  var [tBe,setTBe] = useState(false);
+  var [tVolume,setTVolume] = useState("0.01");
   var [tDateEntry,setTDateEntry] = useState(TODAY);
   var [tHeureEntry,setTHeureEntry] = useState(gn);
   var [tPnl,setTPnl] = useState("");
@@ -514,7 +511,7 @@ export default function App(){
 
   function resetForm(){
     setTDir("");setTStatus("OPEN");setTEntry("");setTSlPoints("50");setTTpPoints("100");
-    setTVolume("");setTBe(false);setTDateEntry(TODAY);setTHeureEntry(gn());
+    setTVolume("0.01");setTDateEntry(TODAY);setTHeureEntry(gn());
     setTPnl("");setTComment("");
     setEditTrade(null);
   }
@@ -548,7 +545,6 @@ export default function App(){
       volume: volume,
       risk_percent: parseFloat(rsk) || null,
       account_balance_before: capSaved ? capActuel : null,
-      be_triggered: tBe,
       status: tStatus,
       exit_time: null,
       exit_price: null,
@@ -577,8 +573,7 @@ export default function App(){
     setTEntry(t.entry_price!=null?String(t.entry_price):"");
     setTSlPoints(t.sl_points!=null?String(t.sl_points):"50");
     setTTpPoints(t.tp_points!=null?String(t.tp_points):"100");
-    setTVolume(t.volume!=null?String(t.volume):"");
-    setTBe(!!t.be_triggered);
+    setTVolume(t.volume!=null?String(t.volume):"0.01");
     if(t.entry_time){ setTDateEntry(t.entry_time.slice(0,10)); setTHeureEntry(t.entry_time.slice(11,16)); }
     setTPnl(t.pnl!=null?String(t.pnl):"");
     setTComment(t.comment||"");
@@ -636,7 +631,6 @@ export default function App(){
           tSlPoints={tSlPoints} setTSlPoints={setTSlPoints}
           tTpPoints={tTpPoints} setTTpPoints={setTTpPoints}
           tVolume={tVolume} setTVolume={setTVolume}
-          tBe={tBe} setTBe={setTBe}
           tDateEntry={tDateEntry} setTDateEntry={setTDateEntry}
           tHeureEntry={tHeureEntry} setTHeureEntry={setTHeureEntry}
           tPnl={tPnl} setTPnl={setTPnl}
