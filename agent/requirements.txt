@@ -2,3 +2,5 @@ fastapi
 uvicorn
 httpx
 ctrader-open-api
+twisted
+supabase
