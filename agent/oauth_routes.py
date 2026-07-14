@@ -66,3 +66,18 @@ def oauth_status():
         "expiresIn": tokens.get("expiresIn"),
         "tokenType": tokens.get("tokenType"),
     }
+
+
+@router.get("/oauth/accounts")
+async def oauth_accounts():
+    """
+    Liste les comptes cTrader liés au token actuel, avec leur ctidTraderAccountId.
+    A appeler une seule fois pour trouver l'ID du compte démo à mettre ensuite
+    dans la variable Railway CTRADER_ACCOUNT_ID.
+    """
+    from ctrader_trading import list_accounts
+    try:
+        accounts = await list_accounts()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la récupération des comptes : {e}")
+    return {"accounts": accounts}
