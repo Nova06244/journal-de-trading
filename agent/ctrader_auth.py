@@ -1,66 +1,255 @@
 """
-Module d'authentification cTrader Open API (OAuth2).
-Utilise le SDK officiel Spotware : pip install ctrader-open-api
+Module d'exécution des ordres via cTrader Open API.
+Utilise le SDK officiel Spotware (ctrader-open-api), basé sur Twisted.
 
-Variables d'environnement requises (à définir sur Railway) :
-    CTRADER_CLIENT_ID
-    CTRADER_CLIENT_SECRET
-    CTRADER_REDIRECT_URI   -> https://journal-de-trading-production.up.railway.app/oauth/callback
+IMPORTANT - Interopérabilité Twisted/asyncio :
+FastAPI tourne sur une boucle asyncio. Twisted (utilisé par ctrader-open-api)
+tourne normalement sur son propre "reactor". Pour que les deux cohabitent dans
+le même process, on installe le reactor asyncio de Twisted AVANT tout import
+de twisted.internet.reactor - c'est fait tout en haut de ce fichier, et ce
+fichier doit donc être importé AVANT tout autre import lié à Twisted.
+
+ATTENTION - Points à vérifier avant de faire confiance à ce module :
+1. calculate_volume() utilise une hypothèse de conversion (1 lot = 100 unités
+   cTrader) qui doit être validée contre les vraies specs du symbole NAS100
+   chez IC Markets (lotSize/minVolume/stepVolume retournés par get_symbol_id).
+2. Le prix d'exécution réel n'est pas garanti égal à entry_price (slippage) -
+   idéalement, il faudrait écouter l'event ProtoOAExecutionEvent plutôt que
+   de faire confiance au prix du signal TradingView.
+3. Variables d'environnement requises : CTRADER_ACCOUNT_ID, CTRADER_ENV.
 """
+import asyncio
+from twisted.internet import asyncioreactor
+try:
+    asyncioreactor.install(asyncio.get_event_loop())
+except Exception:
+    pass  # déjà installé (rechargement à chaud, tests, etc.)
+
 import os
-import json
-from ctrader_open_api import Auth
+from ctrader_open_api import Client, TcpProtocol, EndPoints
+from ctrader_open_api.messages.OpenApiMessages_pb2 import (
+    ProtoOAApplicationAuthReq,
+    ProtoOAAccountAuthReq,
+    ProtoOASymbolsListReq,
+    ProtoOANewOrderReq,
+    ProtoOATraderReq,
+    ProtoOAGetAccountListByAccessTokenReq,
+)
+from ctrader_open_api.messages.OpenApiModelMessages_pb2 import (
+    ProtoOAOrderType,
+    ProtoOATradeSide,
+)
+
+from ctrader_auth import load_tokens
 
 CLIENT_ID = os.environ["CTRADER_CLIENT_ID"]
 CLIENT_SECRET = os.environ["CTRADER_CLIENT_SECRET"]
-REDIRECT_URI = os.environ["CTRADER_REDIRECT_URI"]
-
-# TODO: migrer ce stockage vers une table Supabase pour la persistance en production.
-# Un fichier local suffit pour valider le pipeline en démo, mais Railway peut
-# redéployer/redémarrer le service et effacer le système de fichiers.
-TOKEN_FILE = "ctrader_tokens.json"
-
-auth = Auth(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
+# Optionnel à l'import : tant qu'on n'a pas encore récupéré l'account ID via
+# /oauth/accounts, cette variable n'existe pas - elle n'est requise qu'au
+# moment d'exécuter un trade (voir _require_account_id() ci-dessous).
+_CTRADER_ACCOUNT_ID_RAW = os.environ.get("CTRADER_ACCOUNT_ID")
+CTRADER_ACCOUNT_ID = int(_CTRADER_ACCOUNT_ID_RAW) if _CTRADER_ACCOUNT_ID_RAW else None
+CTRADER_ENV = os.environ.get("CTRADER_ENV", "demo")
 
 
-def get_authorization_url() -> str:
-    """URL vers laquelle rediriger l'utilisateur pour qu'il autorise l'app sur son cTID."""
-    return auth.getAuthUri()
+def _require_account_id() -> int:
+    if CTRADER_ACCOUNT_ID is None:
+        raise RuntimeError(
+            "CTRADER_ACCOUNT_ID n'est pas défini. "
+            "Récupère-le via GET /oauth/accounts puis ajoute-le dans les variables Railway."
+        )
+    return CTRADER_ACCOUNT_ID
+
+HOST = EndPoints.PROTOBUF_DEMO_HOST if CTRADER_ENV == "demo" else EndPoints.PROTOBUF_LIVE_HOST
+RISK_PERCENT = float(os.environ.get("RISK_PERCENT", "1.0"))
+
+_client = None
+_symbol_cache = {}
+_connected = False
 
 
-def exchange_code_for_token(code: str) -> dict:
+def get_client():
+    global _client
+    if _client is None:
+        _client = Client(HOST, EndPoints.PROTOBUF_PORT, TcpProtocol)
+    return _client
+
+
+def start_client_service():
+    """A appeler UNE SEULE FOIS au démarrage de l'app (hook FastAPI startup)."""
+    get_client().startService()
+
+
+async def _send(request, timeout=10):
+    """Bridge Deferred (Twisted) -> Future (asyncio) pour pouvoir 'await' un envoi."""
+    client = get_client()
+    deferred = client.send(request)
+    future = asyncio.get_event_loop().create_future()
+
+    def on_result(result):
+        if not future.done():
+            future.set_result(result)
+
+    def on_error(failure):
+        if not future.done():
+            future.set_exception(RuntimeError(str(failure)))
+
+    deferred.addCallbacks(on_result, on_error)
+    return await asyncio.wait_for(future, timeout=timeout)
+
+
+_app_authenticated = False
+
+
+async def _ensure_app_authenticated():
     """
-    Échange le code d'autorisation contre un access token + refresh token.
-    Attention : le code n'est valide qu'1 minute après réception du callback,
-    cette fonction doit donc être appelée immédiatement.
+    Authentifie uniquement l'APPLICATION (clientId/clientSecret) - étape
+    préalable commune, qu'on connaisse déjà l'account ID ou pas encore.
     """
-    token_response = auth.getToken(code)
-    _save_tokens(token_response)
-    return token_response
+    global _app_authenticated
+    if _app_authenticated:
+        return
+    app_auth = ProtoOAApplicationAuthReq()
+    app_auth.clientId = CLIENT_ID
+    app_auth.clientSecret = CLIENT_SECRET
+    await _send(app_auth)
+    _app_authenticated = True
 
 
-def refresh_access_token() -> dict:
+async def list_accounts() -> list:
     """
-    Renouvelle l'access token à partir du refresh token stocké.
-    Le refresh token n'a pas de date d'expiration, mais l'access token
-    expire après ~30 jours (2 628 000 secondes).
+    Liste tous les comptes cTrader (démo et réels, tous brokers) liés au token
+    actuel. Sert UNIQUEMENT à identifier le ctidTraderAccountId du compte démo
+    à mettre dans la variable Railway CTRADER_ACCOUNT_ID - ne nécessite pas de
+    connaître cet ID à l'avance.
     """
     tokens = load_tokens()
-    if not tokens or "refreshToken" not in tokens:
-        raise RuntimeError("Aucun refresh token disponible — il faut repasser par /oauth/login.")
+    if not tokens:
+        raise RuntimeError("Aucun token cTrader trouvé - passe par /oauth/login d'abord.")
 
-    token_response = auth.refreshToken(tokens["refreshToken"])
-    _save_tokens(token_response)
-    return token_response
+    await _ensure_app_authenticated()
+
+    req = ProtoOAGetAccountListByAccessTokenReq()
+    req.accessToken = tokens["accessToken"]
+    res = await _send(req)
+
+    # NOTE: si ce champ lève une AttributeError, vérifie le nom exact du champ
+    # dans le fichier généré OpenApiMessages_pb2.py de ta version installée
+    # (il peut s'appeler 'accounts' ou 'ctidTraderAccount' selon la version du SDK).
+    accounts = []
+    for acc in res.ctidTraderAccount:
+        accounts.append({
+            "ctidTraderAccountId": acc.ctidTraderAccountId,
+            "isLive": acc.isLive,
+        })
+    return accounts
 
 
-def _save_tokens(token_response: dict) -> None:
-    with open(TOKEN_FILE, "w") as f:
-        json.dump(token_response, f)
+async def ensure_connected():
+    """Authentifie l'app PUIS le compte spécifique (nécessite CTRADER_ACCOUNT_ID)."""
+    global _connected
+    if _connected:
+        return
+
+    tokens = load_tokens()
+    if not tokens:
+        raise RuntimeError("Aucun token cTrader trouvé - passe par /oauth/login d'abord.")
+
+    account_id = _require_account_id()
+
+    await _ensure_app_authenticated()
+
+    acc_auth = ProtoOAAccountAuthReq()
+    acc_auth.ctidTraderAccountId = account_id
+    acc_auth.accessToken = tokens["accessToken"]
+    await _send(acc_auth)
+
+    _connected = True
 
 
-def load_tokens() -> dict | None:
-    if not os.path.exists(TOKEN_FILE):
-        return None
-    with open(TOKEN_FILE) as f:
-        return json.load(f)
+async def get_account_balance() -> float:
+    """Solde actuel du compte démo, nécessaire pour le calcul du volume à 1% de risque."""
+    await ensure_connected()
+    req = ProtoOATraderReq()
+    req.ctidTraderAccountId = CTRADER_ACCOUNT_ID
+    res = await _send(req)
+    return res.trader.balance / 100.0  # cTrader retourne le solde en centimes
+
+
+async def get_symbol_id(symbol_name: str):
+    """
+    Résout le nom du symbole (ex: 'NAS100', 'US100') en symbolId cTrader.
+    Nécessaire car chaque broker a ses propres IDs internes - impossible à deviner.
+    """
+    await ensure_connected()
+    if symbol_name in _symbol_cache:
+        return _symbol_cache[symbol_name]
+
+    req = ProtoOASymbolsListReq()
+    req.ctidTraderAccountId = CTRADER_ACCOUNT_ID
+    res = await _send(req)
+
+    for s in res.symbol:
+        if s.symbolName.upper() == symbol_name.upper():
+            info = {"symbolId": s.symbolId, "digits": s.digits}
+            _symbol_cache[symbol_name] = (s.symbolId, info)
+            return s.symbolId, info
+
+    raise ValueError(f"Symbole '{symbol_name}' introuvable sur ce compte cTrader.")
+
+
+def calculate_volume(balance: float, sl_points: float, point_value_per_lot: float = 1.0) -> int:
+    """
+    Calcule le volume pour risquer RISK_PERCENT du solde.
+
+    HYPOTHESE A VERIFIER : point_value_per_lot=1.0 $/point pour le NAS100
+    (1 lot = 1$/point), et conversion lot -> unités cTrader (x100). Ces deux
+    hypothèses doivent être confrontées aux vraies specs du symbole avant de
+    faire confiance à ce calcul, même en démo.
+    """
+    risk_amount = balance * (RISK_PERCENT / 100.0)
+    raw_lots = risk_amount / (sl_points * point_value_per_lot)
+    lots = max(0.01, round(raw_lots, 2))
+    volume_units = int(lots * 100)
+    return volume_units
+
+
+async def execute_trade(symbol: str, direction: str, entry_price, data: dict) -> dict:
+    """Point d'entrée appelé par main.py à chaque signal reçu - exécution immédiate, sans validation."""
+    await ensure_connected()
+
+    sl_points = float(data.get("sl_points", 50))
+    tp_points = float(data.get("tp_points", 100))
+
+    symbol_id, specs = await get_symbol_id(symbol)
+    balance = await get_account_balance()
+    volume = calculate_volume(balance, sl_points)
+
+    entry_price_f = float(entry_price)
+    if direction.upper() == "BUY":
+        trade_side = ProtoOATradeSide.BUY
+        sl_price = entry_price_f - sl_points
+        tp_price = entry_price_f + tp_points
+    else:
+        trade_side = ProtoOATradeSide.SELL
+        sl_price = entry_price_f + sl_points
+        tp_price = entry_price_f - tp_points
+
+    order = ProtoOANewOrderReq()
+    order.ctidTraderAccountId = CTRADER_ACCOUNT_ID
+    order.symbolId = symbol_id
+    order.orderType = ProtoOAOrderType.MARKET
+    order.tradeSide = trade_side
+    order.volume = volume
+    order.stopLoss = sl_price
+    order.takeProfit = tp_price
+    order.comment = "NASDAQ-Open-Reversal-Bot"
+
+    res = await _send(order)
+
+    return {
+        "executed_price": entry_price_f,  # approximatif - voir note en tête de fichier
+        "volume": volume,
+        "sl": sl_price,
+        "tp": tp_price,
+    }
