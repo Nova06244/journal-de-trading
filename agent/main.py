@@ -1,11 +1,17 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from oauth_routes import router as oauth_router
+from ctrader_trading import execute_trade, start_client_service
 import httpx
 import os
 
-from oauth_routes import router as oauth_router
-
 app = FastAPI()
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Démarre la connexion persistante au client cTrader au lancement de l'app."""
+    start_client_service()
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,8 +27,7 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 
 async def send_telegram(text: str):
-    """Notification passive uniquement -- plus de boutons ACCEPT/REFUSER,
-    le trade est déjà exécuté au moment où ce message part."""
+    """Notification passive uniquement - plus de boutons ACCEPTER/REFUSER."""
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -33,26 +38,15 @@ async def send_telegram(text: str):
         await client.post(url, json=payload)
 
 
-async def execute_trade_ctrader(symbol: str, direction: str, prix: float) -> dict:
-    """
-    TODO: brique non encore codée.
-    Doit envoyer un ProtoOANewOrderReq (ordre au marché) via le client
-    cTrader Open API (WebSocket/Protobuf), avec :
-      - calcul du volume à 1% de risque à partir du solde du compte démo
-      - stopLoss / takeProfit selon les règles de la stratégie
-      - enregistrement de l'entryTime + positionId pour le job de BE à 15 min
-    Tant que cette fonction n'est pas implémentée, l'automatisation
-    n'est PAS complète -- le webhook reçoit bien le signal, mais aucun
-    ordre n'est réellement envoyé à cTrader pour l'instant.
-    """
-    raise NotImplementedError("Module d'exécution cTrader pas encore codé.")
-
-
 @app.post("/webhook/signal")
 async def receive_signal(request: Request):
+    """
+    Reçoit l'alerte TradingView et EXECUTE le trade immédiatement sur cTrader,
+    sans validation humaine. Telegram sert uniquement à notifier le résultat.
+    """
     data = await request.json()
     symbol = data.get("symbol", "?")
-    direction = data.get("direction", "?")
+    direction = data.get("direction", "?")   # "BUY" ou "SELL"
     niveau = data.get("niveau", "?")
     type_trade = data.get("type_trade", "?")
     prix = data.get("prix", "?")
@@ -60,23 +54,31 @@ async def receive_signal(request: Request):
 
     emoji = "🟢" if direction == "BUY" else "🔴"
 
-    try:
-        await execute_trade_ctrader(symbol, direction, prix)
-        statut = "✅ Trade exécuté automatiquement"
-    except NotImplementedError:
-        statut = "⚠️ Signal reçu -- exécution cTrader pas encore branchée"
-
-    message = (
+    # 1. Notification immédiate : signal reçu
+    await send_telegram(
         f"{emoji} <b>SIGNAL {symbol}</b>\n"
-        f"{statut}\n"
         f"Direction : <b>{direction}</b>\n"
         f"Niveau : {niveau}\n"
         f"Type : {type_trade}\n"
         f"Prix : {prix}\n"
-        f"Session : {session}"
+        f"Session : {session}\n"
+        f"⏳ Exécution automatique en cours..."
     )
 
-    await send_telegram(message)
+    # 2. Exécution automatique de l'ordre sur cTrader (démo)
+    try:
+        result = await execute_trade(
+            symbol=symbol,
+            direction=direction,
+            entry_price=prix,
+            data=data,  # sl/tp/volume calculés dans ctrader_trading.py
+        )
+        await send_telegram(
+            f"✅ Trade <b>EXÉCUTÉ</b>\n{symbol} {direction} @ {result.get('executed_price', prix)}"
+        )
+    except Exception as e:
+        await send_telegram(f"❌ <b>ÉCHEC D'EXÉCUTION</b>\n{symbol} {direction}\nErreur : {e}")
+
     return {"status": "signal reçu et traité"}
 
 
