@@ -15,17 +15,19 @@ Twisted pour ce type d'intégration.
 
 ATTENTION - Points à vérifier avant de faire confiance à ce module :
 1. calculate_volume() utilise une hypothèse de conversion (1 lot = 100 unités
-   cTrader) qui doit être validée contre les vraies specs du symbole NAS100
-   chez IC Markets (lotSize/minVolume/stepVolume retournés par get_symbol_id).
+   cTrader) qui doit être validée contre les vraies specs du symbole USTEC
+   chez IC Markets (lotSize/minVolume/stepVolume - non renvoyés par la liste
+   allégée ProtoOASymbolsListReq, voir get_symbol_id()).
 2. Le prix d'exécution réel n'est pas garanti égal à entry_price (slippage) -
    idéalement, il faudrait écouter l'event ProtoOAExecutionEvent plutôt que
    de faire confiance au prix du signal TradingView.
 3. Variables d'environnement requises : CTRADER_ACCOUNT_ID, CTRADER_ENV.
 4. SYMBOL_ALIASES (ci-dessous) fait le pont entre le nom envoyé par le signal
    (ex: 'NAS100', nom générique utilisé côté TradingView/alerte) et le nom
-   réel du symbole chez le broker connecté (IC Markets utilise 'US100').
-   Si le broker change ou si le nom exact diffère (ex: 'US100.a'), corriger
-   ici uniquement - aucune autre partie du code n'a besoin de changer.
+   réel du symbole chez le broker connecté (IC Markets utilise 'USTEC',
+   confirmé via la route de diagnostic GET /debug/symbols).
+   Si le broker change ou si le nom exact diffère, corriger ici uniquement -
+   aucune autre partie du code n'a besoin de changer.
 """
 import crochet
 crochet.setup()  # démarre le reactor Twisted dans un thread dédié, une seule fois
@@ -60,12 +62,12 @@ CTRADER_ACCOUNT_ID = int(_CTRADER_ACCOUNT_ID_RAW) if _CTRADER_ACCOUNT_ID_RAW els
 CTRADER_ENV = os.environ.get("CTRADER_ENV", "demo")
 
 # Alias de symboles : nom générique (côté signal/TradingView) -> nom exact
-# chez le broker connecté. IC Markets nomme le Nasdaq 100 "US100" (et non
-# "NAS100" comme d'autres brokers/plateformes).
+# chez le broker connecté. IC Markets nomme le Nasdaq 100 "USTEC" (et non
+# "NAS100" comme d'autres brokers/plateformes, ni "US100" comme initialement
+# supposé - confirmé via GET /debug/symbols).
 SYMBOL_ALIASES = {
     "NAS100": "USTEC",
 }
-
 
 
 def _require_account_id() -> int:
@@ -257,7 +259,11 @@ async def get_symbol_id(symbol_name: str):
 
     for s in res.symbol:
         if s.symbolName.upper() == resolved_name.upper():
-            info = {"symbolId": s.symbolId, "digits": s.digits}
+            # ProtoOASymbolsListReq renvoie des ProtoOALightSymbol, qui n'ont
+            # pas toujours le champ 'digits' (réservé à la réponse détaillée
+            # ProtoOASymbolByIdReq) - lecture tolérante, non bloquante.
+            digits = getattr(s, "digits", None)
+            info = {"symbolId": s.symbolId, "digits": digits}
             _symbol_cache[resolved_name] = (s.symbolId, info)
             return s.symbolId, info
 
@@ -344,34 +350,3 @@ async def execute_trade(symbol: str, direction: str, entry_price, data: dict) ->
         "tp": tp_price,
         "trade_id": trade_id,
     }
-# --- A AJOUTER dans ctrader_service.py, à la suite de get_symbol_id() ---
-
-async def list_all_symbols() -> list:
-    """
-    Liste tous les symboles disponibles sur ce compte cTrader, triés par nom.
-    Sert UNIQUEMENT à identifier le nom exact utilisé par le broker pour un
-    instrument donné (ex: retrouver le vrai nom du Nasdaq 100 chez IC Markets).
-    A appeler une fois via un endpoint temporaire, puis peut être retiré.
-    """
-    await ensure_connected()
-
-    req = ProtoOASymbolsListReq()
-    req.ctidTraderAccountId = CTRADER_ACCOUNT_ID
-    res = await _send(req)
-
-    names = sorted(s.symbolName for s in res.symbol)
-    return names
-
-
-# --- A AJOUTER dans main.py (FastAPI), avec les autres routes ---
-#
-# from ctrader_service import list_all_symbols
-#
-# @app.get("/debug/symbols")
-# async def debug_symbols():
-#     names = await list_all_symbols()
-#     return {"count": len(names), "symbols": names}
-#
-# Une fois déployé, visite https://journal-de-trading-production.up.railway.app/debug/symbols
-# et cherche dans la liste retournée le nom exact contenant "100", "NAS", "US",
-# ou "TECH" pour identifier le bon symbole Nasdaq chez IC Markets.
