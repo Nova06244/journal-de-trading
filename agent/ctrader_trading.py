@@ -343,3 +343,34 @@ async def execute_trade(symbol: str, direction: str, entry_price, data: dict) ->
         "tp": tp_price,
         "trade_id": trade_id,
     }
+# --- A AJOUTER dans ctrader_service.py, à la suite de get_symbol_id() ---
+
+async def list_all_symbols() -> list:
+    """
+    Liste tous les symboles disponibles sur ce compte cTrader, triés par nom.
+    Sert UNIQUEMENT à identifier le nom exact utilisé par le broker pour un
+    instrument donné (ex: retrouver le vrai nom du Nasdaq 100 chez IC Markets).
+    A appeler une fois via un endpoint temporaire, puis peut être retiré.
+    """
+    await ensure_connected()
+
+    req = ProtoOASymbolsListReq()
+    req.ctidTraderAccountId = CTRADER_ACCOUNT_ID
+    res = await _send(req)
+
+    names = sorted(s.symbolName for s in res.symbol)
+    return names
+
+
+# --- A AJOUTER dans main.py (FastAPI), avec les autres routes ---
+#
+# from ctrader_service import list_all_symbols
+#
+# @app.get("/debug/symbols")
+# async def debug_symbols():
+#     names = await list_all_symbols()
+#     return {"count": len(names), "symbols": names}
+#
+# Une fois déployé, visite https://journal-de-trading-production.up.railway.app/debug/symbols
+# et cherche dans la liste retournée le nom exact contenant "100", "NAS", "US",
+# ou "TECH" pour identifier le bon symbole Nasdaq chez IC Markets.
