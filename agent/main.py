@@ -106,3 +106,14 @@ async def network_test():
         except Exception as e:
             results[label] = f"❌ {type(e).__name__}: {e} ({host}:{port})"
     return results
+
+
+@app.get("/debug/symbols")
+async def debug_symbols():
+    """
+    Route de diagnostic temporaire : liste tous les symboles disponibles
+    sur ce compte cTrader pour identifier le nom exact utilisé par le
+    broker (ex: retrouver le vrai nom du Nasdaq 100 chez IC Markets).
+    """
+    names = await list_all_symbols()
+    return {"count": len(names), "symbols": names}
