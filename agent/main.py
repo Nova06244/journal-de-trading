@@ -6,7 +6,6 @@ import os
 from oauth_routes import router as oauth_router
 from ctrader_trading import execute_trade, start_client_service
 from ctrader_trading import list_all_symbols
-from ctrader_trading import get_symbol_id, get_symbol_specs
 
 
 app = FastAPI()
@@ -118,3 +117,24 @@ async def debug_symbols():
     """
     names = await list_all_symbols()
     return {"count": len(names), "symbols": names}
+
+
+@app.get("/debug/symbol-specs")
+async def debug_symbol_specs(symbol: str = "USTEC"):
+    """
+    Route de diagnostic temporaire : affiche les vraies specs de volume
+    (minVolume, maxVolume, stepVolume - en centilots, ex: 100 = 1.00 lot,
+    10 = 0.10 lot) pour un symbole donné, SANS passer d'ordre. Fonctionne
+    même marché fermé, contrairement à un vrai trade test.
+    """
+    symbol_id, _ = await get_symbol_id(symbol)
+    specs = await get_symbol_specs(symbol_id)
+    return {
+        "symbol": symbol,
+        "symbolId": symbol_id,
+        "minVolume_units": specs["minVolume"],
+        "minVolume_lots": specs["minVolume"] / 100,
+        "maxVolume_units": specs["maxVolume"],
+        "stepVolume_units": specs["stepVolume"],
+        "stepVolume_lots": specs["stepVolume"] / 100,
+    }
