@@ -81,3 +81,26 @@ async def receive_signal(request: Request):
 @app.get("/")
 async def root():
     return {"status": "NASDAQ Open Reversal Bot actif"}
+
+
+@app.get("/debug/network-test")
+async def network_test():
+    """
+    Route de diagnostic temporaire : teste une simple connexion TCP brute
+    vers les serveurs cTrader, sans passer par Twisted/SSL/le SDK complet.
+    Permet d'isoler si le problème est un blocage réseau Railway ou un
+    souci plus profond côté bibliothèque cTrader.
+    """
+    import socket
+    results = {}
+    for host, port, label in [
+        ("demo.ctraderapi.com", 5035, "cTrader démo (protobuf)"),
+        ("google.com", 443, "Contrôle (Google HTTPS)"),
+    ]:
+        try:
+            sock = socket.create_connection((host, port), timeout=8)
+            sock.close()
+            results[label] = f"✅ OK ({host}:{port})"
+        except Exception as e:
+            results[label] = f"❌ {type(e).__name__}: {e} ({host}:{port})"
+    return results
