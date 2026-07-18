@@ -6,6 +6,7 @@ import os
 from oauth_routes import router as oauth_router
 from ctrader_trading import execute_trade, start_client_service
 from ctrader_trading import list_all_symbols
+from ctrader_trading import get_symbol_id, get_symbol_specs
 
 
 app = FastAPI()
