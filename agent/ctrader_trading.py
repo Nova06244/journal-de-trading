@@ -283,7 +283,7 @@ def calculate_volume(balance: float, sl_points: float, point_value_per_lot: floa
     """
     risk_amount = balance * (RISK_PERCENT / 100.0)
     raw_lots = risk_amount / (sl_points * point_value_per_lot)
-    lots = max(0.01, round(raw_lots, 2))
+    lots = max(1, round(raw_lots, 2))
     volume_units = int(lots * 100)
     return volume_units
 
