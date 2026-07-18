@@ -67,36 +67,79 @@ RISK_PERCENT = float(os.environ.get("RISK_PERCENT", "1.0"))
 _client = None
 _symbol_cache = {}
 _connected = False
+_connection_event = None
 
 
 def get_client():
-    global _client
+    global _client, _connection_event
     if _client is None:
+        print(f"[ctrader] Création du client vers {HOST}:{EndPoints.PROTOBUF_PORT}")
         _client = Client(HOST, EndPoints.PROTOBUF_PORT, TcpProtocol)
+        _connection_event = asyncio.Event()
+
+        def _on_connected(client):
+            print("[ctrader] ✅ _on_connected() déclenché - connexion établie")
+            _connection_event.set()
+
+        def _on_disconnected(client, reason):
+            print(f"[ctrader] ❌ _on_disconnected() déclenché - reason={reason}")
+            _connection_event.clear()
+
+        def _on_message_received(client, message):
+            print(f"[ctrader] 📩 Message reçu - payloadType={message.payloadType}")
+
+        # IMPORTANT : ces callbacks doivent être enregistrés AVANT startService(),
+        # et aucun message ne doit être envoyé tant que _on_connected() n'a pas
+        # été déclenché - sinon le message part dans le vide et le send()
+        # correspondant ne reçoit jamais de réponse (timeout silencieux).
+        _client.setConnectedCallback(_on_connected)
+        _client.setDisconnectedCallback(_on_disconnected)
+        _client.setMessageReceivedCallback(_on_message_received)
     return _client
 
 
 def start_client_service():
     """A appeler UNE SEULE FOIS au démarrage de l'app (hook FastAPI startup)."""
+    print("[ctrader] Démarrage du client service...")
     get_client().startService()
 
 
-async def _send(request, timeout=10):
+async def _wait_for_connection(timeout=20):
+    """Attend que la connexion TCP/SSL avec cTrader soit réellement établie."""
+    get_client()  # s'assure que le client + l'event existent
+    try:
+        await asyncio.wait_for(_connection_event.wait(), timeout=timeout)
+    except asyncio.TimeoutError:
+        raise RuntimeError(
+            "Connexion au serveur cTrader impossible (timeout TCP/SSL après "
+            f"{timeout}s) - vérifie CTRADER_ENV et la connectivité réseau."
+        )
+
+
+async def _send(request, timeout=15):
     """Bridge Deferred (Twisted) -> Future (asyncio) pour pouvoir 'await' un envoi."""
+    await _wait_for_connection()
+    print(f"[ctrader] ➡️ Envoi requête payloadType={request.payloadType if hasattr(request,'payloadType') else '?'}")
     client = get_client()
     deferred = client.send(request)
     future = asyncio.get_event_loop().create_future()
 
     def on_result(result):
+        print("[ctrader] ⬅️ on_result() déclenché - réponse reçue")
         if not future.done():
             future.set_result(result)
 
     def on_error(failure):
+        print(f"[ctrader] ⬅️ on_error() déclenché - {failure}")
         if not future.done():
             future.set_exception(RuntimeError(str(failure)))
 
     deferred.addCallbacks(on_result, on_error)
-    return await asyncio.wait_for(future, timeout=timeout)
+    try:
+        return await asyncio.wait_for(future, timeout=timeout)
+    except asyncio.TimeoutError:
+        print(f"[ctrader] ⏱️ TIMEOUT après {timeout}s en attendant la réponse - aucun callback déclenché")
+        raise
 
 
 _app_authenticated = False
