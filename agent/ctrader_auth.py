@@ -2,25 +2,31 @@
 Module d'authentification cTrader Open API (OAuth2).
 Utilise le SDK officiel Spotware : pip install ctrader-open-api
 
+Le token (access + refresh) est stocké dans Supabase (table ctrader_tokens)
+plutôt que dans un fichier local, car le système de fichiers de Railway
+est effacé à chaque redéploiement - un stockage local ferait perdre la
+connexion cTrader à chaque push GitHub.
+
 Variables d'environnement requises (à définir sur Railway) :
     CTRADER_CLIENT_ID
     CTRADER_CLIENT_SECRET
     CTRADER_REDIRECT_URI   -> https://journal-de-trading-production.up.railway.app/oauth/callback
+    SUPABASE_URL
+    SUPABASE_KEY
 """
 import os
-import json
 from ctrader_open_api import Auth
+from supabase import create_client
 
 CLIENT_ID = os.environ["CTRADER_CLIENT_ID"]
 CLIENT_SECRET = os.environ["CTRADER_CLIENT_SECRET"]
 REDIRECT_URI = os.environ["CTRADER_REDIRECT_URI"]
 
-# TODO: migrer ce stockage vers une table Supabase pour la persistance en production.
-# Un fichier local suffit pour valider le pipeline en démo, mais Railway peut
-# redéployer/redémarrer le service et effacer le système de fichiers.
-TOKEN_FILE = "ctrader_tokens.json"
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 
 auth = Auth(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
+_supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 def get_authorization_url() -> str:
@@ -55,12 +61,26 @@ def refresh_access_token() -> dict:
 
 
 def _save_tokens(token_response: dict) -> None:
-    with open(TOKEN_FILE, "w") as f:
-        json.dump(token_response, f)
+    row = {
+        "id": 1,
+        "access_token": token_response.get("accessToken"),
+        "refresh_token": token_response.get("refreshToken"),
+        "expires_in": token_response.get("expiresIn"),
+        "token_type": token_response.get("tokenType"),
+    }
+    _supabase.table("ctrader_tokens").upsert(row).execute()
 
 
 def load_tokens() -> dict | None:
-    if not os.path.exists(TOKEN_FILE):
+    result = _supabase.table("ctrader_tokens").select("*").eq("id", 1).execute()
+    if not result.data:
         return None
-    with open(TOKEN_FILE) as f:
-        return json.load(f)
+    row = result.data[0]
+    if not row.get("access_token"):
+        return None
+    return {
+        "accessToken": row.get("access_token"),
+        "refreshToken": row.get("refresh_token"),
+        "expiresIn": row.get("expires_in"),
+        "tokenType": row.get("token_type"),
+    }
