@@ -350,7 +350,9 @@ async def execute_trade(symbol: str, direction: str, entry_price, data: dict) ->
         "tp": tp_price,
         "trade_id": trade_id,
     }
-   async def list_all_symbols() -> list:
+
+
+async def list_all_symbols() -> list:
     """
     Liste tous les symboles disponibles sur ce compte cTrader, triés par nom.
     Sert de route de diagnostic (GET /debug/symbols dans main.py) pour
