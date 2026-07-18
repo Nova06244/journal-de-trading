@@ -1,3 +1,16 @@
+# ============================================================
+# CRITIQUE : installer le reactor asyncio de Twisted AVANT tout
+# autre import. Importer n'importe quoi depuis oauth_routes/ctrader_auth
+# déclenche indirectement l'import du package ctrader_open_api, qui
+# installe silencieusement le reactor Twisted par défaut (EPollReactor)
+# s'il n'est pas déjà pris - ce reactor par défaut n'est jamais piloté
+# par la boucle asyncio d'Uvicorn, ce qui bloque silencieusement toute
+# connexion cTrader (timeout sans aucune erreur réseau explicite).
+# ============================================================
+import asyncio
+from twisted.internet import asyncioreactor
+asyncioreactor.install(asyncio.get_event_loop())
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
