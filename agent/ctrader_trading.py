@@ -28,7 +28,7 @@ print("[ctrader] ✅ crochet.setup() - reactor Twisted démarré dans son propre
 
 import os
 import asyncio
-from ctrader_open_api import Client, TcpProtocol, EndPoints
+from ctrader_open_api import Client, TcpProtocol, EndPoints, Protobuf
 from ctrader_open_api.messages.OpenApiMessages_pb2 import (
     ProtoOAApplicationAuthReq,
     ProtoOAAccountAuthReq,
@@ -119,9 +119,9 @@ async def _send(request, timeout=15):
     print(f"[ctrader] ➡️ Envoi requête payloadType={label}", flush=True)
     eventual_result = _send_in_reactor_thread(request)
     try:
-        result = await asyncio.to_thread(eventual_result.wait, timeout)
+        raw_result = await asyncio.to_thread(eventual_result.wait, timeout)
         print("[ctrader] ⬅️ Réponse reçue", flush=True)
-        return result
+        return Protobuf.extract(raw_result)
     except crochet.TimeoutError:
         print(f"[ctrader] ⏱️ TIMEOUT après {timeout}s en attendant la réponse", flush=True)
         raise RuntimeError(f"Timeout cTrader après {timeout}s en attendant la réponse à payloadType={label}")
