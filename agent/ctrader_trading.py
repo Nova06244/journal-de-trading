@@ -23,10 +23,10 @@ from twisted.internet import asyncioreactor
 try:
     asyncioreactor.install(asyncio.get_event_loop())
     print("[ctrader] ✅ asyncioreactor installé avec succès", flush=True)
-except Exception as e:
-    print(f"[ctrader] ⚠️ Échec de l'installation d'asyncioreactor : {type(e).__name__}: {e}", flush=True)
+except Exception:
+    # Normal si main.py l'a déjà installé en tout premier (comportement voulu).
     from twisted.internet import reactor as _installed_reactor
-    print(f"[ctrader] Reactor actuellement installé : {type(_installed_reactor).__module__}.{type(_installed_reactor).__name__}", flush=True)
+    print(f"[ctrader] ℹ️ Reactor déjà installé : {type(_installed_reactor).__module__}.{type(_installed_reactor).__name__}", flush=True)
 
 import os
 from ctrader_open_api import Client, TcpProtocol, EndPoints
