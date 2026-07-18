@@ -22,8 +22,11 @@ import asyncio
 from twisted.internet import asyncioreactor
 try:
     asyncioreactor.install(asyncio.get_event_loop())
-except Exception:
-    pass  # déjà installé (rechargement à chaud, tests, etc.)
+    print("[ctrader] ✅ asyncioreactor installé avec succès", flush=True)
+except Exception as e:
+    print(f"[ctrader] ⚠️ Échec de l'installation d'asyncioreactor : {type(e).__name__}: {e}", flush=True)
+    from twisted.internet import reactor as _installed_reactor
+    print(f"[ctrader] Reactor actuellement installé : {type(_installed_reactor).__module__}.{type(_installed_reactor).__name__}", flush=True)
 
 import os
 from ctrader_open_api import Client, TcpProtocol, EndPoints
@@ -107,9 +110,12 @@ def start_client_service():
 async def _wait_for_connection(timeout=20):
     """Attend que la connexion TCP/SSL avec cTrader soit réellement établie."""
     get_client()  # s'assure que le client + l'event existent
+    print(f"[ctrader] ⏳ Attente de connexion (event déjà set = {_connection_event.is_set()})...", flush=True)
     try:
         await asyncio.wait_for(_connection_event.wait(), timeout=timeout)
+        print("[ctrader] ✅ _wait_for_connection() : event reçu", flush=True)
     except asyncio.TimeoutError:
+        print(f"[ctrader] ⏱️ _wait_for_connection() : TIMEOUT après {timeout}s - _on_connected jamais déclenché", flush=True)
         raise RuntimeError(
             "Connexion au serveur cTrader impossible (timeout TCP/SSL après "
             f"{timeout}s) - vérifie CTRADER_ENV et la connectivité réseau."
