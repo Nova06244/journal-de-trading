@@ -4,3 +4,5 @@ httpx
 ctrader-open-api
 twisted
 supabase
+pyopenssl
+service_identity
