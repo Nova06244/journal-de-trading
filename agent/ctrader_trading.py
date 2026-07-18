@@ -137,11 +137,20 @@ async def list_accounts() -> list:
     # NOTE: si ce champ lève une AttributeError, vérifie le nom exact du champ
     # dans le fichier généré OpenApiMessages_pb2.py de ta version installée
     # (il peut s'appeler 'accounts' ou 'ctidTraderAccount' selon la version du SDK).
+    # NOTE: si 'traderLogin' lève une AttributeError, vérifie le nom exact du
+    # champ dans OpenApiMessages_pb2.py de ta version installée (peut aussi
+    # s'appeler 'login' selon la version du SDK).
     accounts = []
     for acc in res.ctidTraderAccount:
+        login = None
+        try:
+            login = acc.traderLogin
+        except AttributeError:
+            pass
         accounts.append({
             "ctidTraderAccountId": acc.ctidTraderAccountId,
             "isLive": acc.isLive,
+            "traderLogin": login,
         })
     return accounts
 
