@@ -21,6 +21,11 @@ ATTENTION - Points à vérifier avant de faire confiance à ce module :
    idéalement, il faudrait écouter l'event ProtoOAExecutionEvent plutôt que
    de faire confiance au prix du signal TradingView.
 3. Variables d'environnement requises : CTRADER_ACCOUNT_ID, CTRADER_ENV.
+4. SYMBOL_ALIASES (ci-dessous) fait le pont entre le nom envoyé par le signal
+   (ex: 'NAS100', nom générique utilisé côté TradingView/alerte) et le nom
+   réel du symbole chez le broker connecté (IC Markets utilise 'US100').
+   Si le broker change ou si le nom exact diffère (ex: 'US100.a'), corriger
+   ici uniquement - aucune autre partie du code n'a besoin de changer.
 """
 import crochet
 crochet.setup()  # démarre le reactor Twisted dans un thread dédié, une seule fois
@@ -53,6 +58,13 @@ CLIENT_SECRET = os.environ["CTRADER_CLIENT_SECRET"]
 _CTRADER_ACCOUNT_ID_RAW = os.environ.get("CTRADER_ACCOUNT_ID")
 CTRADER_ACCOUNT_ID = int(_CTRADER_ACCOUNT_ID_RAW) if _CTRADER_ACCOUNT_ID_RAW else None
 CTRADER_ENV = os.environ.get("CTRADER_ENV", "demo")
+
+# Alias de symboles : nom générique (côté signal/TradingView) -> nom exact
+# chez le broker connecté. IC Markets nomme le Nasdaq 100 "US100" (et non
+# "NAS100" comme d'autres brokers/plateformes).
+SYMBOL_ALIASES = {
+    "NAS100": "US100",
+}
 
 
 def _require_account_id() -> int:
@@ -226,22 +238,31 @@ async def get_symbol_id(symbol_name: str):
     """
     Résout le nom du symbole (ex: 'NAS100', 'US100') en symbolId cTrader.
     Nécessaire car chaque broker a ses propres IDs internes - impossible à deviner.
+
+    Le nom reçu (souvent le nom générique utilisé côté signal/TradingView) est
+    d'abord passé par SYMBOL_ALIASES pour obtenir le nom réel utilisé par le
+    broker connecté, avant recherche et mise en cache.
     """
     await ensure_connected()
-    if symbol_name in _symbol_cache:
-        return _symbol_cache[symbol_name]
+
+    resolved_name = SYMBOL_ALIASES.get(symbol_name.upper(), symbol_name)
+
+    if resolved_name in _symbol_cache:
+        return _symbol_cache[resolved_name]
 
     req = ProtoOASymbolsListReq()
     req.ctidTraderAccountId = CTRADER_ACCOUNT_ID
     res = await _send(req)
 
     for s in res.symbol:
-        if s.symbolName.upper() == symbol_name.upper():
+        if s.symbolName.upper() == resolved_name.upper():
             info = {"symbolId": s.symbolId, "digits": s.digits}
-            _symbol_cache[symbol_name] = (s.symbolId, info)
+            _symbol_cache[resolved_name] = (s.symbolId, info)
             return s.symbolId, info
 
-    raise ValueError(f"Symbole '{symbol_name}' introuvable sur ce compte cTrader.")
+    raise ValueError(
+        f"Symbole '{symbol_name}' (résolu en '{resolved_name}') introuvable sur ce compte cTrader."
+    )
 
 
 def calculate_volume(balance: float, sl_points: float, point_value_per_lot: float = 1.0) -> int:
