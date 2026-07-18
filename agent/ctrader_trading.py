@@ -40,6 +40,7 @@ from ctrader_open_api.messages.OpenApiMessages_pb2 import (
     ProtoOAApplicationAuthReq,
     ProtoOAAccountAuthReq,
     ProtoOASymbolsListReq,
+    ProtoOASymbolByIdReq,
     ProtoOANewOrderReq,
     ProtoOATraderReq,
     ProtoOAGetAccountListByAccessTokenReq,
@@ -272,19 +273,70 @@ async def get_symbol_id(symbol_name: str):
     )
 
 
-def calculate_volume(balance: float, sl_points: float, point_value_per_lot: float = 1.0) -> int:
+_symbol_specs_cache = {}
+
+
+async def get_symbol_specs(symbol_id: int) -> dict:
     """
-    Calcule le volume pour risquer RISK_PERCENT du solde.
+    Récupère les specs détaillées d'un symbole (minVolume, maxVolume,
+    stepVolume - dans la même convention "centilots" que order.volume, ex:
+    minVolume=100 signifie 1.00 lot, minVolume=10 signifie 0.10 lot) via
+    ProtoOASymbolByIdReq.
+
+    Nécessaire car ProtoOASymbolsListReq (utilisé par get_symbol_id) ne
+    renvoie qu'une version allégée (ProtoOALightSymbol) sans ces infos.
+    Le minimum de volume est spécifique à CHAQUE symbole et à CHAQUE compte/
+    plateforme chez le broker (confirmé : le minimum vu sur MT5 pour un
+    symbole ne correspond pas forcément à celui du compte cTrader) - il ne
+    faut donc jamais le coder en dur, toujours l'interroger dynamiquement.
+    """
+    if symbol_id in _symbol_specs_cache:
+        return _symbol_specs_cache[symbol_id]
+
+    req = ProtoOASymbolByIdReq()
+    req.ctidTraderAccountId = CTRADER_ACCOUNT_ID
+    req.symbolId.append(symbol_id)
+    res = await _send(req)
+
+    if not res.symbol:
+        raise ValueError(f"Aucune spec détaillée trouvée pour symbolId={symbol_id}.")
+
+    s = res.symbol[0]
+    specs = {
+        "minVolume": getattr(s, "minVolume", 100),   # défaut prudent: 1.00 lot si absent
+        "maxVolume": getattr(s, "maxVolume", None),
+        "stepVolume": getattr(s, "stepVolume", 100),
+        "digits": getattr(s, "digits", None),
+    }
+    _symbol_specs_cache[symbol_id] = specs
+    return specs
+
+
+def calculate_volume(
+    balance: float,
+    sl_points: float,
+    point_value_per_lot: float = 1.0,
+    min_volume_units: int = 100,
+    step_volume_units: int = 100,
+) -> int:
+    """
+    Calcule le volume pour risquer RISK_PERCENT du solde, puis l'ajuste au
+    minimum et au step réels du symbole (récupérés dynamiquement via
+    get_symbol_specs() - voir execute_trade()).
 
     HYPOTHESE A VERIFIER : point_value_per_lot=1.0 $/point pour le NAS100
-    (1 lot = 1$/point), et conversion lot -> unités cTrader (x100). Ces deux
-    hypothèses doivent être confrontées aux vraies specs du symbole avant de
+    (1 lot = 1$/point). A confronter aux vraies specs du symbole avant de
     faire confiance à ce calcul, même en démo.
     """
     risk_amount = balance * (RISK_PERCENT / 100.0)
     raw_lots = risk_amount / (sl_points * point_value_per_lot)
-    lots = max(1, round(raw_lots, 2))
-    volume_units = int(lots * 100)
+    raw_units = int(raw_lots * 100)
+
+    # Arrondi au step supérieur le plus proche (ex: step=10 -> multiples de 0.10 lot)
+    if step_volume_units > 0:
+        raw_units = ((raw_units + step_volume_units - 1) // step_volume_units) * step_volume_units
+
+    volume_units = max(min_volume_units, raw_units)
     return volume_units
 
 
@@ -297,8 +349,14 @@ async def execute_trade(symbol: str, direction: str, entry_price, data: dict) ->
     tp_points = float(data.get("tp_points", 100))
 
     symbol_id, specs = await get_symbol_id(symbol)
+    symbol_specs = await get_symbol_specs(symbol_id)
     balance = await get_account_balance()
-    volume = calculate_volume(balance, sl_points)
+    volume = calculate_volume(
+        balance,
+        sl_points,
+        min_volume_units=symbol_specs["minVolume"],
+        step_volume_units=symbol_specs["stepVolume"],
+    )
 
     entry_price_f = float(entry_price)
     trade_direction = "LONG" if direction.upper() == "BUY" else "SHORT"
