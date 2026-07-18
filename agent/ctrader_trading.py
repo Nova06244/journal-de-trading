@@ -73,20 +73,20 @@ _connection_event = None
 def get_client():
     global _client, _connection_event
     if _client is None:
-        print(f"[ctrader] Création du client vers {HOST}:{EndPoints.PROTOBUF_PORT}")
+        print(f"[ctrader] Création du client vers {HOST}:{EndPoints.PROTOBUF_PORT}", flush=True)
         _client = Client(HOST, EndPoints.PROTOBUF_PORT, TcpProtocol)
         _connection_event = asyncio.Event()
 
         def _on_connected(client):
-            print("[ctrader] ✅ _on_connected() déclenché - connexion établie")
+            print("[ctrader] ✅ _on_connected() déclenché - connexion établie", flush=True)
             _connection_event.set()
 
         def _on_disconnected(client, reason):
-            print(f"[ctrader] ❌ _on_disconnected() déclenché - reason={reason}")
+            print(f"[ctrader] ❌ _on_disconnected() déclenché - reason={reason}", flush=True)
             _connection_event.clear()
 
         def _on_message_received(client, message):
-            print(f"[ctrader] 📩 Message reçu - payloadType={message.payloadType}")
+            print(f"[ctrader] 📩 Message reçu - payloadType={message.payloadType}", flush=True)
 
         # IMPORTANT : ces callbacks doivent être enregistrés AVANT startService(),
         # et aucun message ne doit être envoyé tant que _on_connected() n'a pas
@@ -100,7 +100,7 @@ def get_client():
 
 def start_client_service():
     """A appeler UNE SEULE FOIS au démarrage de l'app (hook FastAPI startup)."""
-    print("[ctrader] Démarrage du client service...")
+    print("[ctrader] Démarrage du client service...", flush=True)
     get_client().startService()
 
 
@@ -119,18 +119,18 @@ async def _wait_for_connection(timeout=20):
 async def _send(request, timeout=15):
     """Bridge Deferred (Twisted) -> Future (asyncio) pour pouvoir 'await' un envoi."""
     await _wait_for_connection()
-    print(f"[ctrader] ➡️ Envoi requête payloadType={request.payloadType if hasattr(request,'payloadType') else '?'}")
+    print(f"[ctrader] ➡️ Envoi requête payloadType={request.payloadType if hasattr(request,'payloadType') else '?'}", flush=True)
     client = get_client()
     deferred = client.send(request)
     future = asyncio.get_event_loop().create_future()
 
     def on_result(result):
-        print("[ctrader] ⬅️ on_result() déclenché - réponse reçue")
+        print("[ctrader] ⬅️ on_result() déclenché - réponse reçue", flush=True)
         if not future.done():
             future.set_result(result)
 
     def on_error(failure):
-        print(f"[ctrader] ⬅️ on_error() déclenché - {failure}")
+        print(f"[ctrader] ⬅️ on_error() déclenché - {failure}", flush=True)
         if not future.done():
             future.set_exception(RuntimeError(str(failure)))
 
@@ -138,7 +138,7 @@ async def _send(request, timeout=15):
     try:
         return await asyncio.wait_for(future, timeout=timeout)
     except asyncio.TimeoutError:
-        print(f"[ctrader] ⏱️ TIMEOUT après {timeout}s en attendant la réponse - aucun callback déclenché")
+        print(f"[ctrader] ⏱️ TIMEOUT après {timeout}s en attendant la réponse - aucun callback déclenché", flush=True)
         raise
 
 
