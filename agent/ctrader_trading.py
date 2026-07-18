@@ -350,3 +350,17 @@ async def execute_trade(symbol: str, direction: str, entry_price, data: dict) ->
         "tp": tp_price,
         "trade_id": trade_id,
     }
+   async def list_all_symbols() -> list:
+    """
+    Liste tous les symboles disponibles sur ce compte cTrader, triés par nom.
+    Sert de route de diagnostic (GET /debug/symbols dans main.py) pour
+    identifier le nom exact utilisé par le broker pour un instrument donné.
+    """
+    await ensure_connected()
+
+    req = ProtoOASymbolsListReq()
+    req.ctidTraderAccountId = CTRADER_ACCOUNT_ID
+    res = await _send(req)
+
+    names = sorted(s.symbolName for s in res.symbol)
+    return names
