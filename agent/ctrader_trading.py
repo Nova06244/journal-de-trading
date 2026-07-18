@@ -3,11 +3,15 @@ Module d'exécution des ordres via cTrader Open API.
 Utilise le SDK officiel Spotware (ctrader-open-api), basé sur Twisted.
 
 IMPORTANT - Interopérabilité Twisted/asyncio :
-FastAPI tourne sur une boucle asyncio. Twisted (utilisé par ctrader-open-api)
-tourne normalement sur son propre "reactor". Pour que les deux cohabitent dans
-le même process, on installe le reactor asyncio de Twisted AVANT tout import
-de twisted.internet.reactor - c'est fait tout en haut de ce fichier, et ce
-fichier doit donc être importé AVANT tout autre import lié à Twisted.
+Après plusieurs tentatives infructueuses pour faire cohabiter le reactor
+Twisted directement dans la boucle asyncio d'Uvicorn (via asyncioreactor -
+conflits d'installation, puis ClientService qui ne se connectait jamais
+malgré un reactor correctement installé et démarré), on utilise `crochet`,
+une bibliothèque conçue spécifiquement pour ce problème : elle fait tourner
+le reactor Twisted dans son propre thread dédié, exactement comme dans un
+script Python classique qui fonctionne - au lieu de forcer une cohabitation
+fragile dans la même boucle. C'est l'approche recommandée par la communauté
+Twisted pour ce type d'intégration.
 
 ATTENTION - Points à vérifier avant de faire confiance à ce module :
 1. calculate_volume() utilise une hypothèse de conversion (1 lot = 100 unités
@@ -18,17 +22,12 @@ ATTENTION - Points à vérifier avant de faire confiance à ce module :
    de faire confiance au prix du signal TradingView.
 3. Variables d'environnement requises : CTRADER_ACCOUNT_ID, CTRADER_ENV.
 """
-import asyncio
-from twisted.internet import asyncioreactor
-try:
-    asyncioreactor.install(asyncio.get_event_loop())
-    print("[ctrader] ✅ asyncioreactor installé avec succès", flush=True)
-except Exception:
-    # Normal si main.py l'a déjà installé en tout premier (comportement voulu).
-    from twisted.internet import reactor as _installed_reactor
-    print(f"[ctrader] ℹ️ Reactor déjà installé : {type(_installed_reactor).__module__}.{type(_installed_reactor).__name__}", flush=True)
+import crochet
+crochet.setup()  # démarre le reactor Twisted dans un thread dédié, une seule fois
+print("[ctrader] ✅ crochet.setup() - reactor Twisted démarré dans son propre thread", flush=True)
 
 import os
+import asyncio
 from ctrader_open_api import Client, TcpProtocol, EndPoints
 from ctrader_open_api.messages.OpenApiMessages_pb2 import (
     ProtoOAApplicationAuthReq,
@@ -70,31 +69,23 @@ RISK_PERCENT = float(os.environ.get("RISK_PERCENT", "1.0"))
 _client = None
 _symbol_cache = {}
 _connected = False
-_connection_event = None
 
 
 def get_client():
-    global _client, _connection_event
+    global _client
     if _client is None:
         print(f"[ctrader] Création du client vers {HOST}:{EndPoints.PROTOBUF_PORT}", flush=True)
         _client = Client(HOST, EndPoints.PROTOBUF_PORT, TcpProtocol)
-        _connection_event = asyncio.Event()
 
         def _on_connected(client):
             print("[ctrader] ✅ _on_connected() déclenché - connexion établie", flush=True)
-            _connection_event.set()
 
         def _on_disconnected(client, reason):
             print(f"[ctrader] ❌ _on_disconnected() déclenché - reason={reason}", flush=True)
-            _connection_event.clear()
 
         def _on_message_received(client, message):
             print(f"[ctrader] 📩 Message reçu - payloadType={message.payloadType}", flush=True)
 
-        # IMPORTANT : ces callbacks doivent être enregistrés AVANT startService(),
-        # et aucun message ne doit être envoyé tant que _on_connected() n'a pas
-        # été déclenché - sinon le message part dans le vide et le send()
-        # correspondant ne reçoit jamais de réponse (timeout silencieux).
         _client.setConnectedCallback(_on_connected)
         _client.setDisconnectedCallback(_on_disconnected)
         _client.setMessageReceivedCallback(_on_message_received)
@@ -103,62 +94,37 @@ def get_client():
 
 def start_client_service():
     """A appeler UNE SEULE FOIS au démarrage de l'app (hook FastAPI startup)."""
-    print("[ctrader] Démarrage du client service...", flush=True)
+    print("[ctrader] Démarrage du client service (thread crochet)...", flush=True)
+    _start_service_in_reactor_thread()
 
-    # CRITIQUE : avec asyncioreactor, le reactor est "installé" mais jamais
-    # marqué comme "running" tant qu'on n'appelle pas reactor.run() - or on
-    # ne peut pas l'appeler (il est bloquant et prendrait la main sur toute
-    # la boucle asyncio d'Uvicorn). ClientService (utilisé en interne par
-    # Client) attend ce signal "running" via callWhenRunning() avant de
-    # tenter la moindre connexion - sans ça, aucune tentative n'est jamais
-    # faite, sans erreur ni callback, d'où un silence total et un timeout.
-    from twisted.internet import reactor
-    if not reactor.running:
-        reactor.startRunning(installSignalHandlers=False)
-        print("[ctrader] ✅ reactor.startRunning() appelé - ClientService peut maintenant se connecter", flush=True)
 
+@crochet.run_in_reactor
+def _start_service_in_reactor_thread():
+    # Cette fonction s'exécute DANS le thread du reactor Twisted (via crochet),
+    # exactement comme startService() serait appelé dans un script classique.
     get_client().startService()
 
 
-async def _wait_for_connection(timeout=20):
-    """Attend que la connexion TCP/SSL avec cTrader soit réellement établie."""
-    get_client()  # s'assure que le client + l'event existent
-    print(f"[ctrader] ⏳ Attente de connexion (event déjà set = {_connection_event.is_set()})...", flush=True)
-    try:
-        await asyncio.wait_for(_connection_event.wait(), timeout=timeout)
-        print("[ctrader] ✅ _wait_for_connection() : event reçu", flush=True)
-    except asyncio.TimeoutError:
-        print(f"[ctrader] ⏱️ _wait_for_connection() : TIMEOUT après {timeout}s - _on_connected jamais déclenché", flush=True)
-        raise RuntimeError(
-            "Connexion au serveur cTrader impossible (timeout TCP/SSL après "
-            f"{timeout}s) - vérifie CTRADER_ENV et la connectivité réseau."
-        )
+@crochet.run_in_reactor
+def _send_in_reactor_thread(request):
+    # client.send() doit être appelé depuis le thread du reactor - crochet
+    # s'en charge et renvoie un EventualResult qu'on peut attendre depuis
+    # n'importe quel autre thread (notamment le thread asyncio de FastAPI).
+    return get_client().send(request)
 
 
 async def _send(request, timeout=15):
-    """Bridge Deferred (Twisted) -> Future (asyncio) pour pouvoir 'await' un envoi."""
-    await _wait_for_connection()
-    print(f"[ctrader] ➡️ Envoi requête payloadType={request.payloadType if hasattr(request,'payloadType') else '?'}", flush=True)
-    client = get_client()
-    deferred = client.send(request)
-    future = asyncio.get_event_loop().create_future()
-
-    def on_result(result):
-        print("[ctrader] ⬅️ on_result() déclenché - réponse reçue", flush=True)
-        if not future.done():
-            future.set_result(result)
-
-    def on_error(failure):
-        print(f"[ctrader] ⬅️ on_error() déclenché - {failure}", flush=True)
-        if not future.done():
-            future.set_exception(RuntimeError(str(failure)))
-
-    deferred.addCallbacks(on_result, on_error)
+    """Envoie une requête cTrader et attend la réponse, sans bloquer la boucle asyncio principale."""
+    label = request.payloadType if hasattr(request, "payloadType") else "?"
+    print(f"[ctrader] ➡️ Envoi requête payloadType={label}", flush=True)
+    eventual_result = _send_in_reactor_thread(request)
     try:
-        return await asyncio.wait_for(future, timeout=timeout)
-    except asyncio.TimeoutError:
-        print(f"[ctrader] ⏱️ TIMEOUT après {timeout}s en attendant la réponse - aucun callback déclenché", flush=True)
-        raise
+        result = await asyncio.to_thread(eventual_result.wait, timeout)
+        print("[ctrader] ⬅️ Réponse reçue", flush=True)
+        return result
+    except crochet.TimeoutError:
+        print(f"[ctrader] ⏱️ TIMEOUT après {timeout}s en attendant la réponse", flush=True)
+        raise RuntimeError(f"Timeout cTrader après {timeout}s en attendant la réponse à payloadType={label}")
 
 
 _app_authenticated = False
