@@ -63,8 +63,9 @@ CTRADER_ENV = os.environ.get("CTRADER_ENV", "demo")
 # chez le broker connecté. IC Markets nomme le Nasdaq 100 "US100" (et non
 # "NAS100" comme d'autres brokers/plateformes).
 SYMBOL_ALIASES = {
-    "NAS100": "US100",
+    "NAS100": "USTEC",
 }
+
 
 
 def _require_account_id() -> int:
