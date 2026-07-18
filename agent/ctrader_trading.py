@@ -104,6 +104,19 @@ def get_client():
 def start_client_service():
     """A appeler UNE SEULE FOIS au démarrage de l'app (hook FastAPI startup)."""
     print("[ctrader] Démarrage du client service...", flush=True)
+
+    # CRITIQUE : avec asyncioreactor, le reactor est "installé" mais jamais
+    # marqué comme "running" tant qu'on n'appelle pas reactor.run() - or on
+    # ne peut pas l'appeler (il est bloquant et prendrait la main sur toute
+    # la boucle asyncio d'Uvicorn). ClientService (utilisé en interne par
+    # Client) attend ce signal "running" via callWhenRunning() avant de
+    # tenter la moindre connexion - sans ça, aucune tentative n'est jamais
+    # faite, sans erreur ni callback, d'où un silence total et un timeout.
+    from twisted.internet import reactor
+    if not reactor.running:
+        reactor.startRunning(installSignalHandlers=False)
+        print("[ctrader] ✅ reactor.startRunning() appelé - ClientService peut maintenant se connecter", flush=True)
+
     get_client().startService()
 
 
